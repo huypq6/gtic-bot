@@ -65,13 +65,13 @@ export default function PositionsTable() {
   const refresh = () => qc.invalidateQueries({ queryKey: ["positions"] });
 
   if (list.length === 0)
-    return <p className="px-1 py-4 text-sm text-ink-500">Chưa có vị thế mở.</p>;
+    return <p className="px-1 py-4 text-sm text-faint">Chưa có vị thế mở.</p>;
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs uppercase tracking-wide text-ink-500">
+          <tr className="text-left text-xs uppercase tracking-wide text-faint">
             <th className="px-2 py-1.5 font-medium">Mode</th>
             <th className="px-2 py-1.5 font-medium">Symbol</th>
             <th className="px-2 py-1.5 font-medium">Side</th>
@@ -88,7 +88,7 @@ export default function PositionsTable() {
             const up = (p.pnl ?? 0) >= 0;
             const mark = p.price ?? tickers[p.symbol]?.price;
             return (
-              <tr key={p.key} className="border-t border-ink-800 align-middle">
+              <tr key={p.key} className="border-t border-border align-middle">
                 <td className="px-2 py-1.5">
                   <ModeBadge mode={p.mode} />
                 </td>
@@ -101,7 +101,7 @@ export default function PositionsTable() {
                 <td className="px-2 py-1.5 text-right tabular-nums">
                   {mark != null ? fmt(mark) : "—"}
                 </td>
-                <td className="px-2 py-1.5 text-right text-xs tabular-nums text-ink-400">
+                <td className="px-2 py-1.5 text-right text-xs tabular-nums text-muted">
                   {p.sl != null ? fmt(p.sl) : "—"} / {p.tp != null ? fmt(p.tp) : "—"}
                 </td>
                 <td className={`px-2 py-1.5 text-right font-medium tabular-nums ${up ? "text-up" : "text-down"}`}>
@@ -114,7 +114,7 @@ export default function PositionsTable() {
                         <button
                           title="Sửa SL/TP"
                           onClick={() => setEditing(editing === p.id ? null : p.id)}
-                          className="rounded p-1 text-ink-300 hover:bg-ink-800 hover:text-ink-100"
+                          className="rounded p-1 text-muted hover:bg-surface-2 hover:text-text"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
@@ -173,21 +173,21 @@ function SltpEditor({
         value={slv}
         onChange={(e) => setSlv(e.target.value)}
         placeholder="SL"
-        className="w-20 rounded border border-ink-700 bg-ink-800 px-1.5 py-0.5 text-xs"
+        className="w-20 rounded border border-border bg-surface-2 px-1.5 py-0.5 text-xs"
       />
       <input
         value={tpv}
         onChange={(e) => setTpv(e.target.value)}
         placeholder="TP"
-        className="w-20 rounded border border-ink-700 bg-ink-800 px-1.5 py-0.5 text-xs"
+        className="w-20 rounded border border-border bg-surface-2 px-1.5 py-0.5 text-xs"
       />
       <button
         onClick={() => onSave(num(slv), num(tpv))}
-        className="rounded bg-accent-500 px-2 py-0.5 text-xs font-medium text-ink-950"
+        className="rounded bg-accent px-2 py-0.5 text-xs font-medium text-white"
       >
         Lưu
       </button>
-      <button onClick={onCancel} className="rounded px-1.5 py-0.5 text-xs text-ink-400">
+      <button onClick={onCancel} className="rounded px-1.5 py-0.5 text-xs text-muted">
         Hủy
       </button>
     </div>

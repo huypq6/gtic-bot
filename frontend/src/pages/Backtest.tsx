@@ -43,7 +43,7 @@ export default function Backtest() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-      <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <section className="rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">Backtest</h2>
         <div className="flex flex-wrap items-end gap-3 text-sm">
           <F label="Strategy">
@@ -77,7 +77,7 @@ export default function Backtest() {
           <button
             onClick={() => run.mutate()}
             disabled={run.isPending || stratId === ""}
-            className="rounded-md bg-accent-500 px-3 py-1.5 font-semibold text-ink-950 hover:bg-accent-400 disabled:opacity-50"
+            className="rounded-md bg-accent px-3 py-1.5 font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
           >
             {run.isPending ? "Đang chạy…" : "Chạy backtest"}
           </button>
@@ -86,7 +86,7 @@ export default function Backtest() {
       </section>
 
       {stratName && (
-        <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+        <section className="rounded-xl border border-border bg-surface p-4">
           <h3 className="mb-2 text-sm font-semibold">So sánh version — {stratName}</h3>
           <VersionCompare name={stratName} />
         </section>
@@ -102,21 +102,21 @@ export default function Backtest() {
             <Metric label="Số lệnh" value={res.n_trades} />
           </section>
 
-          <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+          <section className="rounded-xl border border-border bg-surface p-4">
             <h3 className="mb-2 text-sm font-semibold">Equity curve</h3>
             {res.equity_curve.length > 1 ? (
               <EquityCurve data={res.equity_curve} />
             ) : (
-              <p className="text-sm text-ink-500">Không đủ dữ liệu vẽ equity.</p>
+              <p className="text-sm text-faint">Không đủ dữ liệu vẽ equity.</p>
             )}
           </section>
 
-          <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+          <section className="rounded-xl border border-border bg-surface p-4">
             <h3 className="mb-2 text-sm font-semibold">Trades ({res.trades.length})</h3>
             <div className="max-h-72 overflow-auto">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-ink-900">
-                  <tr className="text-left text-xs uppercase tracking-wide text-ink-500">
+                <thead className="sticky top-0 bg-surface">
+                  <tr className="text-left text-xs uppercase tracking-wide text-faint">
                     <th className="px-2 py-1.5">Side</th>
                     <th className="px-2 py-1.5">Entry</th>
                     <th className="px-2 py-1.5">Exit</th>
@@ -127,7 +127,7 @@ export default function Backtest() {
                   {res.trades.map((t, i) => {
                     const up = (t.pnl_pct ?? 0) >= 0;
                     return (
-                      <tr key={i} className="border-t border-ink-800">
+                      <tr key={i} className="border-t border-border">
                         <td className={`px-2 py-1 font-medium ${t.side === "Long" ? "text-up" : "text-down"}`}>
                           {t.side}
                         </td>
@@ -149,13 +149,13 @@ export default function Backtest() {
   );
 }
 
-const sel = "rounded-md border border-ink-700 bg-ink-800 px-2 py-1.5";
-const inp = "w-24 rounded-md border border-ink-700 bg-ink-800 px-2 py-1.5";
+const sel = "rounded-md border border-border bg-surface-2 px-2 py-1.5";
+const inp = "w-24 rounded-md border border-border bg-surface-2 px-2 py-1.5";
 
 function F({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs text-ink-500">{label}</span>
+      <span className="text-xs text-faint">{label}</span>
       {children}
     </label>
   );
@@ -172,10 +172,10 @@ function Metric({
   suffix?: string;
   good?: boolean;
 }) {
-  const cls = good === undefined ? "text-ink-100" : good ? "text-up" : "text-down";
+  const cls = good === undefined ? "text-text" : good ? "text-up" : "text-down";
   return (
-    <div className="rounded-xl border border-ink-700 bg-ink-900 p-3">
-      <div className="text-xs text-ink-500">{label}</div>
+    <div className="rounded-xl border border-border bg-surface p-3">
+      <div className="text-xs text-faint">{label}</div>
       <div className={`mt-1 text-lg font-semibold tabular-nums ${cls}`}>
         {value == null ? "—" : `${value}${suffix}`}
       </div>

@@ -13,8 +13,8 @@ export default function TimeframeSelector({ timeframes, active, onSelect }: Prop
           onClick={() => onSelect(tf)}
           className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
             tf === active
-              ? "bg-brand-600 text-ink-100"
-              : "text-ink-400 hover:bg-ink-800 hover:text-ink-100"
+              ? "bg-primary text-white"
+              : "text-muted hover:bg-surface-2 hover:text-text"
           }`}
         >
           {tf}

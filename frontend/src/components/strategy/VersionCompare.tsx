@@ -17,7 +17,7 @@ export default function VersionCompare({ name }: { name: string }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs uppercase tracking-wide text-ink-500">
+          <tr className="text-left text-xs uppercase tracking-wide text-faint">
             <th className="px-2 py-1.5 font-medium">Version</th>
             <th className="px-2 py-1.5 text-right font-medium">Runs</th>
             <th className="px-2 py-1.5 text-right font-medium">Best PnL%</th>
@@ -29,7 +29,7 @@ export default function VersionCompare({ name }: { name: string }) {
         </thead>
         <tbody>
           {data.map((r) => (
-            <tr key={r.version} className="border-t border-ink-800">
+            <tr key={r.version} className="border-t border-border">
               <td className="px-2 py-1.5 font-medium">v{r.version}</td>
               <td className="px-2 py-1.5 text-right tabular-nums">{r.runs}</td>
               <td

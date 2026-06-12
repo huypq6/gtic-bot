@@ -24,10 +24,10 @@ export default function ParamsForm({
         const spec = schema[k];
         return (
           <label key={k} className="flex flex-col gap-1">
-            <span className="text-xs text-ink-500">
+            <span className="text-xs text-faint">
               {k}
               {spec.min !== undefined && (
-                <span className="ml-1 text-ink-700">
+                <span className="ml-1 text-faint">
                   [{spec.min}…{spec.max ?? "∞"}]
                 </span>
               )}
@@ -42,7 +42,7 @@ export default function ParamsForm({
                   [k]: e.target.value === "" ? "" : Number(e.target.value),
                 })
               }
-              className="w-24 rounded-md border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm"
+              className="w-24 rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
             />
           </label>
         );

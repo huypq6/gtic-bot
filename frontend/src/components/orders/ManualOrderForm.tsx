@@ -55,13 +55,13 @@ export default function ManualOrderForm() {
         disabled={submit.isPending || !symbol}
         className={`rounded-md px-3 py-1.5 text-sm font-semibold disabled:opacity-50 ${
           side === "BUY"
-            ? "bg-up/90 text-ink-950 hover:bg-up"
-            : "bg-down/90 text-ink-950 hover:bg-down"
+            ? "bg-up/90 text-white hover:bg-up"
+            : "bg-down/90 text-white hover:bg-down"
         }`}
       >
         {side} {symbol}
       </button>
-      {mark != null && <span className="text-xs text-ink-500">mark {mark.toFixed(2)}</span>}
+      {mark != null && <span className="text-xs text-faint">mark {mark.toFixed(2)}</span>}
     </div>
   );
 }
@@ -79,11 +79,11 @@ function Sel({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs text-ink-500">{label}</span>
+      <span className="text-xs text-faint">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-ink-700 bg-ink-800 px-2 py-1.5"
+        className="rounded-md border border-border bg-surface-2 px-2 py-1.5"
       >
         {options.map((o) => (
           <option key={o}>{o}</option>
@@ -104,11 +104,11 @@ function Inp({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs text-ink-500">{label}</span>
+      <span className="text-xs text-faint">{label}</span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-24 rounded-md border border-ink-700 bg-ink-800 px-2 py-1.5"
+        className="w-24 rounded-md border border-border bg-surface-2 px-2 py-1.5"
       />
     </label>
   );

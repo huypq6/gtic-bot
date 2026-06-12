@@ -1,39 +1,61 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Theme — phái sinh từ docs/logo.png ("stealth trader")
-   brand  = áo hoodie slate-violet + periwinkle highlight
-   accent = màn hình phone teal/emerald → hành động / lãi / long
-   ink    = nền tối lạnh
+   Semantic theme tokens — KHÔNG hardcode màu trong component.
+   Component dùng: bg-bg, bg-surface, bg-surface-2, border-border,
+   text-text, text-muted, text-faint, bg-primary, bg-accent,
+   text-up/text-down, text-warn...
+   Đổi sáng/tối bằng cách thêm/bỏ class `.dark` trên <html> (xem lib/theme.ts).
+   Palette phái sinh từ docs/logo.png (slate-violet + teal).
    ============================================================ */
-@theme {
-  /* Brand — slate-violet / periwinkle */
-  --color-brand-300: #b8c2d9;
-  --color-brand-400: #9aa6c4;
-  --color-brand-500: #8b9cba; /* periwinkle highlight */
-  --color-brand-600: #64667f; /* hoodie (primary) */
-  --color-brand-700: #4f5167;
-  --color-brand-800: #363746;
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-warn: var(--warn);
+}
 
-  /* Accent — teal/emerald (phone screen) */
-  --color-accent-300: #7ad3c6;
-  --color-accent-400: #5cc3b4;
-  --color-accent-500: #46a99c; /* action / positive */
-  --color-accent-600: #38887e;
+/* LIGHT (mặc định — user prefer sáng) */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #e9edf3;
+  --border: #d2d7e1;
+  --text: #1a1d28;
+  --muted: #5d6474;
+  --faint: #9aa0ad;
+  --primary: #4f5269; /* slate-violet — selected/nhấn (chữ trắng) */
+  --accent: #1f9e8a; /* teal — hành động */
+  --accent-strong: #17806f;
+  --up: #1f9e8a;
+  --down: #d83d42;
+  --warn: #b45309;
+}
 
-  /* Ink — cool dark neutrals */
-  --color-ink-950: #0c0d12; /* app background */
-  --color-ink-900: #13141b; /* surface */
-  --color-ink-850: #181a23;
-  --color-ink-800: #1f2130; /* card */
-  --color-ink-700: #2a2c3c; /* border */
-  --color-ink-500: #6c7186;
-  --color-ink-400: #9da1b3; /* muted text */
-  --color-ink-100: #e7e8ee; /* primary text */
-
-  /* Trading semantics */
-  --color-up: #46a99c; /* long / profit — teal (theo accent) */
-  --color-down: #e5544b; /* short / loss — đỏ (bổ sung, không có trong logo) */
+/* DARK */
+.dark {
+  --bg: #0c0d12;
+  --surface: #13141b;
+  --surface-2: #1f2130;
+  --border: #2a2c3c;
+  --text: #e7e8ee;
+  --muted: #9da1b3;
+  --faint: #6c7186;
+  --primary: #5b6079;
+  --accent: #46a99c;
+  --accent-strong: #5cc3b4;
+  --up: #46a99c;
+  --down: #e5544b;
+  --warn: #fbbf24;
 }
 
 html,
@@ -44,8 +66,8 @@ body,
 
 body {
   margin: 0;
-  background-color: var(--color-ink-950);
-  color: var(--color-ink-100);
+  background-color: var(--bg);
+  color: var(--text);
   font-family:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }

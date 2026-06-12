@@ -10,7 +10,7 @@ export default function FeedBanner() {
   return (
     <div
       className={`flex items-center gap-2 px-4 py-1.5 text-sm ${
-        down ? "bg-down/20 text-down" : "bg-brand-600/20 text-brand-300"
+        down ? "bg-down/20 text-down" : "bg-primary/20 text-muted"
       }`}
     >
       {down ? <AlertTriangle className="h-4 w-4" /> : <Wifi className="h-4 w-4" />}

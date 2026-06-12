@@ -23,13 +23,13 @@ export default function Watchlist({ symbols, active, onSelect }: Props) {
               onClick={() => onSelect(sym)}
               className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition ${
                 sym === active
-                  ? "border-brand-600 bg-ink-800"
-                  : "border-transparent hover:bg-ink-850"
+                  ? "border-primary bg-surface-2"
+                  : "border-transparent hover:bg-surface-2"
               }`}
             >
-              <span className="font-medium text-ink-100">{sym}</span>
+              <span className="font-medium text-text">{sym}</span>
               <span className="text-right">
-                <span className="block text-sm tabular-nums text-ink-100">
+                <span className="block text-sm tabular-nums text-text">
                   {t ? fmt(t.price) : "—"}
                 </span>
                 {t && (

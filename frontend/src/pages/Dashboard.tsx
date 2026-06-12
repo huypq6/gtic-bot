@@ -48,8 +48,8 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-      <aside className="border-b border-ink-700 p-3 md:w-64 md:border-b-0 md:border-r">
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">
+      <aside className="border-b border-border p-3 md:w-64 md:border-b-0 md:border-r">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-faint">
           Watchlist
         </h2>
         {watchSymbols && <Watchlist symbols={watchSymbols} active={symbol} onSelect={setSymbol} />}
@@ -58,14 +58,14 @@ export default function Dashboard() {
       <main className="flex min-h-0 flex-1 flex-col p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-accent-500" />
+            <TrendingUp className="h-4 w-4 text-accent" />
             <span className="font-semibold">{symbol || "—"}</span>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowEma((v) => !v)}
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
-                showEma ? "bg-brand-600 text-ink-100" : "text-ink-400 hover:bg-ink-800"
+                showEma ? "bg-primary text-white" : "text-muted hover:bg-surface-2"
               }`}
             >
               EMA 9/21
@@ -75,7 +75,7 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-        <div className="min-h-0 flex-1 rounded-xl border border-ink-700 bg-ink-900 p-2">
+        <div className="min-h-0 flex-1 rounded-xl border border-border bg-surface p-2">
           {symbol && tf && (
             <CandleChart symbol={symbol} tf={tf} showEma={showEma} reloadToken={reloadToken} />
           )}

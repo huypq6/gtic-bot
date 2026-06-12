@@ -15,6 +15,8 @@ import {
 import { loadHistory, toBar } from "../../lib/datafeed";
 import { ema } from "../../lib/indicators";
 import { klineKey, useWsStore } from "../../lib/ws";
+import { chartColors } from "../../lib/chartTheme";
+import { useTheme } from "../../lib/theme";
 
 interface Props {
   symbol: string;
@@ -22,15 +24,6 @@ interface Props {
   showEma: boolean;
   reloadToken?: number; // bump để load lại lịch sử (sau khi sync xong)
 }
-
-const COLORS = {
-  up: "#46a99c",
-  down: "#e5544b",
-  text: "#9da1b3",
-  grid: "#1f2130",
-  emaFast: "#8b9cba",
-  emaSlow: "#5cc3b4",
-};
 
 export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,32 +35,34 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
   const markersApiRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const markersRef = useRef<SeriesMarker<Time>[]>([]);
   const processedOrdersRef = useRef(0);
+  const theme = useTheme((s) => s.theme);
 
   // Tạo chart 1 lần.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    const c = chartColors();
     const chart = createChart(el, {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: COLORS.text,
+        textColor: c.text,
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: COLORS.grid },
-        horzLines: { color: COLORS.grid },
+        vertLines: { color: c.grid },
+        horzLines: { color: c.grid },
       },
-      rightPriceScale: { borderColor: COLORS.grid },
-      timeScale: { borderColor: COLORS.grid, timeVisible: true },
+      rightPriceScale: { borderColor: c.grid },
+      timeScale: { borderColor: c.grid, timeVisible: true },
       autoSize: true,
     });
     chartRef.current = chart;
     candleRef.current = chart.addSeries(CandlestickSeries, {
-      upColor: COLORS.up,
-      downColor: COLORS.down,
+      upColor: c.up,
+      downColor: c.down,
       borderVisible: false,
-      wickUpColor: COLORS.up,
-      wickDownColor: COLORS.down,
+      wickUpColor: c.up,
+      wickDownColor: c.down,
     });
     markersApiRef.current = createSeriesMarkers(candleRef.current, []);
     return () => {
@@ -99,17 +94,18 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
   function redrawEma() {
     const chart = chartRef.current;
     if (!chart) return;
+    const c = chartColors();
     if (showEma) {
       if (!emaFastRef.current)
         emaFastRef.current = chart.addSeries(LineSeries, {
-          color: COLORS.emaFast,
+          color: c.emaFast,
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
         });
       if (!emaSlowRef.current)
         emaSlowRef.current = chart.addSeries(LineSeries, {
-          color: COLORS.emaSlow,
+          color: c.emaSlow,
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
@@ -129,6 +125,27 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
   }
   useEffect(redrawEma, [showEma]);
 
+  // Áp lại màu khi đổi theme sáng/tối (không phá data/series).
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const c = chartColors();
+    chart.applyOptions({
+      layout: { textColor: c.text },
+      grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
+      rightPriceScale: { borderColor: c.grid },
+      timeScale: { borderColor: c.grid },
+    });
+    candleRef.current?.applyOptions({
+      upColor: c.up,
+      downColor: c.down,
+      wickUpColor: c.up,
+      wickDownColor: c.down,
+    });
+    emaFastRef.current?.applyOptions({ color: c.emaFast });
+    emaSlowRef.current?.applyOptions({ color: c.emaSlow });
+  }, [theme]);
+
   // Marker vào/ra lệnh (US-04) — từ order WS, đặt tại nến cuối khi khớp.
   const orders = useWsStore((s) => s.orders);
   useEffect(() => {
@@ -136,6 +153,7 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
     if (!last) return;
     const delta = orders.length - processedOrdersRef.current;
     if (delta <= 0) return;
+    const c = chartColors();
     const fresh = orders.slice(0, delta).reverse(); // cũ → mới
     for (const o of fresh) {
       if (o.symbol !== symbol || o.status !== "FILLED") continue;
@@ -143,7 +161,7 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
       markersRef.current.push({
         time: last.time as Time,
         position: buy ? "belowBar" : "aboveBar",
-        color: buy ? COLORS.up : COLORS.down,
+        color: buy ? c.up : c.down,
         shape: buy ? "arrowUp" : "arrowDown",
         text: o.side,
       });
