@@ -28,7 +28,7 @@
 |---|---|---|---|---|
 | **P0** | Scaffold: monorepo, uv, Docker dev/prod, Alembic+Timescale, single-endpoint | — | ✅ | 100% |
 | **P1** | Market feed + Chart realtime | US-01,02,03,24,25 | ✅ | 100% |
-| **P2** | Strategy base + Paper executor | US-05,12,16 | ⬜ | 0% |
+| **P2** | Strategy base + Paper executor | US-05,12,16 | ✅ | 100% |
 | **P3** | Order Manager + can thiệp tay + audit | US-04,17,18,19,20,21 | ⬜ | 0% |
 | **P4** | Backtest (vectorbt) | US-09,10,11 | ⬜ | 0% |
 | **P5** | Strategy versioning + params UI | US-06,07,08 | ⬜ | 0% |
@@ -184,31 +184,35 @@ gtic-bot/
 **User Stories:** US-05 (viết/sửa strategy + reload), US-12 (paper), US-16 (positions realtime).
 
 ### Backend
-- [ ] `app/strategy/base.py` — dataclass `Signal`, `Context`, `Position` + `Strategy(ABC)` với `name/version/default_params` + `on_candle(ctx)->list[Signal]` (đúng SRS §3). **Strategy chỉ đọc Context, không gọi API.**
-- [ ] `app/strategy/registry.py` — decorator `@register`; quét `strategies/*.py`; đọc metadata; **sync vào bảng `strategy`** (name+version unique). Reload được (US-05).
-- [ ] `app/strategy/strategies/ema_cross.py` + `rsi_rev.py` — 2 strategy mẫu.
-- [ ] `app/execution/base.py` — `Executor(ABC)`: `submit/cancel/modify_sltp`.
-- [ ] `app/execution/paper.py` — **PaperExecutor**: khớp MARKET ngay theo giá WS hiện tại; LIMIT chờ giá chạm; cập nhật `order` + `position` + PnL; ghi DB. Không gọi sàn.
-- [ ] `app/strategy/runner.py` — **StrategyRunner**: 1 asyncio task/bot; subscribe `kline.{symbol}.{tf}` từ bus → dựng `Context` (giá, candles, position, indicators) → gọi `on_candle` → đẩy `Signal` cho Executor → broadcast `order`/`position` qua WSGateway.
-- [ ] `app/orders/models.py` — models `strategy`, `bot`, `order`, `position` + migrations (DDL SRS §4).
-- [ ] `app/api/routes.py` — `GET /api/strategies`, `POST /api/bots`, `PATCH /api/bots/{id}` (pause/resume/stop/params), `DELETE /api/bots/{id}`, `GET /api/positions`.
-- [ ] WSGateway thêm broadcast `{type:"order"}`, `{type:"position"}` (PnL realtime).
+- [x] `app/strategy/base.py` — `Signal`, `Context`, `Position` + `Strategy(ABC)` (SRS §3). Strategy chỉ đọc Context.
+- [x] `app/execution/paper_engine.py` — **PaperEngine** thuần (TDD): market/limit fill, flip, SL/TP, PnL long/short, fee. Tách khỏi DB để test kỹ.
+- [x] `app/strategy/registry.py` — `@register` + `discover()` quét `strategies/` + `sync_to_db` (name+version unique). `app/strategy/ta.py` (EMA/RSI).
+- [x] `app/strategy/strategies/ema_cross.py` + `rsi_rev.py` — 2 strategy mẫu + `param_schema` (cho UI P5).
+- [x] `app/execution/base.py` `Executor(ABC)` (submit/cancel/modify_sltp/on_price/current_position).
+- [x] `app/execution/paper.py` — **PaperExecutor**: bọc engine + persist `order`/`position` + broadcast `order.update`/`position` (PnL realtime). Không gọi sàn.
+- [x] `app/strategy/runner.py` — **StrategyRunner** (1 task/bot, seed nến lịch sử, on_price mỗi tick + on_candle khi nến đóng, PAUSED không sinh tín hiệu) + **BotManager** (vòng đời, restore bot RUNNING khi restart).
+- [x] `app/orders/models.py` — `strategy/bot/order/position` + migration `0002` (autogenerate, đã sửa bỏ drop index Timescale).
+- [x] `app/api/trading.py` — `GET /strategies`, `GET/POST /bots`, `PATCH/DELETE /bots/{id}`, `GET /positions`, `GET /orders`.
+- [x] WSGateway broadcast `{type:"order"}`, `{type:"position"}` (qua firehose có sẵn).
 
 ### Frontend
-- [ ] `pages/Strategies.tsx` — list strategy (từ file registry); tạo bot {strategy, symbol, tf, mode=PAPER, params}.
-- [ ] `components/orders/PositionsTable.tsx` — bảng vị thế mở + PnL realtime (@tanstack/react-table) (US-16).
-- [ ] Badge mode (PAPER = xanh) — chuẩn bị ma trận màu US-15.
-- [ ] Nút pause/resume/stop bot (gọi PATCH).
+- [x] Router (react-router) + `AppLayout` (nav Chart/Trading, feed status) — tách Dashboard khỏi App.
+- [x] `pages/Trading.tsx` — list strategy, tạo bot {strategy, symbol, tf, PAPER, params}, list bots + pause/resume/stop/delete.
+- [x] `components/orders/PositionsTable.tsx` — vị thế mở + **PnL realtime** (seed REST + overlay WS store) (US-16).
+- [x] `components/ModeBadge.tsx` — PAPER teal / TESTNET amber / LIVE đỏ (US-15 ma trận màu).
+- [x] WS store mở rộng: `positions` (key bot_id), `orders`.
 
 ### Tests
-- [ ] `test_paper_executor.py` — MARKET khớp đúng giá; LIMIT khớp khi chạm; PnL long/short đúng; SL/TP đóng vị thế.
-- [ ] `test_strategy_ema_cross.py` / `test_strategy_rsi_rev.py` — feed chuỗi candle giả → assert đúng Signal.
-- [ ] `test_runner.py` — runner gọi on_candle đúng nhịp, đẩy signal sang executor (mock).
+- [x] `test_paper_engine.py` (15) — market/limit, flip, SL/TP, PnL long/short, fee, unrealized.
+- [x] `test_strategies.py` (9) — TA (ema/rsi), ema_cross buy/sell, rsi_rev oversold/overbought, registry discover.
+- [x] `test_paper_executor.py` (1) — PaperExecutor + DB thật: BUY→TP → position CLOSED pnl đúng + broadcast OPEN/order/CLOSED (skip nếu không có DB).
 
 ### Definition of Done
-- Tạo bot paper EMA-cross trên 1 cặp → vào/ra lệnh tự động theo nến thật; positions + PnL nhảy realtime trên UI.
-- Thêm file strategy mới + reload → xuất hiện trong `/api/strategies`.
-- pytest paper + strategy xanh.
+- [x] Tạo bot paper từ UI → bot RUNNING; pause/resume/stop/delete hoạt động; bot restore sau restart. **Verified screenshot Trading page.**
+- [x] Engine→persist→broadcast đúng (test DB) → positions + PnL realtime trên UI (PositionsTable subscribe WS).
+- [x] Thêm strategy = thêm file + reload registry → `/api/strategies` (đã verify 2 strategy + param_schema).
+- [x] 46 pytest xanh, ruff sạch, frontend build OK.
+- [x] **Bug fix khi dogfood**: SPA deep-link `/trade` 404 ở prod-static → thêm `SPAStaticFiles` fallback index.html.
 
 ---
 
@@ -414,5 +418,6 @@ docker compose up --build                            # build frontend → FastAP
 | 2026-06-12 | P0 | ✅ Scaffold xong: uv venv + backend (config/db/main/health), Alembic async + Timescale init SQL, frontend React19/Vite6/Tailwind v4 + proxy, Dockerfile multi-stage + compose dev/prod, CI. Verified: pytest/ruff xanh, prod single-endpoint serve UI+API. (Còn: `docker compose up` thực tế + README.) |
 | 2026-06-12 | UI | 🎨 Logo + theme phái sinh từ docs/logo.png (brand slate-violet, accent teal, dark-first). |
 | 2026-06-12 | P1 | ✅ Market feed + chart realtime: EventBus, MarketFeed (Binance WS live), kline hypertable (verified Timescale), WSGateway /ws, klines sync/read REST. Frontend: chart lightweight-charts + EMA 9/21, watchlist live, feed banner, responsive (desktop+mobile verified screenshot). Fix: batch upsert (asyncpg 32767 param limit). 21 pytest xanh. RSI/MACD subpane hoãn. |
+| 2026-06-12 | P2 | ✅ Strategy base + Paper executor: interface Strategy/Context/Signal/Executor chạy chung 4 mode; PaperEngine (TDD 15 test), registry file-based + ema_cross/rsi_rev, StrategyRunner + BotManager (restore khi restart), models strategy/bot/order/position (migration 0002), API bots/strategies/positions. Frontend: router + Trading page (tạo bot, pause/resume/stop, PositionsTable realtime PnL, ModeBadge). **Verified LIVE: bot tự mở LONG từ nến Binance thật, PnL realtime trên UI.** Fix: SPA fallback /trade (prod-static 404), delete bot giữ history (FK). 46 pytest xanh. |
 
 <!-- Thêm dòng mỗi khi hoàn thành milestone; nhớ cập nhật cột Status + % ở Bảng tiến độ tổng. -->

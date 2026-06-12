@@ -16,8 +16,7 @@ from app.db import Base
 
 # Import models để chúng đăng ký vào Base.metadata (autogenerate thấy được).
 from app.market import models as _market_models  # noqa: F401,E402
-
-# P2+: from app.orders import models  # noqa: F401
+from app.orders import models as _orders_models  # noqa: F401,E402
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

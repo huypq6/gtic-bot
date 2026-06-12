@@ -24,10 +24,37 @@ export interface KlineMsg {
 
 export const klineKey = (symbol: string, tf: string) => `${symbol}.${tf}`;
 
+export interface PositionMsg {
+  bot_id: number;
+  mode: string;
+  symbol: string;
+  side: string; // LONG | SHORT
+  qty: number;
+  entry_price: number;
+  price: number;
+  pnl: number;
+  sl: number | null;
+  tp: number | null;
+  status: string; // OPEN | CLOSED
+}
+
+export interface OrderMsg {
+  bot_id: number;
+  mode: string;
+  symbol: string;
+  side: string;
+  order_type: string;
+  qty: number;
+  price: number;
+  status: string;
+}
+
 interface WsState {
   feed: FeedStatus;
   tickers: Record<string, Ticker>;
   lastKline: Record<string, KlineMsg>; // key = symbol.tf
+  positions: Record<number, PositionMsg>; // key = bot_id
+  orders: OrderMsg[]; // gần nhất trước
   connected: boolean;
   connect: () => void;
 }
@@ -39,6 +66,8 @@ export const useWsStore = create<WsState>((set) => ({
   feed: "CONNECTING",
   tickers: {},
   lastKline: {},
+  positions: {},
+  orders: [],
   connected: false,
 
   connect: () => {
@@ -60,6 +89,15 @@ export const useWsStore = create<WsState>((set) => ({
         set((s) => ({
           lastKline: { ...s.lastKline, [klineKey(m.symbol, m.tf)]: m as KlineMsg },
         }));
+      } else if (m.type === "position") {
+        set((s) => {
+          const positions = { ...s.positions };
+          if (m.status === "CLOSED") delete positions[m.bot_id];
+          else positions[m.bot_id] = m as PositionMsg;
+          return { positions };
+        });
+      } else if (m.type === "order") {
+        set((s) => ({ orders: [m as OrderMsg, ...s.orders].slice(0, 100) }));
       } else if (m.type === "feed") {
         set({ feed: m.status as FeedStatus });
       }

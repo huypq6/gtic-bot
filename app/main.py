@@ -15,14 +15,17 @@ from pathlib import Path
 
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.routes import router as api_router
+from app.api.trading import router as trading_router
 from app.api.ws import WSGateway
 from app.config import settings
 from app.db import async_session
 from app.market.bus import EventBus
 from app.market.feed import MarketFeed
 from app.market.store import persist_closed_klines
+from app.strategy.runner import BotManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,10 +37,12 @@ async def lifespan(app: FastAPI):
     bus = EventBus()
     gateway = WSGateway(bus)
     feed = MarketFeed(bus, symbols=settings.default_symbols, tf=settings.default_tf)
+    bot_manager = BotManager(bus, async_session)
 
     app.state.bus = bus
     app.state.gateway = gateway
     app.state.feed = feed
+    app.state.bot_manager = bot_manager
 
     tasks = [
         asyncio.create_task(gateway.track_feed_status(), name="feed-status-tracker"),
@@ -49,18 +54,45 @@ async def lifespan(app: FastAPI):
                 persist_closed_klines(bus, async_session), name="kline-persister"
             )
         )
+        await _restore_running_bots(bot_manager)
     try:
         yield
     finally:
+        await bot_manager.stop_all()
         feed.stop()
         for t in tasks:
             t.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
 
 
+async def _restore_running_bots(bot_manager: BotManager) -> None:
+    """Khởi động lại các bot đang RUNNING sau khi process restart."""
+    from sqlalchemy import select
+
+    from app.orders.models import Bot, StrategyModel
+
+    try:
+        async with async_session() as s:
+            rows = (
+                await s.execute(
+                    select(Bot, StrategyModel)
+                    .join(StrategyModel, Bot.strategy_id == StrategyModel.id)
+                    .where(Bot.status == "RUNNING")
+                )
+            ).all()
+        for bot, strat in rows:
+            await bot_manager.start_bot(
+                bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode
+            )
+            logging.info("restore bot %s (%s)", bot.id, strat.name)
+    except Exception:  # noqa: BLE001
+        logging.exception("không restore được bot đang chạy")
+
+
 app = FastAPI(title="GTIC Trading Bot", version="0.1.0", lifespan=lifespan)
 
 app.include_router(api_router)
+app.include_router(trading_router)
 
 
 @app.websocket("/ws")
@@ -68,6 +100,18 @@ async def ws_endpoint(websocket: WebSocket) -> None:
     await websocket.app.state.gateway.handle(websocket)
 
 
+class SPAStaticFiles(StaticFiles):
+    """Serve static; fallback index.html cho client-side routes (vd /trade)."""
+
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code == 404:
+                return await super().get_response("index.html", scope)
+            raise
+
+
 # Prod: serve built frontend. Chỉ mount khi dist tồn tại (dev dùng Vite proxy).
 if FRONTEND_DIST.is_dir():
-    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+    app.mount("/", SPAStaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

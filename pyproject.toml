@@ -51,3 +51,4 @@ ignore = ["B008"]
 
 [tool.ruff.lint.per-file-ignores]
 "alembic/env.py" = ["E402"]  # import model sau khi cấu hình context
+"alembic/versions/*" = ["E501"]  # migration autogenerate — không format lại

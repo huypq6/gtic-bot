@@ -1,0 +1,202 @@
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pause, Play, Square, Trash2 } from "lucide-react";
+import {
+  createBot,
+  deleteBot,
+  fetchBots,
+  fetchConfig,
+  fetchStrategies,
+  patchBot,
+} from "../lib/api";
+import ModeBadge from "../components/ModeBadge";
+import PositionsTable from "../components/orders/PositionsTable";
+
+export default function Trading() {
+  const qc = useQueryClient();
+  const { data: strategies } = useQuery({ queryKey: ["strategies"], queryFn: fetchStrategies });
+  const { data: config } = useQuery({ queryKey: ["config"], queryFn: fetchConfig });
+  const { data: bots } = useQuery({ queryKey: ["bots"], queryFn: fetchBots, refetchInterval: 5000 });
+
+  const [stratId, setStratId] = useState<number | "">("");
+  const [symbol, setSymbol] = useState("");
+  const [tf, setTf] = useState("");
+
+  useEffect(() => {
+    if (strategies?.length && stratId === "") setStratId(strategies[0].id);
+  }, [strategies, stratId]);
+  useEffect(() => {
+    if (config && !symbol) {
+      setSymbol(config.symbols[0]);
+      setTf(config.default_tf);
+    }
+  }, [config, symbol]);
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["bots"] });
+    qc.invalidateQueries({ queryKey: ["positions"] });
+  };
+
+  const create = useMutation({
+    mutationFn: () => {
+      const strat = strategies!.find((s) => s.id === stratId)!;
+      return createBot({
+        strategy_id: strat.id,
+        symbol,
+        tf,
+        mode: "PAPER",
+        params: strat.default_params,
+      });
+    },
+    onSuccess: refresh,
+  });
+
+  const setStatus = useMutation({
+    mutationFn: (v: { id: number; status: string }) => patchBot(v.id, { status: v.status }),
+    onSuccess: refresh,
+  });
+  const remove = useMutation({ mutationFn: (id: number) => deleteBot(id), onSuccess: refresh });
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+      {/* Tạo bot */}
+      <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+        <h2 className="mb-3 text-sm font-semibold">Tạo bot (PAPER)</h2>
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="Strategy">
+            <select
+              value={stratId}
+              onChange={(e) => setStratId(Number(e.target.value))}
+              className="rounded-md border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm"
+            >
+              {strategies?.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} v{s.version}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Symbol">
+            <select
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              className="rounded-md border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm"
+            >
+              {config?.symbols.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="TF">
+            <select
+              value={tf}
+              onChange={(e) => setTf(e.target.value)}
+              className="rounded-md border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm"
+            >
+              {config?.timeframes.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </Field>
+          <button
+            onClick={() => create.mutate()}
+            disabled={create.isPending || stratId === ""}
+            className="rounded-md bg-accent-500 px-3 py-1.5 text-sm font-semibold text-ink-950 hover:bg-accent-400 disabled:opacity-50"
+          >
+            {create.isPending ? "Đang tạo…" : "Tạo & chạy"}
+          </button>
+        </div>
+      </section>
+
+      {/* Bots */}
+      <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+        <h2 className="mb-3 text-sm font-semibold">Bots</h2>
+        {!bots?.length ? (
+          <p className="text-sm text-ink-500">Chưa có bot.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {bots.map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-ink-800 bg-ink-850 px-3 py-2"
+              >
+                <div className="flex items-center gap-3">
+                  <ModeBadge mode={b.mode} />
+                  <span className="font-medium">{b.strategy}</span>
+                  <span className="text-ink-400">
+                    {b.symbol} · {b.tf}
+                  </span>
+                  <StatusDot status={b.status} />
+                </div>
+                <div className="flex items-center gap-1">
+                  {b.status !== "RUNNING" && (
+                    <IconBtn title="Run" onClick={() => setStatus.mutate({ id: b.id, status: "RUNNING" })}>
+                      <Play className="h-4 w-4" />
+                    </IconBtn>
+                  )}
+                  {b.status === "RUNNING" && (
+                    <IconBtn title="Pause" onClick={() => setStatus.mutate({ id: b.id, status: "PAUSED" })}>
+                      <Pause className="h-4 w-4" />
+                    </IconBtn>
+                  )}
+                  <IconBtn title="Stop" onClick={() => setStatus.mutate({ id: b.id, status: "STOPPED" })}>
+                    <Square className="h-4 w-4" />
+                  </IconBtn>
+                  <IconBtn title="Delete" onClick={() => remove.mutate(b.id)}>
+                    <Trash2 className="h-4 w-4 text-down" />
+                  </IconBtn>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Positions realtime */}
+      <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+        <h2 className="mb-3 text-sm font-semibold">Vị thế mở (realtime PnL)</h2>
+        <PositionsTable />
+      </section>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs text-ink-500">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function IconBtn({
+  title,
+  onClick,
+  children,
+}: {
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      className="rounded-md p-1.5 text-ink-300 hover:bg-ink-800 hover:text-ink-100"
+    >
+      {children}
+    </button>
+  );
+}
+
+function StatusDot({ status }: { status: string }) {
+  const color =
+    status === "RUNNING" ? "bg-up" : status === "PAUSED" ? "bg-amber-400" : "bg-ink-500";
+  return (
+    <span className="flex items-center gap-1 text-xs text-ink-400">
+      <span className={`h-2 w-2 rounded-full ${color}`} />
+      {status}
+    </span>
+  );
+}
