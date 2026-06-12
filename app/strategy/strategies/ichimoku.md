@@ -9,9 +9,13 @@
 ### Nghiên cứu (skill strategy-research)
 - **Sweep v1** (`scripts/sweep_ichimoku.py`): bộ tốt `conv=9 base=52 span_b=52` → PnL TB +15% (3/4 thị trường),
   win ~36% NHƯNG **maxDD 33–70%** → quá cao cho mục tiêu DD thấp.
-- **v2 trailing**: cắt DD rõ (BTC 1h 180d: 28%→**17%** vẫn giữ +11.5% ở `atr_mult=2`), nhưng là dao 2 lưỡi —
-  ETH bị cắt cả lệnh thắng lớn (27.6%→7.8% ở ×1.5, âm ở ×2). DD còn ~15–17% (vẫn > mục tiêu ~10%).
-  `atr_mult` nhỏ = DD thấp nhưng cắt PnL trend; cần sweep + walk-forward để chốt.
+- **v2 trailing**: cắt DD rõ nhưng dao 2 lưỡi (cũng cắt lệnh thắng lớn). `atr_mult` nhỏ = DD thấp
+  nhưng cắt PnL trend; cần sweep + walk-forward để chốt.
+- **Khung TF (quyết định)**: ichimoku v2 trail×2, bộ conv9/base52/spanB52, cửa sổ chính xác:
+  - **15m: ÂM NẶNG** (BTC −15.6%, ETH −23.3%; 56–66 lệnh whipsaw) → KHÔNG dùng 15m.
+  - **1h: BTC +26.8%, win 45%, maxDD 7.1%** (chạm cả 3 mục tiêu in-sample); ETH −1.9%.
+  - 4h: BTC +31% (DD 15.6%), ETH +9.3% (DD 35.7%) — lời nhưng DD cao.
+  - ⇒ Trend-following cần trend dài: chạy **1h/4h**, ngược hẳn ict_po3 (intraday 15m).
 
 ## Ý tưởng
 
