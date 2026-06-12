@@ -66,6 +66,19 @@ export interface PositionRow {
 }
 
 export const fetchStrategies = () => getJson<StrategyInfo[]>("/api/strategies");
+
+export interface VersionCompareRow {
+  version: string;
+  runs: number;
+  best_pnl_pct: number | null;
+  last_pnl_pct: number | null;
+  last_winrate: number | null;
+  last_max_dd: number | null;
+  last_n_trades: number | null;
+}
+
+export const fetchCompare = (name: string) =>
+  getJson<VersionCompareRow[]>(`/api/strategies/${name}/compare`);
 export const fetchBots = () => getJson<BotInfo[]>("/api/bots");
 export const fetchPositions = () => getJson<PositionRow[]>("/api/positions");
 

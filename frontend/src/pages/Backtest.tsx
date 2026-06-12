@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchConfig, fetchStrategies, runBacktest, type BacktestResult } from "../lib/api";
 import EquityCurve from "../components/backtest/EquityCurve";
+import VersionCompare from "../components/strategy/VersionCompare";
 
 export default function Backtest() {
+  const qc = useQueryClient();
   const { data: strategies } = useQuery({ queryKey: ["strategies"], queryFn: fetchStrategies });
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: fetchConfig });
 
@@ -34,8 +36,10 @@ export default function Backtest() {
         capital: Number(capital),
         fee_rate: Number(fee),
       }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["compare"] }),
   });
   const res: BacktestResult | undefined = run.data;
+  const stratName = strategies?.find((s) => s.id === stratId)?.name ?? "";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
@@ -80,6 +84,13 @@ export default function Backtest() {
         </div>
         {run.isError && <p className="mt-2 text-sm text-down">Lỗi: {String(run.error)}</p>}
       </section>
+
+      {stratName && (
+        <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+          <h3 className="mb-2 text-sm font-semibold">So sánh version — {stratName}</h3>
+          <VersionCompare name={stratName} />
+        </section>
+      )}
 
       {res && (
         <>

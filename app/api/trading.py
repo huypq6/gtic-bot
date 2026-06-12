@@ -8,9 +8,18 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
-from app.orders.models import Bot, OrderModel, PositionModel, StrategyModel
+from app.orders.models import BacktestRun, Bot, OrderModel, PositionModel, StrategyModel
 from app.strategy.base import Signal
-from app.strategy.registry import all_strategies, discover, sync_to_db
+from app.strategy.params import ParamError, validate_params
+from app.strategy.registry import all_strategies, discover, get, sync_to_db
+
+
+def _schema_for(strat: StrategyModel) -> dict:
+    discover()
+    try:
+        return getattr(get(strat.name, strat.version), "param_schema", {})
+    except KeyError:
+        return {}
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -37,6 +46,41 @@ async def list_strategies(session: AsyncSession = Depends(get_session)) -> list[
         }
         for r in rows
     ]
+
+
+@router.get("/strategies/{name}/compare")
+async def compare_versions(
+    name: str, session: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """So sánh hiệu năng các version (gộp backtest_run) theo version (US-08)."""
+    strats = (
+        await session.execute(
+            select(StrategyModel).where(StrategyModel.name == name).order_by(StrategyModel.version)
+        )
+    ).scalars().all()
+    out = []
+    for s in strats:
+        runs = (
+            await session.execute(
+                select(BacktestRun)
+                .where(BacktestRun.strategy_id == s.id)
+                .order_by(BacktestRun.id.desc())
+            )
+        ).scalars().all()
+        best = max((float(r.pnl_pct) for r in runs if r.pnl_pct is not None), default=None)
+        last = runs[0] if runs else None
+        out.append(
+            {
+                "version": s.version,
+                "runs": len(runs),
+                "best_pnl_pct": best,
+                "last_pnl_pct": float(last.pnl_pct) if last and last.pnl_pct is not None else None,
+                "last_winrate": float(last.winrate) if last and last.winrate is not None else None,
+                "last_max_dd": float(last.max_dd) if last and last.max_dd is not None else None,
+                "last_n_trades": last.n_trades if last else None,
+            }
+        )
+    return out
 
 
 # ---------------- bots ----------------
@@ -78,9 +122,13 @@ async def create_bot(
         raise HTTPException(404, "strategy không tồn tại")
     if body.mode != "PAPER":
         raise HTTPException(400, f"mode {body.mode} chưa hỗ trợ (P2: PAPER)")
+    try:
+        params = validate_params(_schema_for(strat), body.params)
+    except ParamError as e:
+        raise HTTPException(422, str(e)) from e
     bot = Bot(
         strategy_id=body.strategy_id, symbol=body.symbol, tf=body.tf,
-        mode=body.mode, params=body.params, status="RUNNING",
+        mode=body.mode, params=params, status="RUNNING",
     )
     session.add(bot)
     await session.commit()
@@ -102,7 +150,11 @@ async def patch_bot(
     mgr = request.app.state.bot_manager
 
     if body.params is not None:
-        bot.params = body.params
+        strat = await session.get(StrategyModel, bot.strategy_id)
+        try:
+            bot.params = validate_params(_schema_for(strat), body.params)
+        except ParamError as e:
+            raise HTTPException(422, str(e)) from e
     if body.status is not None:
         if body.status not in ("RUNNING", "PAUSED", "STOPPED"):
             raise HTTPException(400, "status không hợp lệ")

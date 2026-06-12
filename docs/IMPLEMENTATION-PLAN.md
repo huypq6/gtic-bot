@@ -31,7 +31,7 @@
 | **P2** | Strategy base + Paper executor | US-05,12,16 | ✅ | 100% |
 | **P3** | Order Manager + can thiệp tay + audit | US-04,17,18,19,20,21 | ✅ | 100% |
 | **P4** | Backtest (vectorbt) | US-09,10,11 | ✅ | 100% |
-| **P5** | Strategy versioning + params UI | US-06,07,08 | ⬜ | 0% |
+| **P5** | Strategy versioning + params UI | US-06,07,08 | ✅ | 100% |
 | **P6** | Testnet integration | US-13,15 | ⬜ | 0% |
 | **P7** | Scanner đề xuất cặp | US-22,23 | ⬜ | 0% |
 | **P8** | Live + rào chắn an toàn | US-14,26,27 | ⬜ | 0% |
@@ -282,22 +282,24 @@ gtic-bot/
 **User Stories:** US-06 (params UI), US-07 (nhiều version chạy song song), US-08 (so sánh version).
 
 ### Backend
-- [ ] Registry: `version` trong file là **nguồn sự thật**; sync nhiều (name, version) → bảng `strategy`. Nhiều bot chạy version khác nhau song song (US-07).
-- [ ] Schema params: strategy khai báo `param_schema` (kiểu/min/max/default) để UI render form + validate.
-- [ ] `app/api/routes.py` — `GET /api/strategies/{id}/params` (schema), so sánh: `GET /api/strategies/{name}/compare` (gộp backtest_run theo version).
-- [ ] PATCH bot params: validate theo schema trước khi lưu.
+- [x] Registry: `version` là nguồn sự thật; sync nhiều (name, version). Thêm **ema_cross v2** (gap-filter) → 2 version song song (US-07).
+- [x] `param_schema` (kiểu/min/max/default) trả trong `GET /strategies`; `app/strategy/params.py validate_params`.
+- [x] `GET /strategies/{name}/compare` — gộp backtest_run theo version (US-08).
+- [x] Validate params theo schema khi tạo/PATCH bot (ngoài khoảng → 422).
 
 ### Frontend
-- [ ] `components/strategy/ParamsForm.tsx` — render từ param_schema (react-hook-form + zod), lưu DB (US-06).
-- [ ] Chọn version khi tạo bot (US-07).
-- [ ] `components/strategy/VersionCompare.tsx` — bảng so sánh PnL/winrate/drawdown theo version (US-08).
+- [x] `components/strategy/ParamsForm.tsx` — render input từ param_schema (min/max hint) (US-06).
+- [x] Chọn version khi tạo bot (dropdown "name vX") + form params (US-07).
+- [x] `components/strategy/VersionCompare.tsx` — bảng so sánh PnL/winrate/maxDD/trades theo version (US-08), trong trang Backtest.
 
 ### Tests
-- [ ] `test_registry_versioning.py` — 2 version cùng name sync đúng, unique (name,version); params override default đúng.
-- [ ] `test_params_validation.py` — params ngoài min/max bị từ chối.
+- [x] `test_params.py` (8) — validate (default/coerce/min/max/type/extra), 2 version registered, v2 gap-filter chặn cross nhỏ.
 
 ### Definition of Done
-- Chỉnh params từ UI → bot dùng params mới (không sửa code); 2 version chạy song song; bảng so sánh hiển thị đúng.
+- [x] Chỉnh params từ UI → bot dùng params mới (không sửa code); validation 422/200 (verified live).
+- [x] 2 version chạy song song (v1/v2 trong dropdown + backtest riêng).
+- [x] Bảng so sánh đúng (verified live: v1 -20%/91 trades vs v2 +3.6%/1 trade — gap filter giảm overtrade; **screenshot**).
+- [x] 62 pytest xanh, ruff sạch, build OK.
 
 ---
 
@@ -422,6 +424,7 @@ docker compose up --build                            # build frontend → FastAP
 | 2026-06-12 | P0 | ✅ Scaffold xong: uv venv + backend (config/db/main/health), Alembic async + Timescale init SQL, frontend React19/Vite6/Tailwind v4 + proxy, Dockerfile multi-stage + compose dev/prod, CI. Verified: pytest/ruff xanh, prod single-endpoint serve UI+API. (Còn: `docker compose up` thực tế + README.) |
 | 2026-06-12 | UI | 🎨 Logo + theme phái sinh từ docs/logo.png (brand slate-violet, accent teal, dark-first). |
 | 2026-06-12 | P1 | ✅ Market feed + chart realtime: EventBus, MarketFeed (Binance WS live), kline hypertable (verified Timescale), WSGateway /ws, klines sync/read REST. Frontend: chart lightweight-charts + EMA 9/21, watchlist live, feed banner, responsive (desktop+mobile verified screenshot). Fix: batch upsert (asyncpg 32767 param limit). 21 pytest xanh. RSI/MACD subpane hoãn. |
+| 2026-06-12 | P5 | ✅ Versioning + params UI: validate_params vs param_schema (422 khi sai), ema_cross v2 (gap filter), compare API gộp backtest theo version. Frontend: ParamsForm (render từ schema), version compare table. **Verified LIVE: v1 -20%/91 trades vs v2 +3.6%/1 trade (screenshot); validation 422.** 62 pytest xanh. |
 | 2026-06-12 | P4 | ✅ Backtest (vectorbt): engine dùng chung on_candle → vbt.Portfolio.from_signals; models backtest_run/trade (migration 0004); API /backtest (threadpool); frontend page form + metrics + equity curve + trade list. **Verified LIVE: backtest 7 ngày BTC 1m, 272 trades, equity curve (screenshot).** vectorbt ở extra; Dockerfile cài extra. Fix: WS disconnect noise. 54 pytest xanh. |
 | 2026-06-12 | P3 | ✅ Order Manager + can thiệp tay + audit: OrderManager (audit ghi TRƯỚC khi act), AuditLog (migration 0003), order lifecycle NEW→FILLED/CANCELLED, ManualTrader + routing executor (bot vs tay), API close/sltp/manual-order/cancel/audit. Frontend: ManualOrderForm, Close/EditSLTP trong PositionsTable, trang Audit, chart markers. **Verified LIVE: đặt lệnh tay → sửa SL/TP → đóng tay, audit OPEN/EDIT_SLTP/CLOSE đúng thứ tự (screenshot).** 52 pytest xanh. |
 | 2026-06-12 | P2 | ✅ Strategy base + Paper executor: interface Strategy/Context/Signal/Executor chạy chung 4 mode; PaperEngine (TDD 15 test), registry file-based + ema_cross/rsi_rev, StrategyRunner + BotManager (restore khi restart), models strategy/bot/order/position (migration 0002), API bots/strategies/positions. Frontend: router + Trading page (tạo bot, pause/resume/stop, PositionsTable realtime PnL, ModeBadge). **Verified LIVE: bot tự mở LONG từ nến Binance thật, PnL realtime trên UI.** Fix: SPA fallback /trade (prod-static 404), delete bot giữ history (FK). 46 pytest xanh. |

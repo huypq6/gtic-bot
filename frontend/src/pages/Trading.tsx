@@ -12,6 +12,7 @@ import {
 import ModeBadge from "../components/ModeBadge";
 import PositionsTable from "../components/orders/PositionsTable";
 import ManualOrderForm from "../components/orders/ManualOrderForm";
+import ParamsForm from "../components/strategy/ParamsForm";
 
 export default function Trading() {
   const qc = useQueryClient();
@@ -22,10 +23,17 @@ export default function Trading() {
   const [stratId, setStratId] = useState<number | "">("");
   const [symbol, setSymbol] = useState("");
   const [tf, setTf] = useState("");
+  const [params, setParams] = useState<Record<string, unknown>>({});
+
+  const selectedStrat = strategies?.find((s) => s.id === stratId);
 
   useEffect(() => {
     if (strategies?.length && stratId === "") setStratId(strategies[0].id);
   }, [strategies, stratId]);
+  // reset params về default khi đổi strategy/version.
+  useEffect(() => {
+    if (selectedStrat) setParams({ ...selectedStrat.default_params });
+  }, [selectedStrat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (config && !symbol) {
       setSymbol(config.symbols[0]);
@@ -39,16 +47,14 @@ export default function Trading() {
   };
 
   const create = useMutation({
-    mutationFn: () => {
-      const strat = strategies!.find((s) => s.id === stratId)!;
-      return createBot({
-        strategy_id: strat.id,
+    mutationFn: () =>
+      createBot({
+        strategy_id: stratId as number,
         symbol,
         tf,
         mode: "PAPER",
-        params: strat.default_params,
-      });
-    },
+        params,
+      }),
     onSuccess: refresh,
   });
 
@@ -107,6 +113,17 @@ export default function Trading() {
             {create.isPending ? "Đang tạo…" : "Tạo & chạy"}
           </button>
         </div>
+        {selectedStrat && Object.keys(selectedStrat.param_schema ?? {}).length > 0 && (
+          <div className="mt-3 border-t border-ink-800 pt-3">
+            <p className="mb-2 text-xs text-ink-500">Params (chỉnh không cần sửa code)</p>
+            <ParamsForm
+              schema={selectedStrat.param_schema as Record<string, never>}
+              values={params}
+              onChange={setParams}
+            />
+          </div>
+        )}
+        {create.isError && <p className="mt-2 text-sm text-down">Lỗi: {String(create.error)}</p>}
       </section>
 
       {/* Bots */}
