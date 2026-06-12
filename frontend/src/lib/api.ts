@@ -92,3 +92,41 @@ export async function deleteBot(id: number) {
   if (!res.ok) throw new Error(`${res.status}`);
   return res.json();
 }
+
+// ---- manual intervention (P3) ----
+export const closePosition = (id: number, ref_price?: number) =>
+  postJson(`/api/positions/${id}/close`, { ref_price });
+
+export async function editSltp(id: number, sl: number | null, tp: number | null) {
+  const res = await fetch(`/api/positions/${id}/sltp`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sl, tp }),
+  });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+export const manualOrder = (body: {
+  symbol: string;
+  side: string;
+  type: string;
+  qty: number;
+  price?: number | null;
+  sl?: number | null;
+  tp?: number | null;
+  ref_price?: number | null;
+}) => postJson("/api/orders", body);
+
+export interface AuditRow {
+  id: number;
+  ts: string | null;
+  source: string;
+  mode: string | null;
+  bot_id: number | null;
+  symbol: string | null;
+  action: string;
+  detail: Record<string, unknown> | null;
+}
+
+export const fetchAudit = () => getJson<AuditRow[]>("/api/audit");

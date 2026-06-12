@@ -11,6 +11,7 @@ import {
 } from "../lib/api";
 import ModeBadge from "../components/ModeBadge";
 import PositionsTable from "../components/orders/PositionsTable";
+import ManualOrderForm from "../components/orders/ManualOrderForm";
 
 export default function Trading() {
   const qc = useQueryClient();
@@ -150,6 +151,12 @@ export default function Trading() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* Lệnh tay */}
+      <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+        <h2 className="mb-3 text-sm font-semibold">Đặt lệnh tay</h2>
+        <ManualOrderForm />
       </section>
 
       {/* Positions realtime */}

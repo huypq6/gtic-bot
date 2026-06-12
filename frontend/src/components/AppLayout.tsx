@@ -22,6 +22,7 @@ export default function AppLayout() {
           <nav className="flex items-center gap-1 text-sm">
             <Tab to="/">Chart</Tab>
             <Tab to="/trade">Trading</Tab>
+            <Tab to="/audit">Audit</Tab>
           </nav>
         </div>
         <div className="flex items-center gap-2 text-xs">

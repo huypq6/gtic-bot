@@ -25,7 +25,8 @@ from app.db import async_session
 from app.market.bus import EventBus
 from app.market.feed import MarketFeed
 from app.market.store import persist_closed_klines
-from app.strategy.runner import BotManager
+from app.orders.manager import OrderManager
+from app.strategy.runner import BotManager, ManualTrader
 
 logging.basicConfig(level=logging.INFO)
 
@@ -37,12 +38,16 @@ async def lifespan(app: FastAPI):
     bus = EventBus()
     gateway = WSGateway(bus)
     feed = MarketFeed(bus, symbols=settings.default_symbols, tf=settings.default_tf)
-    bot_manager = BotManager(bus, async_session)
+    order_manager = OrderManager(async_session)
+    bot_manager = BotManager(bus, async_session, order_manager)
+    manual_trader = ManualTrader(bus, async_session)
 
     app.state.bus = bus
     app.state.gateway = gateway
     app.state.feed = feed
+    app.state.order_manager = order_manager
     app.state.bot_manager = bot_manager
+    app.state.manual_trader = manual_trader
 
     tasks = [
         asyncio.create_task(gateway.track_feed_status(), name="feed-status-tracker"),
@@ -59,6 +64,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         await bot_manager.stop_all()
+        await manual_trader.stop_all()
         feed.stop()
         for t in tasks:
             t.cancel()

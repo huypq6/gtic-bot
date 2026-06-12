@@ -4,9 +4,13 @@ import {
   ColorType,
   LineSeries,
   createChart,
+  createSeriesMarkers,
   type CandlestickData,
   type IChartApi,
   type ISeriesApi,
+  type ISeriesMarkersPluginApi,
+  type SeriesMarker,
+  type Time,
 } from "lightweight-charts";
 import { loadHistory, toBar } from "../../lib/datafeed";
 import { ema } from "../../lib/indicators";
@@ -35,6 +39,9 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
   const emaFastRef = useRef<ISeriesApi<"Line"> | null>(null);
   const emaSlowRef = useRef<ISeriesApi<"Line"> | null>(null);
   const barsRef = useRef<CandlestickData[]>([]);
+  const markersApiRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+  const markersRef = useRef<SeriesMarker<Time>[]>([]);
+  const processedOrdersRef = useRef(0);
 
   // Tạo chart 1 lần.
   useEffect(() => {
@@ -62,6 +69,7 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
       wickUpColor: COLORS.up,
       wickDownColor: COLORS.down,
     });
+    markersApiRef.current = createSeriesMarkers(candleRef.current, []);
     return () => {
       chart.remove();
       chartRef.current = null;
@@ -120,6 +128,29 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
     }
   }
   useEffect(redrawEma, [showEma]);
+
+  // Marker vào/ra lệnh (US-04) — từ order WS, đặt tại nến cuối khi khớp.
+  const orders = useWsStore((s) => s.orders);
+  useEffect(() => {
+    const last = barsRef.current[barsRef.current.length - 1];
+    if (!last) return;
+    const delta = orders.length - processedOrdersRef.current;
+    if (delta <= 0) return;
+    const fresh = orders.slice(0, delta).reverse(); // cũ → mới
+    for (const o of fresh) {
+      if (o.symbol !== symbol || o.status !== "FILLED") continue;
+      const buy = o.side === "BUY";
+      markersRef.current.push({
+        time: last.time as Time,
+        position: buy ? "belowBar" : "aboveBar",
+        color: buy ? COLORS.up : COLORS.down,
+        shape: buy ? "arrowUp" : "arrowDown",
+        text: o.side,
+      });
+    }
+    processedOrdersRef.current = orders.length;
+    markersApiRef.current?.setMarkers(markersRef.current.slice(-50));
+  }, [orders, symbol]);
 
   // Cập nhật realtime từ WS store (nến cuối).
   const live = useWsStore((s) => s.lastKline[klineKey(symbol, tf)]);

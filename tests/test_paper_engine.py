@@ -147,6 +147,37 @@ def test_cancel_clears_pending():
     assert any(e.cancelled for e in events)
 
 
+def test_limit_submit_emits_queued_with_id():
+    eng = PaperEngine()
+    events = eng.submit(buy(1, order_type="LIMIT", price=95), price=100)
+    assert events[0].queued is not None
+    assert events[0].queued.oid == 1
+
+
+def test_limit_fill_carries_pending_id():
+    eng = PaperEngine()
+    eng.submit(buy(1, order_type="LIMIT", price=95), price=100)
+    events = eng.on_price(95)
+    assert any(e.filled_pending_id == 1 for e in events)
+
+
+def test_cancel_returns_pending_ids():
+    eng = PaperEngine()
+    eng.submit(buy(1, order_type="LIMIT", price=95), price=100)
+    eng.submit(sell(1, order_type="LIMIT", price=120), price=100)
+    events = eng.submit(Signal(action="CANCEL", symbol="BTCUSDT"), price=100)
+    assert sorted(events[0].cancelled_ids) == [1, 2]
+
+
+def test_force_close_manual():
+    eng = PaperEngine()
+    eng.submit(buy(2), price=100)
+    events = eng.force_close(108, "MANUAL")
+    assert eng.position is None
+    assert events[0].closed.reason == "MANUAL"
+    assert events[0].closed.pnl == (108 - 100) * 2
+
+
 # ---- phí ----
 def test_fee_reduces_pnl():
     eng = PaperEngine(fee_rate=0.001)

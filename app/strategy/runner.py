@@ -31,6 +31,8 @@ class StrategyRunner:
         symbol: str,
         tf: str,
         session_factory: async_sessionmaker,
+        order_manager=None,
+        mode: str = "PAPER",
         lookback: int = 300,
     ) -> None:
         self.bot_id = bot_id
@@ -40,6 +42,8 @@ class StrategyRunner:
         self.symbol = symbol
         self.tf = tf
         self._sf = session_factory
+        self._om = order_manager
+        self.mode = mode
         self.status = "RUNNING"
         self._candles: deque = deque(maxlen=lookback)
         self._task: asyncio.Task | None = None
@@ -74,7 +78,16 @@ class StrategyRunner:
                             position=self.executor.current_position(),
                         )
                         for sig in self.strategy.on_candle(ctx):
-                            await self.executor.submit(sig)
+                            # NFR: ghi audit TRƯỚC khi executor tác động.
+                            if self._om:
+                                await self._om.execute(
+                                    source="BOT", action=sig.action, mode=self.mode,
+                                    bot_id=self.bot_id, symbol=self.symbol,
+                                    detail={"size": sig.size, "type": sig.order_type},
+                                    do=lambda s=sig: self.executor.submit(s),
+                                )
+                            else:
+                                await self.executor.submit(sig)
         except asyncio.CancelledError:
             raise
         except Exception:  # noqa: BLE001 — không để 1 lỗi giết runner
@@ -86,9 +99,12 @@ class StrategyRunner:
 class BotManager:
     """Quản lý các runner đang chạy. Lưu ở app.state, dùng bởi API + lifespan."""
 
-    def __init__(self, bus: EventBus, session_factory: async_sessionmaker) -> None:
+    def __init__(
+        self, bus: EventBus, session_factory: async_sessionmaker, order_manager=None
+    ) -> None:
         self._bus = bus
         self._sf = session_factory
+        self._om = order_manager
         self._runners: dict[int, StrategyRunner] = {}
 
     async def start_bot(
@@ -96,13 +112,20 @@ class BotManager:
         params: dict, symbol: str, tf: str, mode: str,
     ) -> None:
         if mode != "PAPER":
-            raise ValueError(f"mode {mode} chưa hỗ trợ ở P2 (PAPER only)")
+            raise ValueError(f"mode {mode} chưa hỗ trợ ở P2/P3 (PAPER only)")
         discover()
         strat = get(strategy_name, strategy_version)(params)
         executor = PaperExecutor(bot_id, symbol, mode, self._bus, self._sf)
-        runner = StrategyRunner(bot_id, strat, executor, self._bus, symbol, tf, self._sf)
+        runner = StrategyRunner(
+            bot_id, strat, executor, self._bus, symbol, tf, self._sf,
+            order_manager=self._om, mode=mode,
+        )
         await runner.start()
         self._runners[bot_id] = runner
+
+    def get_executor(self, bot_id: int) -> Executor | None:
+        r = self._runners.get(bot_id)
+        return r.executor if r else None
 
     def set_status(self, bot_id: int, status: str) -> None:
         r = self._runners.get(bot_id)
@@ -121,3 +144,45 @@ class BotManager:
         for r in list(self._runners.values()):
             r.stop()
         self._runners.clear()
+
+
+class ManualTrader:
+    """Quản lý lệnh tay rời (không thuộc bot). 1 PaperExecutor/symbol, subscribe
+    ticker để cập nhật giá + check SL/TP/limit. bot_id=None, source=MANUAL."""
+
+    def __init__(self, bus: EventBus, session_factory: async_sessionmaker) -> None:
+        self._bus = bus
+        self._sf = session_factory
+        self._ex: dict[str, PaperExecutor] = {}
+        self._tasks: dict[str, asyncio.Task] = {}
+
+    def ensure(self, symbol: str, mode: str = "PAPER") -> PaperExecutor:
+        if symbol not in self._ex:
+            ex = PaperExecutor(None, symbol, mode, self._bus, self._sf)
+            self._ex[symbol] = ex
+            self._tasks[symbol] = asyncio.create_task(
+                self._price_loop(symbol, ex), name=f"manual-{symbol}"
+            )
+        return self._ex[symbol]
+
+    def executor_for(self, symbol: str) -> PaperExecutor | None:
+        return self._ex.get(symbol)
+
+    async def _price_loop(self, symbol: str, ex: PaperExecutor) -> None:
+        sub = self._bus.subscribe(f"ticker.{symbol}")
+        try:
+            while True:
+                msg = await sub.get()
+                await ex.on_price(msg["price"])
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001
+            logger.exception("manual trader %s lỗi", symbol)
+        finally:
+            self._bus.unsubscribe(f"ticker.{symbol}", sub)
+
+    async def stop_all(self) -> None:
+        for t in self._tasks.values():
+            t.cancel()
+        self._tasks.clear()
+        self._ex.clear()

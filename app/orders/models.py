@@ -6,6 +6,7 @@ Khớp DDL trong docs/04-SRS.md §4. `kline` ở app/market/models.py.
 from datetime import datetime
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -110,3 +111,18 @@ class PositionModel(Base):
         CheckConstraint("side IN ('LONG','SHORT')", name="ck_position_side"),
         CheckConstraint("status IN ('OPEN','CLOSED')", name="ck_position_status"),
     )
+
+
+class AuditLog(Base):
+    """Ghi MỌI hành động (bot + tay) TRƯỚC khi tác động (NFR truy vết)."""
+
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    source: Mapped[str] = mapped_column(String, nullable=False)  # BOT|MANUAL|SYSTEM
+    mode: Mapped[str | None] = mapped_column(String)
+    bot_id: Mapped[int | None] = mapped_column(Integer)
+    symbol: Mapped[str | None] = mapped_column(String)
+    action: Mapped[str] = mapped_column(String, nullable=False)  # OPEN|CLOSE|EDIT_SLTP|CANCEL|...
+    detail: Mapped[dict | None] = mapped_column(JSONB)

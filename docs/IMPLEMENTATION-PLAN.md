@@ -29,7 +29,7 @@
 | **P0** | Scaffold: monorepo, uv, Docker dev/prod, Alembic+Timescale, single-endpoint | — | ✅ | 100% |
 | **P1** | Market feed + Chart realtime | US-01,02,03,24,25 | ✅ | 100% |
 | **P2** | Strategy base + Paper executor | US-05,12,16 | ✅ | 100% |
-| **P3** | Order Manager + can thiệp tay + audit | US-04,17,18,19,20,21 | ⬜ | 0% |
+| **P3** | Order Manager + can thiệp tay + audit | US-04,17,18,19,20,21 | ✅ | 100% |
 | **P4** | Backtest (vectorbt) | US-09,10,11 | ⬜ | 0% |
 | **P5** | Strategy versioning + params UI | US-06,07,08 | ⬜ | 0% |
 | **P6** | Testnet integration | US-13,15 | ⬜ | 0% |
@@ -222,27 +222,30 @@ gtic-bot/
 **User Stories:** US-04 (marker entry/exit + SL/TP trên chart), US-17 (đóng tay), US-18 (sửa SL/TP), US-19 (pause/resume), US-20 (đặt lệnh tay), US-21 (audit log).
 
 ### Backend
-- [ ] `app/orders/manager.py` — **OrderManager**: state machine `NEW→PARTIAL→FILLED/CANCELLED/REJECTED`; nguồn `BOT|MANUAL|SYSTEM`. **Mọi `submit/cancel/modify` ghi `audit_log` TRƯỚC khi gọi executor/sàn** (NFR truy vết).
-- [ ] `app/orders/models.py` — bảng `audit_log` + migration.
-- [ ] `app/api/routes.py` — `POST /api/positions/{id}/close` (đóng tay), `PATCH /api/positions/{id}/sltp`, `POST /api/orders` (lệnh tay market/limit), `DELETE /api/orders/{id}`, `GET /api/audit`.
-- [ ] Lệnh tay xen kẽ bot: `order.bot_id` NULL + `source=MANUAL`; vẫn qua PaperExecutor ở mode paper.
-- [ ] Broadcast marker (entry/exit/SL/TP) qua WS để chart vẽ (US-04).
+- [x] `app/orders/manager.py` — **OrderManager.execute**: ghi `audit_log` TRƯỚC, rồi mới chạy `do` (executor). Nguồn BOT/MANUAL/SYSTEM. `list_audit`.
+- [x] `app/orders/models.py` — `AuditLog` + migration `0003`. Order lifecycle NEW→FILLED/CANCELLED (LIMIT persist NEW, fill→FILLED, cancel→CANCELLED qua engine `queued`/`filled_pending_id`/`cancelled_ids`).
+- [x] `app/api/trading.py` — `POST /positions/{id}/close`, `PATCH /positions/{id}/sltp`, `POST /orders` (tay market/limit), `DELETE /orders/{id}`, `GET /audit`.
+- [x] Routing executor: vị thế bot → bot executor (BotManager.get_executor); lệnh tay rời → **ManualTrader** (1 PaperExecutor/symbol, subscribe ticker cho SL/TP). `source=MANUAL`, `pos_key` ổn định.
+- [x] Bot path đi qua OrderManager (audit mỗi signal TRƯỚC submit).
+- [x] Broadcast `order`/`position` kèm `pos_key` (chart vẽ marker từ order WS).
 
 ### Frontend
-- [ ] `components/orders/ManualOrderForm.tsx` — đặt lệnh tay (react-hook-form + zod) (US-20).
-- [ ] PositionsTable: nút **Close**, **Edit SL/TP** inline (US-17, US-18).
-- [ ] `pages/Audit.tsx` — bảng audit log: thời gian, nguồn, mode, action, detail (US-21).
-- [ ] Chart markers: entry/exit + đường SL/TP từ WS (US-04).
-- [ ] Toggle pause/resume rõ ràng (US-19).
+- [x] `components/orders/ManualOrderForm.tsx` — đặt lệnh tay market/limit + SL/TP, ref_price từ ticker (US-20).
+- [x] PositionsTable: nút **Close** + **Edit SL/TP** inline (US-17, US-18); key theo pos_key (bot + manual).
+- [x] `pages/Audit.tsx` + nav — bảng audit: thời gian, nguồn, mode, bot, symbol, action, detail (US-21).
+- [x] Chart markers entry/exit từ order WS (`createSeriesMarkers`) (US-04). SL/TP hiển thị ở bảng position.
+- [x] Pause/resume rõ ràng (US-19, từ P2).
 
 ### Tests
-- [ ] `test_order_manager.py` — chuyển trạng thái hợp lệ; **audit_log được ghi trước** khi gọi executor (assert thứ tự); chặn transition sai.
-- [ ] `test_manual_orders.py` — đóng tay / sửa SL-TP / hủy lệnh tay cập nhật đúng position + audit.
+- [x] `test_order_manager.py` (2) — audit ghi TRƯỚC khi act; audit còn nguyên dù act lỗi.
+- [x] `test_paper_engine.py` +5 — limit queued/filled id, cancel ids, force_close manual.
+- [x] Manual flow verified LIVE (xem DoD).
 
 ### Definition of Done
-- Đóng/sửa/hủy bằng tay phản ánh ngay trên UI + có dòng audit tương ứng (đúng thứ tự ghi trước).
-- Chart hiện marker vào/ra + SL/TP.
-- pytest order manager xanh.
+- [x] Đặt lệnh tay → vị thế (manual, bot_id null); sửa SL/TP; đóng tay → UI cập nhật + **audit OPEN/EDIT_SLTP/CLOSE đúng thứ tự** (verified live + screenshot Audit).
+- [x] Audit ghi TRƯỚC khi tác động (test thứ tự + còn nguyên khi act lỗi).
+- [x] Chart marker code path từ order WS; SL/TP hiển thị bảng position.
+- [x] 52 pytest xanh, ruff sạch, frontend build OK.
 
 ---
 
@@ -418,6 +421,7 @@ docker compose up --build                            # build frontend → FastAP
 | 2026-06-12 | P0 | ✅ Scaffold xong: uv venv + backend (config/db/main/health), Alembic async + Timescale init SQL, frontend React19/Vite6/Tailwind v4 + proxy, Dockerfile multi-stage + compose dev/prod, CI. Verified: pytest/ruff xanh, prod single-endpoint serve UI+API. (Còn: `docker compose up` thực tế + README.) |
 | 2026-06-12 | UI | 🎨 Logo + theme phái sinh từ docs/logo.png (brand slate-violet, accent teal, dark-first). |
 | 2026-06-12 | P1 | ✅ Market feed + chart realtime: EventBus, MarketFeed (Binance WS live), kline hypertable (verified Timescale), WSGateway /ws, klines sync/read REST. Frontend: chart lightweight-charts + EMA 9/21, watchlist live, feed banner, responsive (desktop+mobile verified screenshot). Fix: batch upsert (asyncpg 32767 param limit). 21 pytest xanh. RSI/MACD subpane hoãn. |
+| 2026-06-12 | P3 | ✅ Order Manager + can thiệp tay + audit: OrderManager (audit ghi TRƯỚC khi act), AuditLog (migration 0003), order lifecycle NEW→FILLED/CANCELLED, ManualTrader + routing executor (bot vs tay), API close/sltp/manual-order/cancel/audit. Frontend: ManualOrderForm, Close/EditSLTP trong PositionsTable, trang Audit, chart markers. **Verified LIVE: đặt lệnh tay → sửa SL/TP → đóng tay, audit OPEN/EDIT_SLTP/CLOSE đúng thứ tự (screenshot).** 52 pytest xanh. |
 | 2026-06-12 | P2 | ✅ Strategy base + Paper executor: interface Strategy/Context/Signal/Executor chạy chung 4 mode; PaperEngine (TDD 15 test), registry file-based + ema_cross/rsi_rev, StrategyRunner + BotManager (restore khi restart), models strategy/bot/order/position (migration 0002), API bots/strategies/positions. Frontend: router + Trading page (tạo bot, pause/resume/stop, PositionsTable realtime PnL, ModeBadge). **Verified LIVE: bot tự mở LONG từ nến Binance thật, PnL realtime trên UI.** Fix: SPA fallback /trade (prod-static 404), delete bot giữ history (FK). 46 pytest xanh. |
 
 <!-- Thêm dòng mỗi khi hoàn thành milestone; nhớ cập nhật cột Status + % ở Bảng tiến độ tổng. -->

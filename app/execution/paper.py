@@ -33,10 +33,12 @@ class PaperExecutor(Executor):
         self.bot_id = bot_id
         self.symbol = symbol
         self.mode = mode
+        self.source = "BOT" if bot_id is not None else "MANUAL"
         self._bus = bus
         self._sf = session_factory
         self._last_price = 0.0
         self._pos_db_id: int | None = None
+        self._pending_db: dict[int, int] = {}  # engine pending oid → db order id
 
     def current_position(self):
         return self.engine.position
@@ -51,6 +53,14 @@ class PaperExecutor(Executor):
 
     async def cancel(self, order_id: str | None = None) -> None:
         await self._apply(self.engine.submit(Signal("CANCEL", self.symbol), self._last_price))
+
+    async def close(self, reason: str = "MANUAL") -> None:
+        """Đóng vị thế hiện tại (can thiệp tay)."""
+        await self._apply(self.engine.force_close(self._last_price, reason))
+
+    async def seed_price(self, price: float) -> None:
+        """Đặt giá tham chiếu cho lệnh tay MARKET trước khi submit."""
+        self._last_price = price
 
     async def modify_sltp(self, sl: float | None, tp: float | None) -> None:
         p = self.engine.position
@@ -70,18 +80,51 @@ class PaperExecutor(Executor):
     # ---------- áp dụng events ----------
     async def _apply(self, events: list[EngineEvent]) -> None:
         for e in events:
+            if e.queued:
+                await self._persist_queued(e.queued)
             if e.closed:
                 await self._persist_close(e.closed)
-            if e.opened and e.fill:
-                await self._persist_open(e.fill)
+            if e.opened:
+                await self._persist_position_open()
+            if e.filled_pending_id is not None:
+                await self._mark_order(e.filled_pending_id, "FILLED")
+            elif e.fill:  # market fill → tạo order FILLED mới
+                await self._persist_order_filled(e.fill)
             if e.fill:
                 await self._broadcast_order(e.fill, "FILLED")
             if e.opened:
                 await self._broadcast_position(self._last_price)  # phát OPEN ngay
-            if e.cancelled:
-                logger.info("paper bot %s: cancel pending", self.bot_id)
+            if e.cancelled_ids:
+                for oid in e.cancelled_ids:
+                    await self._mark_order(oid, "CANCELLED")
 
-    async def _persist_open(self, fill: Fill) -> None:
+    async def _persist_queued(self, order) -> None:
+        async with self._sf() as s:
+            row = OrderModel(
+                bot_id=self.bot_id, source=self.source, mode=self.mode, symbol=self.symbol,
+                side=order.side, type="LIMIT", qty=order.qty, price=order.price,
+                status="NEW", sl=order.sl, tp=order.tp,
+            )
+            s.add(row)
+            await s.flush()
+            self._pending_db[order.oid] = row.id
+            await s.commit()
+        await self._broadcast_order(Fill(order.side, "LIMIT", order.qty, order.price), "NEW")
+
+    async def _mark_order(self, oid: int, status: str) -> None:
+        db_id = self._pending_db.pop(oid, None)
+        if db_id is None:
+            return
+        async with self._sf() as s:
+            vals: dict = {"status": status}
+            if status == "FILLED":
+                vals["filled_qty"] = (
+                    await s.get(OrderModel, db_id)
+                ).qty
+            await s.execute(update(OrderModel).where(OrderModel.id == db_id).values(**vals))
+            await s.commit()
+
+    async def _persist_position_open(self) -> None:
         p = self.engine.position
         assert p is not None
         async with self._sf() as s:
@@ -90,9 +133,13 @@ class PaperExecutor(Executor):
                 qty=p.qty, entry_price=p.entry_price, sl=p.sl, tp=p.tp, status="OPEN",
             )
             s.add(pos)
-            s.add(self._order_row(fill, "FILLED"))
             await s.flush()
             self._pos_db_id = pos.id
+            await s.commit()
+
+    async def _persist_order_filled(self, fill: Fill) -> None:
+        async with self._sf() as s:
+            s.add(self._order_row(fill, "FILLED"))
             await s.commit()
 
     async def _persist_close(self, closed: Closed) -> None:
@@ -110,7 +157,7 @@ class PaperExecutor(Executor):
             close_side = "SELL" if closed.side == "LONG" else "BUY"
             s.add(
                 OrderModel(
-                    bot_id=self.bot_id, source="BOT", mode=self.mode, symbol=self.symbol,
+                    bot_id=self.bot_id, source=self.source, mode=self.mode, symbol=self.symbol,
                     side=close_side, type="MARKET", qty=closed.qty, price=closed.exit_price,
                     status="FILLED", filled_qty=closed.qty, avg_price=closed.exit_price,
                 )
@@ -122,20 +169,25 @@ class PaperExecutor(Executor):
     def _order_row(self, fill: Fill, status: str) -> OrderModel:
         p = self.engine.position
         return OrderModel(
-            bot_id=self.bot_id, source="BOT", mode=self.mode, symbol=self.symbol,
+            bot_id=self.bot_id, source=self.source, mode=self.mode, symbol=self.symbol,
             side=fill.side, type=fill.type, qty=fill.qty, price=fill.price, status=status,
             filled_qty=fill.qty, avg_price=fill.price,
             sl=p.sl if p else None, tp=p.tp if p else None,
         )
+
+    @property
+    def pos_key(self) -> str:
+        # khóa ổn định để frontend phân biệt vị thế bot vs lệnh tay.
+        return f"bot:{self.bot_id}" if self.bot_id is not None else f"manual:{self.symbol}"
 
     # ---------- broadcast ----------
     async def _broadcast_order(self, fill: Fill, status: str) -> None:
         await self._bus.publish(
             "order.update",
             {
-                "type": "order", "bot_id": self.bot_id, "mode": self.mode, "symbol": self.symbol,
-                "side": fill.side, "order_type": fill.type, "qty": fill.qty, "price": fill.price,
-                "status": status,
+                "type": "order", "bot_id": self.bot_id, "source": self.source, "mode": self.mode,
+                "symbol": self.symbol, "side": fill.side, "order_type": fill.type,
+                "qty": fill.qty, "price": fill.price, "status": status,
             },
         )
 
@@ -146,7 +198,8 @@ class PaperExecutor(Executor):
         await self._bus.publish(
             "position",
             {
-                "type": "position", "bot_id": self.bot_id, "mode": self.mode, "symbol": self.symbol,
+                "type": "position", "key": self.pos_key, "bot_id": self.bot_id,
+                "source": self.source, "mode": self.mode, "symbol": self.symbol,
                 "side": p.side, "qty": p.qty, "entry_price": p.entry_price, "sl": p.sl, "tp": p.tp,
                 "price": price, "pnl": self.engine.unrealized_pnl(price), "status": "OPEN",
             },
@@ -156,7 +209,8 @@ class PaperExecutor(Executor):
         await self._bus.publish(
             "position",
             {
-                "type": "position", "bot_id": self.bot_id, "mode": self.mode, "symbol": self.symbol,
+                "type": "position", "key": self.pos_key, "bot_id": self.bot_id,
+                "source": self.source, "mode": self.mode, "symbol": self.symbol,
                 "side": closed.side, "qty": 0, "entry_price": closed.entry_price,
                 "price": closed.exit_price, "pnl": closed.pnl, "status": "CLOSED",
                 "reason": closed.reason,

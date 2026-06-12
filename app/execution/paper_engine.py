@@ -34,6 +34,7 @@ class Closed:
 
 @dataclass
 class PendingOrder:
+    oid: int  # id nội bộ engine, để khớp với row DB
     side: str  # BUY | SELL
     qty: float
     price: float  # limit price
@@ -47,6 +48,9 @@ class EngineEvent:
     opened: Position | None = None
     closed: Closed | None = None
     cancelled: bool = False
+    queued: PendingOrder | None = None  # limit vào hàng chờ (persist NEW)
+    filled_pending_id: int | None = None  # pending vừa khớp (NEW→FILLED)
+    cancelled_ids: list[int] | None = None  # pending bị hủy (NEW→CANCELLED)
 
 
 class PaperEngine:
@@ -55,6 +59,11 @@ class PaperEngine:
         self.fee_rate = fee_rate
         self.position: Position | None = None
         self.pending: list[PendingOrder] = []
+        self._oid = 0
+
+    def _next_oid(self) -> int:
+        self._oid += 1
+        return self._oid
 
     # ---------- public API ----------
     def submit(self, signal: Signal, price: float) -> list[EngineEvent]:
@@ -64,10 +73,12 @@ class PaperEngine:
             return [self._close(price, "SIGNAL")] if self.position else []
         if signal.action in ("BUY", "SELL"):
             if signal.order_type == "LIMIT" and signal.price is not None:
-                self.pending.append(
-                    PendingOrder(signal.action, signal.size, signal.price, signal.sl, signal.tp)
+                order = PendingOrder(
+                    self._next_oid(), signal.action, signal.size, signal.price,
+                    signal.sl, signal.tp,
                 )
-                return []
+                self.pending.append(order)
+                return [EngineEvent(queued=order)]
             return self._apply_market(signal.action, signal.size, price, signal.sl, signal.tp)
         return []
 
@@ -78,6 +89,10 @@ class PaperEngine:
         if sltp:
             events.append(sltp)
         return events
+
+    def force_close(self, price: float, reason: str = "MANUAL") -> list[EngineEvent]:
+        """Đóng vị thế hiện tại tại giá `price` (vd can thiệp tay)."""
+        return [self._close(price, reason)] if self.position else []
 
     def unrealized_pnl(self, price: float) -> float:
         p = self.position
@@ -127,8 +142,9 @@ class PaperEngine:
     def _cancel_all(self) -> list[EngineEvent]:
         if not self.pending:
             return []
+        ids = [o.oid for o in self.pending]
         self.pending = []
-        return [EngineEvent(cancelled=True)]
+        return [EngineEvent(cancelled=True, cancelled_ids=ids)]
 
     def _fill_pending(self, price: float) -> list[EngineEvent]:
         events: list[EngineEvent] = []
@@ -138,7 +154,11 @@ class PaperEngine:
                 o.side == "SELL" and price >= o.price
             )
             if crosses:
-                events += self._apply_market(o.side, o.qty, o.price, o.sl, o.tp, "LIMIT")
+                fills = self._apply_market(o.side, o.qty, o.price, o.sl, o.tp, "LIMIT")
+                for ev in fills:
+                    if ev.opened:  # đánh dấu pending nào vừa khớp
+                        ev.filled_pending_id = o.oid
+                events += fills
             else:
                 still.append(o)
         self.pending = still

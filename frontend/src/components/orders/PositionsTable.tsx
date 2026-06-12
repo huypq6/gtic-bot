@@ -1,22 +1,42 @@
-import { useQuery } from "@tanstack/react-query";
-import { fetchPositions, type PositionRow } from "../../lib/api";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, X } from "lucide-react";
+import { closePosition, editSltp, fetchPositions } from "../../lib/api";
 import { useWsStore } from "../../lib/ws";
 import ModeBadge from "../ModeBadge";
 
 const fmt = (n: number, d = 2) =>
   n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 
+interface Row {
+  id: number; // DB position id (-1 nếu chỉ có realtime)
+  key: string;
+  mode: string;
+  symbol: string;
+  side: string;
+  qty: number;
+  entry_price: number;
+  price?: number;
+  pnl?: number;
+  sl: number | null;
+  tp: number | null;
+}
+
+const keyOf = (botId: number | null, symbol: string) =>
+  botId != null ? `bot:${botId}` : `manual:${symbol}`;
+
 export default function PositionsTable() {
-  // Seed từ REST, phủ realtime (pnl) từ WS store theo bot_id.
+  const qc = useQueryClient();
   const { data: initial } = useQuery({ queryKey: ["positions"], queryFn: fetchPositions });
   const live = useWsStore((s) => s.positions);
+  const tickers = useWsStore((s) => s.tickers);
+  const [editing, setEditing] = useState<number | null>(null);
 
-  const merged = new Map<number, PositionRow & { price?: number; pnl?: number }>();
-  for (const p of initial ?? []) if (p.bot_id != null) merged.set(p.bot_id, { ...p });
-  for (const [botId, p] of Object.entries(live)) {
-    merged.set(Number(botId), {
-      id: -1,
-      bot_id: Number(botId),
+  const rows = new Map<string, Row>();
+  for (const p of initial ?? [])
+    rows.set(keyOf(p.bot_id, p.symbol), {
+      id: p.id,
+      key: keyOf(p.bot_id, p.symbol),
       mode: p.mode,
       symbol: p.symbol,
       side: p.side,
@@ -24,13 +44,27 @@ export default function PositionsTable() {
       entry_price: p.entry_price,
       sl: p.sl,
       tp: p.tp,
+    });
+  for (const [k, p] of Object.entries(live)) {
+    const prev = rows.get(k);
+    rows.set(k, {
+      id: prev?.id ?? -1,
+      key: k,
+      mode: p.mode,
+      symbol: p.symbol,
+      side: p.side,
+      qty: p.qty,
+      entry_price: p.entry_price,
       price: p.price,
       pnl: p.pnl,
+      sl: p.sl,
+      tp: p.tp,
     });
   }
-  const rows = [...merged.values()];
+  const list = [...rows.values()];
+  const refresh = () => qc.invalidateQueries({ queryKey: ["positions"] });
 
-  if (rows.length === 0)
+  if (list.length === 0)
     return <p className="px-1 py-4 text-sm text-ink-500">Chưa có vị thế mở.</p>;
 
   return (
@@ -44,38 +78,118 @@ export default function PositionsTable() {
             <th className="px-2 py-1.5 text-right font-medium">Qty</th>
             <th className="px-2 py-1.5 text-right font-medium">Entry</th>
             <th className="px-2 py-1.5 text-right font-medium">Mark</th>
+            <th className="px-2 py-1.5 text-right font-medium">SL / TP</th>
             <th className="px-2 py-1.5 text-right font-medium">PnL</th>
+            <th className="px-2 py-1.5 text-right font-medium">Hành động</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((p) => {
+          {list.map((p) => {
             const up = (p.pnl ?? 0) >= 0;
+            const mark = p.price ?? tickers[p.symbol]?.price;
             return (
-              <tr key={p.bot_id} className="border-t border-ink-800">
+              <tr key={p.key} className="border-t border-ink-800 align-middle">
                 <td className="px-2 py-1.5">
                   <ModeBadge mode={p.mode} />
                 </td>
                 <td className="px-2 py-1.5 font-medium">{p.symbol}</td>
-                <td
-                  className={`px-2 py-1.5 font-medium ${p.side === "LONG" ? "text-up" : "text-down"}`}
-                >
+                <td className={`px-2 py-1.5 font-medium ${p.side === "LONG" ? "text-up" : "text-down"}`}>
                   {p.side}
                 </td>
                 <td className="px-2 py-1.5 text-right tabular-nums">{fmt(p.qty, 4)}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums">{fmt(p.entry_price)}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums">
-                  {p.price != null ? fmt(p.price) : "—"}
+                  {mark != null ? fmt(mark) : "—"}
                 </td>
-                <td
-                  className={`px-2 py-1.5 text-right font-medium tabular-nums ${up ? "text-up" : "text-down"}`}
-                >
+                <td className="px-2 py-1.5 text-right text-xs tabular-nums text-ink-400">
+                  {p.sl != null ? fmt(p.sl) : "—"} / {p.tp != null ? fmt(p.tp) : "—"}
+                </td>
+                <td className={`px-2 py-1.5 text-right font-medium tabular-nums ${up ? "text-up" : "text-down"}`}>
                   {p.pnl != null ? `${up ? "+" : ""}${fmt(p.pnl, 2)}` : "—"}
+                </td>
+                <td className="px-2 py-1.5">
+                  <div className="flex items-center justify-end gap-1">
+                    {p.id > 0 && (
+                      <>
+                        <button
+                          title="Sửa SL/TP"
+                          onClick={() => setEditing(editing === p.id ? null : p.id)}
+                          className="rounded p-1 text-ink-300 hover:bg-ink-800 hover:text-ink-100"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          title="Đóng vị thế"
+                          onClick={async () => {
+                            await closePosition(p.id, mark);
+                            refresh();
+                          }}
+                          className="rounded p-1 text-down hover:bg-down/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {editing === p.id && (
+                    <SltpEditor
+                      sl={p.sl}
+                      tp={p.tp}
+                      onSave={async (sl, tp) => {
+                        await editSltp(p.id, sl, tp);
+                        setEditing(null);
+                        refresh();
+                      }}
+                      onCancel={() => setEditing(null)}
+                    />
+                  )}
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function SltpEditor({
+  sl,
+  tp,
+  onSave,
+  onCancel,
+}: {
+  sl: number | null;
+  tp: number | null;
+  onSave: (sl: number | null, tp: number | null) => void;
+  onCancel: () => void;
+}) {
+  const [slv, setSlv] = useState(sl?.toString() ?? "");
+  const [tpv, setTpv] = useState(tp?.toString() ?? "");
+  const num = (v: string) => (v.trim() === "" ? null : Number(v));
+  return (
+    <div className="mt-1 flex items-center justify-end gap-1">
+      <input
+        value={slv}
+        onChange={(e) => setSlv(e.target.value)}
+        placeholder="SL"
+        className="w-20 rounded border border-ink-700 bg-ink-800 px-1.5 py-0.5 text-xs"
+      />
+      <input
+        value={tpv}
+        onChange={(e) => setTpv(e.target.value)}
+        placeholder="TP"
+        className="w-20 rounded border border-ink-700 bg-ink-800 px-1.5 py-0.5 text-xs"
+      />
+      <button
+        onClick={() => onSave(num(slv), num(tpv))}
+        className="rounded bg-accent-500 px-2 py-0.5 text-xs font-medium text-ink-950"
+      >
+        Lưu
+      </button>
+      <button onClick={onCancel} className="rounded px-1.5 py-0.5 text-xs text-ink-400">
+        Hủy
+      </button>
     </div>
   );
 }

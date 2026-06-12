@@ -25,7 +25,9 @@ export interface KlineMsg {
 export const klineKey = (symbol: string, tf: string) => `${symbol}.${tf}`;
 
 export interface PositionMsg {
-  bot_id: number;
+  key: string; // bot:<id> | manual:<symbol>
+  bot_id: number | null;
+  source: string;
   mode: string;
   symbol: string;
   side: string; // LONG | SHORT
@@ -53,7 +55,7 @@ interface WsState {
   feed: FeedStatus;
   tickers: Record<string, Ticker>;
   lastKline: Record<string, KlineMsg>; // key = symbol.tf
-  positions: Record<number, PositionMsg>; // key = bot_id
+  positions: Record<string, PositionMsg>; // key = pos_key (bot:<id> | manual:<symbol>)
   orders: OrderMsg[]; // gần nhất trước
   connected: boolean;
   connect: () => void;
@@ -92,8 +94,8 @@ export const useWsStore = create<WsState>((set) => ({
       } else if (m.type === "position") {
         set((s) => {
           const positions = { ...s.positions };
-          if (m.status === "CLOSED") delete positions[m.bot_id];
-          else positions[m.bot_id] = m as PositionMsg;
+          if (m.status === "CLOSED") delete positions[m.key];
+          else positions[m.key] = m as PositionMsg;
           return { positions };
         });
       } else if (m.type === "order") {
