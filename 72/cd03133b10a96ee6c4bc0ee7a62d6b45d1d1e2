@@ -1,0 +1,21 @@
+app/strategy/strategies/ict_po3.md
+  s_0cd7f0ddef5937::t_d675a303dcdfd4 221-231
+scripts/scan365_ict_po3_v4.py
+  s_0cd7f0ddef5937::t_5edb1fbff88230 1-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "72cd03133b10a96ee6c4bc0ee7a62d6b45d1d1e2",
+  "prompts": {},
+  "sessions": {
+    "s_0cd7f0ddef5937": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2510a30-5d6c-4ec2-8d35-094b34c18a84",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
