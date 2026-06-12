@@ -69,4 +69,13 @@ breakout ngược (trả lại hết lãi khi trend gãy). v2 thêm exit chủ �
 Breakout ngược kênh chính vẫn **đảo chiều** vị thế như v1.
 
 ### Nghiên cứu (skill strategy-research)
-- (đang tiến hành — xem commit research)
+- **Screening (default params, 180d × 6 thị trường)**: v1 thô ÂM 5/6 (15m chết vì phí;
+  1h lẫn lộn — ETH +66% nhưng DD 64%).
+- **Sweep v2** (`scripts/sweep_donchian_v2.py`, 36 bộ × BTC/ETH/SOL 1h 180d + BTC 15m 90d):
+  **THẤT BẠI TOÀN DIỆN** — mọi bộ đều âm TB (−12…−31%), tốt nhất chỉ 2/4 thị trường dương,
+  DD 33–70%, win 33–36%, 440–1200 lệnh. Exit chủ động (ATR trail / kênh-thoát) cắt mất
+  lệnh thắng lớn — thứ duy nhất nuôi trend-following — rồi churn phí khi re-entry.
+  Lọc ADX/cuối tuần không cứu được.
+- **Verdict: DỪNG donchian v2.** Cùng kết luận với ichimoku: trend-following khung 1h trên
+  crypto regime này không giảm được DD mà không giết PnL. Không tinh chỉnh tham số thêm
+  (trần alpha). Hướng intraday đang khả quan hơn: xem `vol_breakout.md`.

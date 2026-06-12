@@ -206,6 +206,11 @@ thật) → v3 fade trend hơn nửa số ngày. v4 sửa:
 nghĩa đen). Lưu ý: **12 lệnh/180 ngày** = tần suất thấp, PnL khiêm tốn (~7%/năm chưa đòn bẩy), nhiều tuần đứng
 do không có lệnh. Đề xuất: **paper-trade BTC 15m bằng v4** để xác nhận forward, CHƯA tiền thật.
 
+**Đối chứng 365 ngày (2026-06-13, `scripts/walkforward_365_ict_po3_v4.py`)**: BTC 15m
+**+3.88%, maxDD 3.31%, 18 lệnh**; SUI **+2.81%, DD 6.22%, 21 lệnh**; cửa sổ 30d tệ nhất chỉ
+−2.0% — v4 **sống qua cả regime nghịch Nov–Dec 2025** (nơi vol_breakout danh mục −26.8%/tháng).
+Củng cố verdict "ổn định + DD thấp"; cái giá là lợi nhuận mỏng ~3–4%/năm chưa đòn bẩy.
+
 ## Giới hạn đã biết (tóm tắt cho người đọc code)
 
 1. MSS = phá **swing fractal** (CHoCH) hình thành sau sweep; cần `swing` nến xác nhận → vào trễ `swing` nến. Đơn giản hơn CHoCH đa-khung của ICT thủ công.

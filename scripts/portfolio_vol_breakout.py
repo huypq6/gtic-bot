@@ -84,6 +84,8 @@ async def main() -> None:
         print(f"  Tuần âm ≤−2%: {', '.join(neg) if neg else 'không có'}")
 
     report("đủ 6 cặp (không chọn lọc)", SYMBOLS)
+    report("3 cặp chuẩn (BTC/ETH/SOL — chọn TRƯỚC khi quét, không bias)",
+           ["BTCUSDT", "ETHUSDT", "SOLUSDT"])
     report("4 cặp dương (BTC/ETH/SOL/XRP — ⚠️ chọn sau khi nhìn kết quả = selection bias)",
            ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"])
 

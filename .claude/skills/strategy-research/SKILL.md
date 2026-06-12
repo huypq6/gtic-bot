@@ -42,6 +42,9 @@ Quy trình kiểm chứng MỘT chiến lược trước khi tin / chạy tiền
 ### 4. Walk-forward — BẮT BUỘC (phán quyết)
 - Sao chép `scripts/walkforward_ict_po3.py` → `scripts/walkforward_<name>.py`; rổ cặp tốt, params CỐ ĐỊNH.
 - Chia lịch sử thành N cửa sổ tuần tự (~30 ngày). Dương kỳ-gần-đây nhưng âm kỳ-xa = regime-luck = TRƯỢT.
+- **Tối thiểu 365 ngày, cho CẢ ứng viên lẫn chuẩn so sánh** (bài học vol_breakout 06/2026: đẹp toàn diện
+  trên 180d — OOS giữ, robust lân cận, danh mục DD <10% — vẫn nổ −27%/tháng ở regime Nov–Dec 2025
+  ngoài cửa sổ phát triển; trong khi ict_po3 v4 sống cả năm).
 
 ### 5. Verdict → ghi vào `<name>.md`
 - Đối chiếu 3 mục tiêu. ĐẠT → đề xuất paper → testnet (vẫn theo dõi forward). KHÔNG ĐẠT → dừng ở

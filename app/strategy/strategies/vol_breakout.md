@@ -74,4 +74,28 @@ vào-ra dày). vol_breakout được chọn vì 0–1 lệnh/ngày, lãi/lệnh 
   (OOS/IS) dương trên CẢ 3 cặp. Kỹ thuật có tài liệu gốc (systrader79), không phải fit cửa sổ.
 - **Quét rổ 6 cặp** (k cố định 0.6): BTC/ETH/SOL/XRP dương, DOGE/AVAX âm nhẹ.
 
-(Verdict cập nhật ở cuối — xem commit research mới nhất.)
+- **Danh mục 180d (Dec 2025→Jun 2026)**: 3 cặp chuẩn BTC/ETH/SOL equal-weight **+32.75%,
+  maxDD 9.91%**, tuần tệ nhất −4.6%; cửa sổ 30d: mỗi cặp 4/6 dương, danh mục 5/7. Cả 6 cặp
+  (thêm XRP/DOGE/AVAX) đều dương per-pair. Trông ĐẠT cả 3 mục tiêu…
+- **…nhưng 365 ngày lật bài** (`scripts/walkforward_windows_vol_breakout.py`, params cố định):
+  cửa sổ ~Nov 2025–Jan 2026 thảm họa — ETH −30%, SOL −37%, **danh mục −26.8% rồi −12.8%
+  liên tiếp**; cả năm ~hòa (+3–4%), 8/13 cửa sổ dương (62% < 2/3), PnL dồn vào cú hồi sau sập.
+  180d phát triển rơi đúng giai đoạn thuận lợi — đúng bẫy regime của ict_po3 v3.
+- **Đối chứng cùng 365d** (`scripts/walkforward_365_ict_po3_v4.py`): ict_po3 v4 BTC +3.88%
+  maxDD 3.31%, SUI +2.81% DD 6.22% — chuẩn cũ SỐNG qua regime nghịch, chỉ là lợi nhuận mỏng.
+
+## VERDICT (2026-06-13)
+
+| Mục tiêu | vol_breakout noise40 (danh mục 3 cặp) |
+|---|---|
+| Ổn định ≥2/3 cửa sổ | ❌ 8/13 trên 365d (62%); ✅ trên 180d — regime-dependent |
+| PnL dương đều | ❌ cả năm ~hòa; −26.8%/−12.8% hai tháng liên tiếp |
+| Max DD < ~10% | ❌ ~35%+ trên 365d (✅ 9.9% trên 180d) |
+
+**KHÔNG ĐẠT — không dùng tiền thật.** Edge có thật trong regime trend/vol bình thường
+(OOS 180d giữ được, noise-k cải thiện bền) nhưng chết trong regime chop dữ dội Nov–Dec 2025.
+So với chuẩn ict_po3 v4 (sống cả năm, DD ≤6%): vol_breakout KHÔNG tốt hơn về độ bền.
+
+**Nếu quay lại**: cần cổng regime CÓ NGUYÊN TẮC (vd tắt khi vol ngày > ngưỡng lịch sử dài,
+hoặc drawdown-circuit-breaker tắt 2 tuần sau tháng âm > x%) — phải kiểm chứng trên dữ liệu
+CHƯA nhìn (2024 hoặc forward), không fit thêm trên 365d này. KHÔNG tinh chỉnh k/noise thêm.
