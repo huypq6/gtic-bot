@@ -56,7 +56,7 @@ def evaluate(params: dict, data: dict) -> dict:
     pos = 0
     for (sym, tf), candles in data.items():
         try:
-            r = run_backtest("ict_po3", "1", params, candles, 1000.0, FEE, tf, 1)
+            r = run_backtest("ict_po3", "3", params, candles, 1000.0, FEE, tf, 1)
         except Exception:  # noqa: BLE001
             continue
         pnls.append(r["pnl_pct"])

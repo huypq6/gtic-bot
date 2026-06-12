@@ -2,6 +2,21 @@
 
 > Trường phái: **Smart Money / liquidity (ICT)**. Khung gợi ý: **15m** (5m–1h chạy được). Chỉ đánh **trong ngày** (UTC), không giữ qua đêm.
 
+## Phiên bản (giữ song song để so sánh)
+
+3 phiên bản cùng `name="ict_po3"`, chọn version trên UI; VersionCompare so theo name:
+
+| Ver | File | Khác biệt chính |
+|---|---|---|
+| **v1** | `ict_po3_v1.py` | MSS **proxy** (phá đỉnh/đáy phản ứng) + bias + retest FVG/OB + tp_mode. CHƯA lọc tin. |
+| **v2** | `ict_po3_v2.py` | = v1 + **lọc tin** (NFP/khung giờ US). |
+| **v3** | `ict_po3.py` | = v2 nhưng MSS đổi sang **swing-structure (CHoCH)** + param `swing`. |
+
+**So sánh có kiểm soát (cùng params, chỉ khác MSS), 90–200 ngày BTC/ETH:** v2(proxy) TB +0.08% vs
+v3(swing) TB −0.60% — **v3 KHÔNG vượt v2 rõ ràng** (v3 chỉ thắng ETH 15m). Con số "+1.65% in-sample"
+của v3 trước đó là do sweep tìm được params hợp cửa-sổ (overfit), không phải swing MSS tốt hơn bản chất.
+⇒ Chưa có phiên bản nào là edge chắc chắn; dùng VersionCompare + backtest nhiều cặp để tự kiểm.
+
 ## Ý tưởng
 
 ICT **Power of Three (PO3)** mô tả vòng đời mọi cây nến / mọi phiên theo 3 pha **AMD**:
