@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchCompare } from "../../lib/api";
+import InfoTip from "../InfoTip";
 
 // So sánh hiệu năng các version theo backtest (US-08).
 export default function VersionCompare({ name }: { name: string }) {
@@ -20,11 +21,19 @@ export default function VersionCompare({ name }: { name: string }) {
           <tr className="text-left text-xs uppercase tracking-wide text-faint">
             <th className="px-2 py-1.5 font-medium">Version</th>
             <th className="px-2 py-1.5 text-right font-medium">Runs</th>
-            <th className="px-2 py-1.5 text-right font-medium">Best PnL%</th>
+            <th className="px-2 py-1.5 text-right font-medium">
+              <InfoTip term="pnl_pct">Best PnL%</InfoTip>
+            </th>
             <th className="px-2 py-1.5 text-right font-medium">Last PnL%</th>
-            <th className="px-2 py-1.5 text-right font-medium">Win%</th>
-            <th className="px-2 py-1.5 text-right font-medium">Max DD%</th>
-            <th className="px-2 py-1.5 text-right font-medium">Trades</th>
+            <th className="px-2 py-1.5 text-right font-medium">
+              <InfoTip term="winrate">Win%</InfoTip>
+            </th>
+            <th className="px-2 py-1.5 text-right font-medium">
+              <InfoTip term="max_dd">Max DD%</InfoTip>
+            </th>
+            <th className="px-2 py-1.5 text-right font-medium">
+              <InfoTip term="n_trades">Trades</InfoTip>
+            </th>
           </tr>
         </thead>
         <tbody>

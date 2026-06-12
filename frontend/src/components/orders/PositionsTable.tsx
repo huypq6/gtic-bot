@@ -4,6 +4,7 @@ import { Pencil, X } from "lucide-react";
 import { closePosition, editSltp, fetchPositions } from "../../lib/api";
 import { useWsStore } from "../../lib/ws";
 import ModeBadge from "../ModeBadge";
+import InfoTip from "../InfoTip";
 
 const fmt = (n: number, d = 2) =>
   n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -74,12 +75,20 @@ export default function PositionsTable() {
           <tr className="text-left text-xs uppercase tracking-wide text-faint">
             <th className="px-2 py-1.5 font-medium">Mode</th>
             <th className="px-2 py-1.5 font-medium">Symbol</th>
-            <th className="px-2 py-1.5 font-medium">Side</th>
+            <th className="px-2 py-1.5 font-medium">
+              <InfoTip term="side">Side</InfoTip>
+            </th>
             <th className="px-2 py-1.5 text-right font-medium">Qty</th>
             <th className="px-2 py-1.5 text-right font-medium">Entry</th>
-            <th className="px-2 py-1.5 text-right font-medium">Mark</th>
-            <th className="px-2 py-1.5 text-right font-medium">SL / TP</th>
-            <th className="px-2 py-1.5 text-right font-medium">PnL</th>
+            <th className="px-2 py-1.5 text-right font-medium">
+              <InfoTip term="mark">Mark</InfoTip>
+            </th>
+            <th className="px-2 py-1.5 text-right font-medium">
+              <InfoTip term="sl">SL / TP</InfoTip>
+            </th>
+            <th className="px-2 py-1.5 text-right font-medium">
+              <InfoTip term="pnl">PnL</InfoTip>
+            </th>
             <th className="px-2 py-1.5 text-right font-medium">Hành động</th>
           </tr>
         </thead>

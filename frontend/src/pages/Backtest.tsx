@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchConfig, fetchStrategies, runBacktest, type BacktestResult } from "../lib/api";
 import EquityCurve from "../components/backtest/EquityCurve";
 import VersionCompare from "../components/strategy/VersionCompare";
+import InfoTip from "../components/InfoTip";
 
 export default function Backtest() {
   const qc = useQueryClient();
@@ -125,11 +126,15 @@ export default function Backtest() {
         <>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
             <span className="rounded border border-border px-2 py-0.5">
-              {res.market ?? "SPOT"}
-              {(res.leverage ?? 1) > 1 ? ` · ×${res.leverage}` : ""}
+              <InfoTip term={(res.leverage ?? 1) > 1 ? "leverage" : "market"} align="left">
+                {res.market ?? "SPOT"}
+                {(res.leverage ?? 1) > 1 ? ` · ×${res.leverage}` : ""}
+              </InfoTip>
             </span>
             <span className="rounded border border-border px-2 py-0.5">
-              phí {((res.fee_rate ?? 0) * 100).toFixed(3)}%/chiều
+              <InfoTip term="fee" align="left">
+                phí {((res.fee_rate ?? 0) * 100).toFixed(3)}%/chiều
+              </InfoTip>
             </span>
             <span>vốn {res.capital} USDT</span>
           </div>
@@ -140,11 +145,11 @@ export default function Backtest() {
             </div>
           )}
           <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
-            <Metric label="PnL %" value={res.pnl_pct} suffix="%" good={(res.pnl_pct ?? 0) >= 0} />
-            <Metric label="Win rate" value={res.winrate} suffix="%" />
-            <Metric label="Max DD" value={res.max_dd} suffix="%" good={false} />
-            <Metric label="Sharpe" value={res.sharpe} />
-            <Metric label="Số lệnh" value={res.n_trades} />
+            <Metric label="PnL %" term="pnl_pct" value={res.pnl_pct} suffix="%" good={(res.pnl_pct ?? 0) >= 0} />
+            <Metric label="Win rate" term="winrate" value={res.winrate} suffix="%" />
+            <Metric label="Max DD" term="max_dd" value={res.max_dd} suffix="%" good={false} />
+            <Metric label="Sharpe" term="sharpe" value={res.sharpe} />
+            <Metric label="Số lệnh" term="n_trades" value={res.n_trades} />
           </section>
 
           <section className="rounded-xl border border-border bg-surface p-4">
@@ -215,11 +220,13 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
 
 function Metric({
   label,
+  term,
   value,
   suffix = "",
   good,
 }: {
   label: string;
+  term?: string;
   value: number | null;
   suffix?: string;
   good?: boolean;
@@ -227,7 +234,11 @@ function Metric({
   const cls = good === undefined ? "text-text" : good ? "text-up" : "text-down";
   return (
     <div className="rounded-xl border border-border bg-surface p-3">
-      <div className="text-xs text-faint">{label}</div>
+      <div className="text-xs text-faint">
+        <InfoTip term={term} align="left">
+          {label}
+        </InfoTip>
+      </div>
       <div className={`mt-1 text-lg font-semibold tabular-nums ${cls}`}>
         {value == null ? "—" : `${value}${suffix}`}
       </div>

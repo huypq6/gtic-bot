@@ -5,6 +5,7 @@ import { Bot, LineChart, Zap } from "lucide-react";
 import { fetchScan } from "../lib/api";
 import { useWsStore, type ScanRow } from "../lib/ws";
 import QuickTradePanel from "../components/scanner/QuickTradePanel";
+import InfoTip from "../components/InfoTip";
 
 const SIGNAL_CLS: Record<string, string> = {
   BUY: "text-up",
@@ -45,11 +46,21 @@ export default function Scanner() {
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-faint">
               <th className="px-3 py-2 font-medium">Symbol</th>
-              <th className="px-3 py-2 text-right font-medium">Score</th>
-              <th className="px-3 py-2 font-medium">Tín hiệu</th>
-              <th className="px-3 py-2 text-right font-medium">Entry</th>
-              <th className="px-3 py-2 text-right font-medium">SL</th>
-              <th className="px-3 py-2 text-right font-medium">TP</th>
+              <th className="px-3 py-2 text-right font-medium">
+                <InfoTip term="score">Score</InfoTip>
+              </th>
+              <th className="px-3 py-2 font-medium">
+                <InfoTip term="signal">Tín hiệu</InfoTip>
+              </th>
+              <th className="px-3 py-2 text-right font-medium">
+                <InfoTip term="entry">Entry</InfoTip>
+              </th>
+              <th className="px-3 py-2 text-right font-medium">
+                <InfoTip term="sl">SL</InfoTip>
+              </th>
+              <th className="px-3 py-2 text-right font-medium">
+                <InfoTip term="tp">TP</InfoTip>
+              </th>
               <th className="px-3 py-2 font-medium">Lý do</th>
               <th className="px-3 py-2 text-right font-medium">Hành động</th>
             </tr>
