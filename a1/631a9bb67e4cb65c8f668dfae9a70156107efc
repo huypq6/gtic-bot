@@ -1,0 +1,34 @@
+.claude/skills/strategy-research/SKILL.md
+  s_0cd7f0ddef5937::t_5399ef7be3dae3 45-47
+scripts/walkforward_365_ict_po3_v4.py
+  s_0cd7f0ddef5937::t_e333b878727b17 1-53
+scripts/portfolio_vol_breakout.py
+  s_0cd7f0ddef5937::t_c93a6d6f0567d9 87-88
+app/strategy/strategies/donchian.md
+  s_0cd7f0ddef5937::t_898597e96b46f9 72-81
+app/strategy/strategies/vol_breakout.md
+  s_0cd7f0ddef5937::t_723dd865be15d6 77-101
+app/strategy/strategies/ict_po3.md
+  s_0cd7f0ddef5937::t_5dde4f309f7ed4 209-213
+scripts/walkforward_windows_vol_breakout.py
+  s_0cd7f0ddef5937::t_a0f4f46888b41a 1-11,13-17,19-35,40-70
+  s_0cd7f0ddef5937::t_73cf1bbecf02fc 36-39
+  s_0cd7f0ddef5937::t_54d97345881bd7 18
+  s_0cd7f0ddef5937::t_16e602991d938f 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "a1631a9bb67e4cb65c8f668dfae9a70156107efc",
+  "prompts": {},
+  "sessions": {
+    "s_0cd7f0ddef5937": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2510a30-5d6c-4ec2-8d35-094b34c18a84",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
