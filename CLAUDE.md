@@ -1,7 +1,7 @@
 # CLAUDE.md — Binance Trading Bot Platform
 
 > File này là ngữ cảnh dự án cho Claude Code. Đọc đầu mỗi phiên.
-> Tài liệu chi tiết nằm trong `docs/` (đọc khi cần): 00-Plan, 01-BRD, 02-URD, 03-ASCII-Mockups, 04-SRS.
+> Tài liệu chi tiết nằm trong `docs/` (đọc khi cần): 00-Plan, 01-BRD, 02-URD, 03-ASCII-Mockups, 04-SRS, **05-Strategy-Dev-Guide** (viết/backtest/nhúng strategy), IMPLEMENTATION-PLAN (tiến độ).
 
 ## Tóm tắt dự án
 Web app trading bot cho sàn **Binance**, **single-user**, self-hosted. Mục tiêu: tự động hóa chiến thuật có kỷ luật, kiểm chứng kỹ (backtest + paper) trước khi dùng tiền thật, realtime sát sàn, vẫn can thiệp tay được.
