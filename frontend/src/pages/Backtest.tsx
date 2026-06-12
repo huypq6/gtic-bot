@@ -5,6 +5,7 @@ import EquityCurve from "../components/backtest/EquityCurve";
 import BacktestChart from "../components/backtest/BacktestChart";
 import TradeDetail from "../components/backtest/TradeDetail";
 import VersionCompare from "../components/strategy/VersionCompare";
+import ParamsForm from "../components/strategy/ParamsForm";
 import InfoTip from "../components/InfoTip";
 
 export default function Backtest() {
@@ -24,10 +25,16 @@ export default function Backtest() {
   const [fee, setFee] = useState(FEE_PRESET.SPOT);
   const [feeEdited, setFeeEdited] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
+  const [params, setParams] = useState<Record<string, unknown>>({});
 
+  const selectedStrat = strategies?.find((s) => s.id === stratId);
   useEffect(() => {
     if (strategies?.length && stratId === "") setStratId(strategies[0].id);
   }, [strategies, stratId]);
+  // đổi strategy → nạp lại params mặc định của strategy đó (để chỉnh trước khi chạy).
+  useEffect(() => {
+    if (selectedStrat) setParams({ ...selectedStrat.default_params });
+  }, [selectedStrat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (config && !symbol) {
       setSymbol(config.symbols[0]);
@@ -52,6 +59,8 @@ export default function Backtest() {
         market,
         leverage: Number(leverage),
         fee_rate: Number(fee),
+        // gộp lên default_params + ép số; "" → bỏ qua (dùng mặc định backend).
+        params: cleanParams({ ...selectedStrat?.default_params, ...params }),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["compare"] }),
   });
@@ -117,6 +126,18 @@ export default function Backtest() {
             {run.isPending ? "Đang chạy…" : "Chạy backtest"}
           </button>
         </div>
+        {selectedStrat && Object.keys(selectedStrat.param_schema ?? {}).length > 0 && (
+          <div className="mt-3 border-t border-border pt-3">
+            <p className="mb-2 text-xs text-faint">
+              Tham số chiến lược (chỉnh trước khi chạy — không cần sửa code)
+            </p>
+            <ParamsForm
+              schema={selectedStrat.param_schema as Record<string, never>}
+              values={params}
+              onChange={setParams}
+            />
+          </div>
+        )}
         <p className="mt-2 text-xs text-faint">
           Phí Binance taker (VIP0): Spot {(+FEE_PRESET.SPOT * 100).toFixed(2)}% · Futures{" "}
           {(+FEE_PRESET.FUTURES * 100).toFixed(3)}% (mỗi chiều). Futures cho đòn bẩy — hợp vốn nhỏ
@@ -249,6 +270,11 @@ export default function Backtest() {
       )}
     </div>
   );
+}
+
+// Bỏ field rỗng ("" do xoá input) → backend dùng mặc định cho field đó.
+function cleanParams(p: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(p).filter(([, v]) => v !== "" && v != null));
 }
 
 const sel = "rounded-md border border-border bg-surface-2 px-2 py-1.5";
