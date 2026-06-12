@@ -194,6 +194,13 @@ thật) → v3 fade trend hơn nửa số ngày. v4 sửa:
 - Đối chứng cùng-params: v4-fix cải thiện 3/4 thị trường so với hành-vi-v3 (vd ETH 5m −1.35%→+1.48%).
 - ETH 15m/BTC 5m vẫn âm nhẹ qua 180/60 ngày → **chỉ khuyến nghị BTC 15m** (đúng mục tiêu "ổn định ≥1 cặp×1 TF").
 
+**Quét cặp v4 (`scripts/scan_pairs_ict_po3_v4.py`, 14 cặp × 15m/5m, xếp theo %tuần-không-âm):**
+- **15m**: BTC và SUI nổi trội; XRP/DOGE đẹp trên 120d nhưng **rụng khi kiểm 180d** (XRP +2.32% → +0.01%
+  = window-luck). Kiểm chứng 180d: **SUI +9.42%, DD 2.75%, win 69%, 88% tuần không âm** (tốt nhất chương
+  trình); **BTC +3.43%, DD 3.31%, 85%**. Tuần tệ nhất cả hai ~−1.2%.
+- **5m**: không cặp nào đủ bền (INJ/BNB/ETH dương nhưng mẫu nhỏ 45 ngày, 67–83% tuần) → **chưa dùng 5m**.
+- **Rổ khuyến nghị: BTC + SUI, 15m** (trung bình ~+6.4%/180d, DD ≤3.3%, đa dạng hoá 2 cặp).
+
 **Verdict v4 (theo mục tiêu)**: maxDD ✅ (3.3% < 10%) · ổn định ✅ (robust lân cận + không sập theo regime)
 · "luôn dương mỗi tuần" ⚠️ gần đạt (85% tuần không âm, 4 tuần âm nhỏ /26 — không chiến thuật nào đạt 100% theo
 nghĩa đen). Lưu ý: **12 lệnh/180 ngày** = tần suất thấp, PnL khiêm tốn (~7%/năm chưa đòn bẩy), nhiều tuần đứng
