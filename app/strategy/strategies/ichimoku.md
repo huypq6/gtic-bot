@@ -16,6 +16,9 @@
   - **1h: BTC +26.8%, win 45%, maxDD 7.1%** (chạm cả 3 mục tiêu in-sample); ETH −1.9%.
   - 4h: BTC +31% (DD 15.6%), ETH +9.3% (DD 35.7%) — lời nhưng DD cao.
   - ⇒ Trend-following cần trend dài: chạy **1h/4h**, ngược hẳn ict_po3 (intraday 15m).
+- **Sweep v2 (1h/4h)**: bộ bền nhất `conv=9 base=26 span_b=104 trail×2` → PnL TB **+28.7%**, 4/4 thị trường
+  dương, win 38% NHƯNG **maxDD 28.2%** → fail mục tiêu DD thấp. TẠM GÁC (chưa walk-forward) — ưu tiên
+  ict_po3 v4 theo yêu cầu; nếu quay lại: cần cơ chế giảm DD thêm (vd position sizing theo ATR) trước.
 
 ## Ý tưởng
 
