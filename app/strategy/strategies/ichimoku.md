@@ -2,6 +2,17 @@
 
 > Trường phái: **Trend-following** (đa chỉ báo). Khung gợi ý: 1h–1d. Cần nhiều dữ liệu (≥ 78 nến).
 
+## Phiên bản
+- **v1** (`ichimoku.py`) — thô: vào theo cross + mây, thoát khi đảo tín hiệu. KHÔNG cắt lỗ → giữ lệnh dài.
+- **v2** (`ichimoku_v2.py`) — v1 + **ATR trailing stop** (`atr_mult`) để ghìm max DD, vẫn để lời chạy theo trend.
+
+### Nghiên cứu (skill strategy-research)
+- **Sweep v1** (`scripts/sweep_ichimoku.py`): bộ tốt `conv=9 base=52 span_b=52` → PnL TB +15% (3/4 thị trường),
+  win ~36% NHƯNG **maxDD 33–70%** → quá cao cho mục tiêu DD thấp.
+- **v2 trailing**: cắt DD rõ (BTC 1h 180d: 28%→**17%** vẫn giữ +11.5% ở `atr_mult=2`), nhưng là dao 2 lưỡi —
+  ETH bị cắt cả lệnh thắng lớn (27.6%→7.8% ở ×1.5, âm ở ×2). DD còn ~15–17% (vẫn > mục tiêu ~10%).
+  `atr_mult` nhỏ = DD thấp nhưng cắt PnL trend; cần sweep + walk-forward để chốt.
+
 ## Ý tưởng
 
 Ichimoku (Goichi Hosoda) gộp nhiều thành phần thành một hệ thống "nhìn một lần thấy ngay" xu hướng, hỗ trợ/kháng cự và động lượng. Tín hiệu mạnh khi **nhiều thành phần đồng thuận**.
