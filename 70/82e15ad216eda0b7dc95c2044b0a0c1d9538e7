@@ -1,0 +1,19 @@
+scripts/sweep_ichimoku.py
+  s_dd1d383719b312::t_f1cc6d5bc75192 1-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "7082e15ad216eda0b7dc95c2044b0a0c1d9538e7",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
