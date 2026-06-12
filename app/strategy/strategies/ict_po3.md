@@ -106,6 +106,7 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
 | `flatten_h` | 21 | Giờ UTC đóng hết lệnh (kết thúc NY). |
 | `news_filter` | 2 | Lọc tin: 0 = tắt · 1 = chặn vào lệnh trong khung giờ tin · 2 = + chặn ngày NFP (thứ Sáu đầu tháng). |
 | `news_start_h` / `news_end_h` | 12 / 14 | Khung giờ tin US (UTC): 8:30 ET = 12:30 (hè) / 13:30 (đông). |
+| `max_per_day` | 0 | 0 = không giới hạn (vào lại sau mỗi lần đóng) · N = tối đa N lệnh/ngày. |
 | `size` | 0.001 | Khối lượng. |
 
 ## Hiển thị (chart backtest)
@@ -155,9 +156,13 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
   (`sl_mode=1`, mặc định) làm SL/TP **chạm được trong ngày**: win lên ~45–50% (15m), SL bắt đầu cắt lỗ thật.
   Bù lại số lệnh tăng → **phí ăn mòn** (≈0,1%/vòng × nhiều lệnh) kéo PnL về ~hòa. Khung **1h vẫn hay flatten**
   (ít nến/ngày) — ATR SL hợp 15m hơn.
-- **Kết luận thẳng**: SL/TP giờ hợp lý (không còn flatten-dominated trên 15m), win ~45–50%, DD thấp,
-  nhưng PnL TB ~hòa (phí + BTC thua bền) → **CHƯA phải edge, chưa nên tiền thật**. Hướng tiếp: giảm tần suất
-  lệnh (tăng confluence/swing) để bớt phí; walk-forward; bỏ BTC, tập trung ETH/SOL.
+- **Giảm tần suất KHÔNG cải thiện**: tăng `confluence`/`swing`/`mss_lookback` đẩy biến thể ít-lệnh xuống
+  hạng (cắt cả lệnh thắng → net xấu hơn). Thêm `max_per_day` rồi so 0/1/2 → **gần như y hệt** (chiến thuật
+  vốn chỉ ~1 lệnh/ngày; "100 lệnh" là cộng 4 thị trường qua 45–200 ngày). ⇒ phí KHÔNG phải nút thắt.
+- **Nút thắt là THỊ TRƯỜNG, không phải tần suất**: trên cửa sổ 60–200 ngày, ETH 15m **+1.46%**, ETH 1h
+  **+2.67%**, SOL 1h **+1.23%** (win 53–67%) — chỉ **BTC −2.66%** kéo xuống.
+- **Kết luận thẳng**: bộ ATR-SL hiện tại ăn ổn ở **ETH/SOL** (3/4 thị trường dương, DD thấp), thua bền ở **BTC**.
+  Lever hiệu quả là **chọn cặp** (tập trung ETH/SOL), không phải siết tần suất. Vẫn nên walk-forward trước tiền thật.
 
 ## Giới hạn đã biết (tóm tắt cho người đọc code)
 

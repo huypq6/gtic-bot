@@ -52,6 +52,7 @@ class IctPo3(Strategy):
         "news_filter": 2,      # 0=tắt · 1=chặn vào lệnh trong khung giờ tin · 2=+chặn ngày NFP
         "news_start_h": 12,    # khung giờ tin US (UTC): 8:30 ET = 12:30 (hè) / 13:30 (đông)
         "news_end_h": 14,
+        "max_per_day": 0,      # 0=không giới hạn (vào lại sau mỗi lần đóng) · N=tối đa N lệnh/ngày (bớt phí)
         "size": 0.001,
     }
     param_schema = {
@@ -71,6 +72,7 @@ class IctPo3(Strategy):
         "news_filter": {"type": "int", "min": 0, "max": 2, "default": 0},
         "news_start_h": {"type": "int", "min": 0, "max": 23, "default": 12},
         "news_end_h": {"type": "int", "min": 0, "max": 23, "default": 14},
+        "max_per_day": {"type": "int", "min": 0, "max": 10, "default": 0},
         "size": {"type": "float", "min": 0.0, "default": 0.001},
     }
 
@@ -86,6 +88,7 @@ class IctPo3(Strategy):
         self._armed = False           # đã MSS, đang chờ giá retest FVG để vào (conf≥2)
         self._armed_dir = None        # hướng đã vũ trang
         self._fvg_prox = None         # mép gần của FVG (mức retest để fill)
+        self._n_today = 0             # số lệnh đã vào trong ngày (cho max_per_day)
         self._side = None             # "LONG" | "SHORT" | None (lệnh đang mở)
         self._sl = None
         self._tp = None
@@ -93,6 +96,7 @@ class IctPo3(Strategy):
     def _reset_day(self, day) -> None:
         self._day = day
         self._asia_high = self._asia_low = None
+        self._n_today = 0
         self._reset_setup()
 
     def _reset_setup(self) -> None:
@@ -145,8 +149,11 @@ class IctPo3(Strategy):
             return out
 
         # 4. Ngoài cửa sổ săn lệnh / chưa có range Asia → không vào mới.
-        #    (Không giới hạn số lệnh/ngày; chỉ 1 lệnh/thời điểm — đã chặn ở bước 3 khi đang có lệnh.)
+        #    1 lệnh/thời điểm (chặn ở bước 3). max_per_day>0 → giới hạn số lệnh/ngày (giảm phí).
+        mpd = int(p.get("max_per_day", 0))
         if hour >= flatten_h or self._asia_high is None or self._asia_low is None:
+            return out
+        if mpd > 0 and self._n_today >= mpd:
             return out
 
         # 4a. Lọc tin: không MỞ/ARM/FILL lệnh mới trong khung giờ tin (hoặc ngày NFP).
@@ -265,6 +272,7 @@ class IctPo3(Strategy):
             sig = Signal("SELL", ctx.symbol, float(p["size"]), sl=sl, tp=tp)
         self._side, self._sl, self._tp = direction, sl, sig.tp
         self._armed = False
+        self._n_today += 1
         return sig
 
     @staticmethod

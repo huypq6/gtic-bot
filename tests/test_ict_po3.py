@@ -132,6 +132,17 @@ def test_multiple_trades_per_day():
     assert a[:2] == ["BUY", "CLOSE"] and "SELL" in a  # 2 lệnh tuần tự trong ngày
 
 
+# ---- max_per_day: giới hạn số lệnh/ngày (giảm phí) ----
+def test_max_per_day_cap():
+    bars = asia(0) + LONG_BRK + [
+        c(0, 12, 102, 113, 102, 112.5),    # TP LONG → CLOSE (lệnh 1)
+        c(0, 13, 112, 113, 111, 112), c(0, 14, 112, 112.5, 110, 111),
+        c(0, 15, 111, 112, 110.5, 111.5), c(0, 16, 111, 111, 105, 106),  # setup SHORT
+    ]
+    a = acts(replay(IctPo3({**MECH, "confluence": 1, "max_per_day": 1}), bars))
+    assert "BUY" in a and "SELL" not in a  # cap=1 → không vào lệnh thứ 2 trong ngày
+
+
 # ---- MSS thật: KHÔNG có swing-high thì KHÔNG vào (giá đi thẳng, không lập cấu trúc) ----
 def test_no_mss_without_swing():
     # sau sweep low, giá tăng đều (mỗi high cao hơn) → không có swing-high để phá → không MSS.

@@ -24,20 +24,22 @@ MIN_TOTAL_TRADES = 20  # bộ nào quá ít lệnh → loại (không đủ mẫ
 
 
 def build_grid() -> list[dict]:
-    # SL: sl_mode=0 (điểm quét, xa) hoặc sl_mode=1 theo ATR (gần, TP dễ chạm) × atr_mult.
-    sl_variants = [{"sl_mode": 0}] + [{"sl_mode": 1, "atr_mult": m} for m in (1.0, 1.5, 2.5)]
+    # Giữ SL theo ATR (sl_mode=1, đã chứng minh tốt). Quét các knob GIẢM TẦN SUẤT để bớt phí:
+    # confluence (3=+OB chặt hơn), swing (rộng→ít MSS), mss_lookback (debounce dài hơn).
     grid = []
-    for conf in (2, 3):                       # 2=retest FVG, 3=+OB
-        for tp_mode, rrs in ((0, (1.0, 1.5, 2.0)), (1, (2.0,))):  # tp_mode=1: rr chỉ là fallback
-            for rr in rrs:
-                for bias_len in (100, 200):
-                    for sv in sl_variants:
-                        grid.append({
-                            "bias_mode": 1, "confluence": conf, "tp_mode": tp_mode,
-                            "rr_target": rr, "bias_len": bias_len, "mss_lookback": 2,
-                            "swing": 1, "news_filter": 2, "atr_len": 14,
-                            "sl_buffer_pct": 0.05, "size": 0.001, **sv,
-                        })
+    for conf in (2, 3):
+        for swing in (1, 2, 3):
+            for mss in (2, 4):
+                for tp_mode, rrs in ((0, (1.5, 2.0)), (1, (2.0,))):
+                    for rr in rrs:
+                        for atr_mult in (1.0, 1.5):
+                            grid.append({
+                                "bias_mode": 1, "confluence": conf, "tp_mode": tp_mode,
+                                "rr_target": rr, "bias_len": 100, "mss_lookback": mss,
+                                "swing": swing, "news_filter": 2, "sl_mode": 1,
+                                "atr_len": 14, "atr_mult": atr_mult,
+                                "sl_buffer_pct": 0.05, "size": 0.001,
+                            })
     return grid
 
 
@@ -82,9 +84,9 @@ def evaluate(params: dict, data: dict) -> dict:
 
 
 def fmt(p: dict) -> str:
-    sl = f"sl=atr×{p['atr_mult']}" if p.get("sl_mode") == 1 else "sl=sweep"
-    return (f"conf={p['confluence']} tp={p['tp_mode']} rr={p['rr_target']} "
-            f"bias_len={p['bias_len']} {sl}")
+    sl = f"atr×{p['atr_mult']}" if p.get("sl_mode") == 1 else "sweep"
+    return (f"conf={p['confluence']} swing={p['swing']} mss={p['mss_lookback']} "
+            f"tp={p['tp_mode']} rr={p['rr_target']} sl={sl}")
 
 
 async def main() -> None:
