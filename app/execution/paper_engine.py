@@ -94,6 +94,23 @@ class PaperEngine:
         """Đóng vị thế hiện tại tại giá `price` (vd can thiệp tay)."""
         return [self._close(price, reason)] if self.position else []
 
+    def sltp_reason(self, price: float) -> str | None:
+        """SL/TP có chạm ở `price` không (không đóng) — dùng cho testnet/live."""
+        p = self.position
+        if not p:
+            return None
+        if p.side == "LONG":
+            if p.sl is not None and price <= p.sl:
+                return "SL"
+            if p.tp is not None and price >= p.tp:
+                return "TP"
+        else:
+            if p.sl is not None and price >= p.sl:
+                return "SL"
+            if p.tp is not None and price <= p.tp:
+                return "TP"
+        return None
+
     def unrealized_pnl(self, price: float) -> float:
         p = self.position
         if not p:

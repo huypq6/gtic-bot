@@ -11,6 +11,7 @@ from collections import deque
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.config import settings
 from app.execution.base import Executor
 from app.execution.paper import PaperExecutor
 from app.market.bus import EventBus
@@ -111,17 +112,35 @@ class BotManager:
         self, bot_id: int, strategy_name: str, strategy_version: str,
         params: dict, symbol: str, tf: str, mode: str,
     ) -> None:
-        if mode != "PAPER":
-            raise ValueError(f"mode {mode} chưa hỗ trợ ở P2/P3 (PAPER only)")
         discover()
         strat = get(strategy_name, strategy_version)(params)
-        executor = PaperExecutor(bot_id, symbol, mode, self._bus, self._sf)
+        executor = await self._make_executor(bot_id, symbol, mode, params)
         runner = StrategyRunner(
             bot_id, strat, executor, self._bus, symbol, tf, self._sf,
             order_manager=self._om, mode=mode,
         )
         await runner.start()
         self._runners[bot_id] = runner
+
+    async def _make_executor(
+        self, bot_id: int | None, symbol: str, mode: str, params: dict
+    ) -> Executor:
+        if mode == "PAPER":
+            return PaperExecutor(bot_id, symbol, mode, self._bus, self._sf)
+        if mode == "TESTNET":
+            from app.execution.binance_client import BinanceClient
+            from app.execution.testnet import TestnetExecutor
+
+            if not settings.binance_testnet_key or not settings.binance_testnet_secret:
+                raise ValueError("cần BINANCE_TESTNET_KEY/SECRET trong .env để chạy mode TESTNET")
+            client = await BinanceClient.create(
+                settings.binance_testnet_key, settings.binance_testnet_secret, testnet=True
+            )
+            return TestnetExecutor(
+                bot_id, symbol, mode, self._bus, self._sf, client,
+                timeout=params.get("timeout"),
+            )
+        raise ValueError(f"mode {mode} chưa hỗ trợ (LIVE ở P8)")
 
     def get_executor(self, bot_id: int) -> Executor | None:
         r = self._runners.get(bot_id)

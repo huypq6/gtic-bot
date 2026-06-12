@@ -23,6 +23,7 @@ export default function Trading() {
   const [stratId, setStratId] = useState<number | "">("");
   const [symbol, setSymbol] = useState("");
   const [tf, setTf] = useState("");
+  const [mode, setMode] = useState("PAPER");
   const [params, setParams] = useState<Record<string, unknown>>({});
 
   const selectedStrat = strategies?.find((s) => s.id === stratId);
@@ -52,7 +53,7 @@ export default function Trading() {
         strategy_id: stratId as number,
         symbol,
         tf,
-        mode: "PAPER",
+        mode,
         params,
       }),
     onSuccess: refresh,
@@ -103,6 +104,16 @@ export default function Trading() {
               {config?.timeframes.map((t) => (
                 <option key={t}>{t}</option>
               ))}
+            </select>
+          </Field>
+          <Field label="Mode">
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value)}
+              className="rounded-md border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm"
+            >
+              <option>PAPER</option>
+              <option>TESTNET</option>
             </select>
           </Field>
           <button

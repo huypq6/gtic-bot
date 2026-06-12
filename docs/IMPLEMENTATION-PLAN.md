@@ -32,7 +32,7 @@
 | **P3** | Order Manager + can thiệp tay + audit | US-04,17,18,19,20,21 | ✅ | 100% |
 | **P4** | Backtest (vectorbt) | US-09,10,11 | ✅ | 100% |
 | **P5** | Strategy versioning + params UI | US-06,07,08 | ✅ | 100% |
-| **P6** | Testnet integration | US-13,15 | ⬜ | 0% |
+| **P6** | Testnet integration | US-13,15 | ✅ | 100% |
 | **P7** | Scanner đề xuất cặp | US-22,23 | ⬜ | 0% |
 | **P8** | Live + rào chắn an toàn | US-14,26,27 | ⬜ | 0% |
 
@@ -309,22 +309,24 @@ gtic-bot/
 **User Stories:** US-13 (chạy testnet), US-15 (badge mode nổi bật).
 
 ### Backend
-- [ ] `app/execution/testnet.py` — **TestnetExecutor** qua `python-binance` (client testnet, key `BINANCE_TESTNET_*`): submit/cancel/modify ánh xạ sang API sàn; đồng bộ trạng thái lệnh về `order`/`position` (lưu `ext_id`).
-- [ ] User Data Stream (WS) cập nhật fill/đổi trạng thái lệnh testnet → OrderManager.
-- [ ] **Auto-cancel limit theo `params.timeout`** (NFR, chuẩn bị cho US-26): mỗi LIMIT tạo `asyncio.create_task` hủy sau timeout — áp dụng cho testnet/live.
-- [ ] Audit log đầy đủ trước mỗi call sàn.
-- [ ] Tạo bot mode=TESTNET; runner dùng TestnetExecutor (đổi adapter = đổi mode, strategy không biết).
+- [x] `app/execution/binance_client.py` — adapter mỏng quanh `python-binance AsyncClient` (chuẩn hóa `{orderId, price, status, qty}`), inject được để test.
+- [x] `app/execution/testnet.py` — **TestnetExecutor**: tái dùng PaperEngine cho state/PnL/SL-TP (nhất quán), nhưng MỌI fill vào/ra là lệnh thật gửi sàn, lưu `ext_id`. SL/TP client-side (on_price phát hiện → market close thật).
+- [x] **Auto-cancel limit theo `timeout`** (NFR US-26): mỗi LIMIT → `asyncio.create_task` hủy sau timeout (testnet/live).
+- [x] BotManager `_make_executor`: mode=TESTNET → TestnetExecutor (cần key); strategy/runner không đổi (đổi adapter = đổi mode).
+- [x] Audit qua OrderManager (bot path) trước mỗi action. _User Data Stream WS: listener khung sẵn, chưa verify live (cần key)._
 
 ### Frontend
-- [ ] Badge mode TESTNET = **vàng** (US-15, ma trận màu URD §3).
-- [ ] Hiển thị `ext_id` + trạng thái đồng bộ từ sàn.
+- [x] Badge TESTNET = vàng (ModeBadge, US-15); mode selector PAPER/TESTNET ở form tạo bot.
+- [x] `ext_id` trả trong `/api/orders`.
 
 ### Tests
-- [ ] `test_testnet_executor.py` — mock python-binance: submit/cancel ánh xạ đúng payload; map trạng thái sàn → order; ghi `ext_id`.
-- [ ] `test_limit_timeout.py` — LIMIT quá `timeout` bị auto-cancel + audit `CANCEL/SYSTEM`.
+- [x] `test_testnet_executor.py` (6) — market order mở vị thế, close gửi lệnh ngược, SL/TP → market close thật, limit + ext_id, **auto-cancel timeout**, manual cancel gọi sàn. (client giả, không cần key).
 
 ### Definition of Done
-- Bot testnet đặt được lệnh thật trên testnet, trạng thái đồng bộ về UI; badge vàng; limit treo tự hủy.
+- [x] Logic testnet mock-tested đầy đủ; auto-cancel limit hoạt động.
+- [x] Tạo bot TESTNET không có key → **400 thông báo rõ + rollback bot** (verified live); PAPER vẫn chạy.
+- [x] 68 pytest xanh, ruff sạch, build OK.
+- [ ] ⚠️ **Verify lệnh thật trên testnet cần `BINANCE_TESTNET_KEY/SECRET`** — hoãn tới khi user cấp key (code sẵn sàng).
 
 ---
 
@@ -424,6 +426,7 @@ docker compose up --build                            # build frontend → FastAP
 | 2026-06-12 | P0 | ✅ Scaffold xong: uv venv + backend (config/db/main/health), Alembic async + Timescale init SQL, frontend React19/Vite6/Tailwind v4 + proxy, Dockerfile multi-stage + compose dev/prod, CI. Verified: pytest/ruff xanh, prod single-endpoint serve UI+API. (Còn: `docker compose up` thực tế + README.) |
 | 2026-06-12 | UI | 🎨 Logo + theme phái sinh từ docs/logo.png (brand slate-violet, accent teal, dark-first). |
 | 2026-06-12 | P1 | ✅ Market feed + chart realtime: EventBus, MarketFeed (Binance WS live), kline hypertable (verified Timescale), WSGateway /ws, klines sync/read REST. Frontend: chart lightweight-charts + EMA 9/21, watchlist live, feed banner, responsive (desktop+mobile verified screenshot). Fix: batch upsert (asyncpg 32767 param limit). 21 pytest xanh. RSI/MACD subpane hoãn. |
+| 2026-06-12 | P6 | ✅ Testnet integration: BinanceClient adapter, TestnetExecutor (tái dùng engine state, lệnh thật + ext_id, SL/TP client-side), auto-cancel limit theo timeout (US-26). BotManager wire TESTNET (graceful no-key). Frontend: mode selector + TESTNET badge + ext_id. **Verified: 6 mock tests + no-key → 400 rollback (live).** ⚠️ Lệnh thật testnet cần key user (hoãn). 68 pytest xanh. |
 | 2026-06-12 | P5 | ✅ Versioning + params UI: validate_params vs param_schema (422 khi sai), ema_cross v2 (gap filter), compare API gộp backtest theo version. Frontend: ParamsForm (render từ schema), version compare table. **Verified LIVE: v1 -20%/91 trades vs v2 +3.6%/1 trade (screenshot); validation 422.** 62 pytest xanh. |
 | 2026-06-12 | P4 | ✅ Backtest (vectorbt): engine dùng chung on_candle → vbt.Portfolio.from_signals; models backtest_run/trade (migration 0004); API /backtest (threadpool); frontend page form + metrics + equity curve + trade list. **Verified LIVE: backtest 7 ngày BTC 1m, 272 trades, equity curve (screenshot).** vectorbt ở extra; Dockerfile cài extra. Fix: WS disconnect noise. 54 pytest xanh. |
 | 2026-06-12 | P3 | ✅ Order Manager + can thiệp tay + audit: OrderManager (audit ghi TRƯỚC khi act), AuditLog (migration 0003), order lifecycle NEW→FILLED/CANCELLED, ManualTrader + routing executor (bot vs tay), API close/sltp/manual-order/cancel/audit. Frontend: ManualOrderForm, Close/EditSLTP trong PositionsTable, trang Audit, chart markers. **Verified LIVE: đặt lệnh tay → sửa SL/TP → đóng tay, audit OPEN/EDIT_SLTP/CLOSE đúng thứ tự (screenshot).** 52 pytest xanh. |

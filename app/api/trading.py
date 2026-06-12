@@ -120,8 +120,8 @@ async def create_bot(
     strat = await session.get(StrategyModel, body.strategy_id)
     if not strat:
         raise HTTPException(404, "strategy không tồn tại")
-    if body.mode != "PAPER":
-        raise HTTPException(400, f"mode {body.mode} chưa hỗ trợ (P2: PAPER)")
+    if body.mode not in ("PAPER", "TESTNET"):
+        raise HTTPException(400, f"mode {body.mode} chưa hỗ trợ (LIVE ở P8)")
     try:
         params = validate_params(_schema_for(strat), body.params)
     except ParamError as e:
@@ -134,9 +134,14 @@ async def create_bot(
     await session.commit()
     await session.refresh(bot)
 
-    await request.app.state.bot_manager.start_bot(
-        bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode
-    )
+    try:
+        await request.app.state.bot_manager.start_bot(
+            bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode
+        )
+    except ValueError as e:  # vd thiếu key testnet
+        await session.delete(bot)
+        await session.commit()
+        raise HTTPException(400, str(e)) from e
     return await _bot_dict(session, bot)
 
 
@@ -221,9 +226,10 @@ async def list_orders(
     ).scalars().all()
     return [
         {
-            "id": o.id, "bot_id": o.bot_id, "source": o.source, "mode": o.mode, "symbol": o.symbol,
-            "side": o.side, "type": o.type, "qty": float(o.qty),
-            "price": float(o.price) if o.price is not None else None, "status": o.status,
+            "id": o.id, "bot_id": o.bot_id, "ext_id": o.ext_id, "source": o.source,
+            "mode": o.mode, "symbol": o.symbol, "side": o.side, "type": o.type,
+            "qty": float(o.qty), "price": float(o.price) if o.price is not None else None,
+            "status": o.status,
         }
         for o in rows
     ]
