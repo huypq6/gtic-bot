@@ -5,10 +5,19 @@ Các model nghiệp vụ (strategy/bot/order/position/audit) thêm ở app/order
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Numeric, PrimaryKeyConstraint, String
+from sqlalchemy import DateTime, Numeric, PrimaryKeyConstraint, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
+
+
+class WatchSymbol(Base):
+    """Watchlist — cặp theo dõi (sửa từ UI). Feed subscribe realtime theo bảng này."""
+
+    __tablename__ = "watch_symbol"
+
+    symbol: Mapped[str] = mapped_column(String, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Kline(Base):

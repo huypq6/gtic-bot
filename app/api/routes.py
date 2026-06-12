@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.db import get_session
 from app.market.store import get_klines, sync_historical
+from app.market.watchlist import add_symbol, get_watchlist, remove_symbol
 from app.orders.models import ScanResult
 
 router = APIRouter(prefix="/api")
@@ -25,13 +26,54 @@ async def health() -> dict:
 
 
 @router.get("/config")
-async def config() -> dict:
-    """Cấu hình UI cần: danh sách symbol theo dõi + khung thời gian + tf mặc định."""
+async def config(session: AsyncSession = Depends(get_session)) -> dict:
+    """Cấu hình UI: watchlist (DB) + khung thời gian + tf mặc định."""
     return {
-        "symbols": settings.default_symbols,
+        "symbols": await get_watchlist(session),
         "timeframes": TIMEFRAMES,
         "default_tf": settings.default_tf,
     }
+
+
+class WatchReq(BaseModel):
+    symbol: str
+
+
+@router.post("/watchlist")
+async def watchlist_add(
+    body: WatchReq, request: Request, session: AsyncSession = Depends(get_session)
+) -> dict:
+    """Thêm cặp vào watchlist + feed subscribe realtime. Kiểm tra cặp tồn tại trên Binance."""
+    symbol = body.symbol.strip().upper()
+    if not symbol.isalnum():
+        raise HTTPException(400, "symbol không hợp lệ")
+    from binance import AsyncClient
+
+    client = await AsyncClient.create()
+    try:
+        info = await client.get_symbol_info(symbol)
+    finally:
+        await client.close_connection()
+    if not info:
+        raise HTTPException(400, f"cặp {symbol} không tồn tại trên Binance")
+
+    await add_symbol(session, symbol)
+    feed = getattr(request.app.state, "feed", None)
+    if feed:
+        await feed.add_symbol(symbol)
+    return {"added": symbol, "symbols": await get_watchlist(session)}
+
+
+@router.delete("/watchlist/{symbol}")
+async def watchlist_remove(
+    symbol: str, request: Request, session: AsyncSession = Depends(get_session)
+) -> dict:
+    symbol = symbol.upper()
+    await remove_symbol(session, symbol)
+    feed = getattr(request.app.state, "feed", None)
+    if feed:
+        await feed.remove_symbol(symbol)
+    return {"removed": symbol, "symbols": await get_watchlist(session)}
 
 
 @router.get("/klines")

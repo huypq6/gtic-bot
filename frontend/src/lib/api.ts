@@ -20,6 +20,15 @@ export interface AppConfig {
 
 export const fetchConfig = () => getJson<AppConfig>("/api/config");
 
+export const addWatch = (symbol: string) =>
+  postJson<{ added: string; symbols: string[] }>("/api/watchlist", { symbol });
+
+export async function removeWatch(symbol: string) {
+  const res = await fetch(`/api/watchlist/${symbol}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
     method: "POST",

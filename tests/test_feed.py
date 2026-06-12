@@ -1,6 +1,7 @@
 """MarketFeed — parse message Binance combined stream + build stream URL + reconnect."""
 
 import asyncio
+import json
 
 import pytest
 
@@ -121,3 +122,39 @@ async def test_run_reconnects_and_emits_feed_status():
 def test_stream_url_respects_tf(tf):
     feed = MarketFeed(EventBus(), symbols=["BTCUSDT"], tf=tf)
     assert f"btcusdt@kline_{tf}" in feed.stream_url()
+
+
+class _CtrlWS:
+    def __init__(self):
+        self.sent = []
+
+    async def send(self, data):
+        self.sent.append(json.loads(data))
+
+
+async def test_add_symbol_subscribes_runtime():
+    feed = MarketFeed(EventBus(), symbols=["BTCUSDT"], tf="1m")
+    ws = _CtrlWS()
+    feed._ws = ws  # giả lập đang kết nối
+    await feed.add_symbol("ethusdt")
+    assert "ETHUSDT" in feed._symbols
+    assert "ethusdt@kline_1m" in feed.stream_url()
+    assert ws.sent[0]["method"] == "SUBSCRIBE"
+    assert "ethusdt@ticker" in ws.sent[0]["params"]
+
+
+async def test_remove_symbol_unsubscribes_runtime():
+    feed = MarketFeed(EventBus(), symbols=["BTCUSDT", "ETHUSDT"], tf="1m")
+    ws = _CtrlWS()
+    feed._ws = ws
+    await feed.remove_symbol("ETHUSDT")
+    assert "ETHUSDT" not in feed._symbols
+    assert ws.sent[0]["method"] == "UNSUBSCRIBE"
+
+
+async def test_add_duplicate_noop():
+    feed = MarketFeed(EventBus(), symbols=["BTCUSDT"], tf="1m")
+    feed._ws = _CtrlWS()
+    await feed.add_symbol("BTCUSDT")  # đã có
+    assert feed._symbols == ["BTCUSDT"]
+    assert feed._ws.sent == []

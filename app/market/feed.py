@@ -70,24 +70,51 @@ class MarketFeed:
         backoff_max: float = 30.0,
     ) -> None:
         self._bus = bus
-        self._symbols = symbols
+        self._symbols = [s.upper() for s in symbols]
         self._tf = tf
         self._connect = connect
         self._base_url = base_url
         self._backoff_base = backoff_base
         self._backoff_max = backoff_max
         self._running = False
+        self._ws = None  # WS đang mở (để SUBSCRIBE/UNSUBSCRIBE runtime)
+        self._msg_id = 0
+
+    def _streams_for(self, symbol: str) -> list[str]:
+        s = symbol.lower()
+        return [f"{s}@kline_{self._tf}", f"{s}@ticker"]
 
     def stream_url(self) -> str:
         streams = []
         for sym in self._symbols:
-            s = sym.lower()
-            streams.append(f"{s}@kline_{self._tf}")
-            streams.append(f"{s}@ticker")
+            streams += self._streams_for(sym)
         return self._base_url + "/".join(streams)
 
     def stop(self) -> None:
         self._running = False
+
+    async def _control(self, method: str, symbol: str) -> None:
+        if not self._ws:
+            return
+        self._msg_id += 1
+        await self._ws.send(
+            json.dumps({"method": method, "params": self._streams_for(symbol), "id": self._msg_id})
+        )
+
+    async def add_symbol(self, symbol: str) -> None:
+        """Thêm cặp + SUBSCRIBE realtime (không cần reconnect)."""
+        s = symbol.upper()
+        if s in self._symbols:
+            return
+        self._symbols.append(s)
+        await self._control("SUBSCRIBE", s)
+
+    async def remove_symbol(self, symbol: str) -> None:
+        s = symbol.upper()
+        if s not in self._symbols:
+            return
+        self._symbols.remove(s)
+        await self._control("UNSUBSCRIBE", s)
 
     async def handle_raw(self, raw: str | bytes) -> None:
         try:
@@ -107,16 +134,19 @@ class MarketFeed:
         while self._running:
             try:
                 async with self._connect(self.stream_url()) as ws:
+                    self._ws = ws
                     backoff = self._backoff_base
                     await self._bus.publish("feed", {"status": "OK"})
                     async for raw in ws:
                         await self.handle_raw(raw)
+                self._ws = None
                 # iterator kết thúc bình thường (vd test) → thoát nếu đã stop
                 if not self._running:
                     break
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 — mọi lỗi WS đều reconnect
+                self._ws = None
                 if not self._running:
                     break
                 logger.warning("feed mất kết nối: %s → reconnect sau %.1fs", exc, backoff)
