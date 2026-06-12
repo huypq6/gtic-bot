@@ -1,0 +1,35 @@
+app/strategy/ta.py
+  s_97e667e10cf896::t_3218506735f7a7 91-133
+app/strategy/strategies/grid.py
+  s_97e667e10cf896::t_3e807ab393375d 1-45
+tests/test_more_strategies.py
+  s_97e667e10cf896::t_4606b61ac72c16 1-92
+app/backtest/engine.py
+  s_97e667e10cf896::t_98614c6c876322 19-20,26,28-30,35,39,43
+app/strategy/strategies/ichimoku.py
+  s_97e667e10cf896::t_061057b363f398 1-38
+app/strategy/strategies/vwap.md
+  s_97e667e10cf896::t_f9857ed00297bb 1-44
+app/strategy/strategies/grid.md
+  s_97e667e10cf896::t_8cf8964da3fa9a 1-50
+app/strategy/strategies/vwap_cross.py
+  s_97e667e10cf896::t_38faaaf533bad9 1-36
+app/strategy/strategies/ichimoku.md
+  s_97e667e10cf896::t_6248db8c79a8b7 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "4b28ef1f31c1d5ede89c6fac7e224e8333650591",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
