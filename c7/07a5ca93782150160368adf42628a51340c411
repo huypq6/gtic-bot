@@ -1,0 +1,39 @@
+app/market/models.py
+  s_97e667e10cf896::t_a9315b6c269119 8,14-20
+frontend/src/components/watchlist/Watchlist.tsx
+  s_97e667e10cf896::t_4494767ab7164d 1-4,17,19-29,32-75,77-96
+app/api/routes.py
+  s_97e667e10cf896::t_352844c0d1684d 5,13,29-30,32,38-76
+app/market/watchlist.py
+  s_97e667e10cf896::t_cff63c0ebe8ebf 1-36
+frontend/src/lib/api.ts
+  s_97e667e10cf896::t_1d3a0c9c7f2744 23-31
+app/market/feed.py
+  s_97e667e10cf896::t_2dfe45a694ab51 149
+  s_97e667e10cf896::t_9338b72eed5262 137,142
+  s_97e667e10cf896::t_7fed3d26702478 73,80-85,90,96-117
+app/main.py
+  s_97e667e10cf896::t_e1955302efb744 40-41,44-45
+alembic/versions/6960966b39b8_watch_symbol.py
+  s_97e667e10cf896::t_9a272a10fc48bd 11
+  s_97e667e10cf896::t_6aeaac147d3fc8 1-10,12-33
+tests/test_feed.py
+  s_97e667e10cf896::t_a4fad76dd4cd88 4
+  s_97e667e10cf896::t_00097d80325bfc 125-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "c707a5ca93782150160368adf42628a51340c411",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
