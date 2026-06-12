@@ -1,0 +1,55 @@
+app/strategy/strategies/rsi_rev.py
+  s_dd1d383719b312::t_a10bd703be2fd7 8
+  s_dd1d383719b312::t_16ce5c8b1664b9 36-42
+app/strategy/strategies/adx_dmi.py
+  s_dd1d383719b312::t_64e27a712a96c1 35-40
+  s_dd1d383719b312::t_1cc4837b7df56e 8
+frontend/src/lib/api.ts
+  s_dd1d383719b312::t_609cb7679a1ab0 250
+  s_dd1d383719b312::t_5d185b1b644cf6 189-192
+  s_dd1d383719b312::t_9983325a350880 221
+app/strategy/strategies/keltner.py
+  s_dd1d383719b312::t_5581ee0dcb7970 8
+  s_dd1d383719b312::t_f54f0d29488a1f 37-39
+app/strategy/strategies/supertrend.py
+  s_dd1d383719b312::t_ab37cc6e3c8940 8
+  s_dd1d383719b312::t_361bcf4fe4d6cd 34-37
+app/strategy/strategies/ichimoku.py
+  s_dd1d383719b312::t_dbd9965f0f9d06 8
+  s_dd1d383719b312::t_586622cccf646f 39-42
+app/strategy/ta.py
+  s_dd1d383719b312::t_28cf83ca90671d 261-451
+app/strategy/strategies/stochastic.py
+  s_dd1d383719b312::t_91a67aa430bd59 8
+  s_dd1d383719b312::t_6317b89bb4117c 34-39
+app/strategy/strategies/parabolic_sar.py
+  s_dd1d383719b312::t_d59a06594453fe 33-35
+  s_dd1d383719b312::t_03e3fb38017895 8
+app/backtest/engine.py
+  s_dd1d383719b312::t_bf2bf2d895f4b5 89-90,92,94-101
+app/strategy/strategies/macd_cross.py
+  s_dd1d383719b312::t_440cc2b36ba08c 8
+  s_dd1d383719b312::t_1ecca880b089d2 37-45
+app/strategy/base.py
+  s_dd1d383719b312::t_089fabdb7e2015 63-70
+frontend/src/components/backtest/BacktestChart.tsx
+  s_dd1d383719b312::t_48b6144fb8bbad 127,129
+  s_dd1d383719b312::t_ef7471eb676ea9 16,19-26,33
+  s_dd1d383719b312::t_81da644248fff5 75-91,93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "bb02c207307e061a121f74d948e550dabbe32bc8",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
