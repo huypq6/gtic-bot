@@ -1,0 +1,25 @@
+tests/test_ict_po3.py
+  s_dd1d383719b312::t_8b8f74b237182d 112-123,125-129,132
+app/strategy/strategies/ict_po3.py
+  s_dd1d383719b312::t_801564f8a979a4 137,140-142
+app/strategy/strategies/ict_po3.md
+  s_dd1d383719b312::t_71fa8fb1ced02e 115
+  s_dd1d383719b312::t_3ab2a34250e0c7 73-74
+  s_dd1d383719b312::t_957d70a6f5c532 129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "9872c877b50a28e550820dd2650cd6d13f24edfe",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
