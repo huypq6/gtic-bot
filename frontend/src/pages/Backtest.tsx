@@ -85,13 +85,6 @@ export default function Backtest() {
         {run.isError && <p className="mt-2 text-sm text-down">Lỗi: {String(run.error)}</p>}
       </section>
 
-      {stratName && (
-        <section className="rounded-xl border border-border bg-surface p-4">
-          <h3 className="mb-2 text-sm font-semibold">So sánh version — {stratName}</h3>
-          <VersionCompare name={stratName} />
-        </section>
-      )}
-
       {res && (
         <>
           <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -103,17 +96,8 @@ export default function Backtest() {
           </section>
 
           <section className="rounded-xl border border-border bg-surface p-4">
-            <h3 className="mb-2 text-sm font-semibold">Equity curve</h3>
-            {res.equity_curve.length > 1 ? (
-              <EquityCurve data={res.equity_curve} />
-            ) : (
-              <p className="text-sm text-faint">Không đủ dữ liệu vẽ equity.</p>
-            )}
-          </section>
-
-          <section className="rounded-xl border border-border bg-surface p-4">
             <h3 className="mb-2 text-sm font-semibold">Trades ({res.trades.length})</h3>
-            <div className="max-h-72 overflow-auto">
+            <div className="max-h-80 overflow-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-surface">
                   <tr className="text-left text-xs uppercase tracking-wide text-faint">
@@ -143,7 +127,23 @@ export default function Backtest() {
               </table>
             </div>
           </section>
+
+          <section className="rounded-xl border border-border bg-surface p-4">
+            <h3 className="mb-2 text-sm font-semibold">Equity curve</h3>
+            {res.equity_curve.length > 1 ? (
+              <EquityCurve data={res.equity_curve} />
+            ) : (
+              <p className="text-sm text-faint">Không đủ dữ liệu vẽ equity.</p>
+            )}
+          </section>
         </>
+      )}
+
+      {stratName && (
+        <section className="rounded-xl border border-border bg-surface p-4">
+          <h3 className="mb-2 text-sm font-semibold">So sánh version — {stratName}</h3>
+          <VersionCompare name={stratName} />
+        </section>
       )}
     </div>
   );
