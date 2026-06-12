@@ -32,15 +32,16 @@ class IctPo3(Strategy):
         "ICT Power of Three (Session AMD) — quét range Asia ở London/NY rồi đảo chiều "
         "(MSS + FVG/OB), SL ngoài sweep, TP 2R, chỉ đánh trong ngày."
     )
-    # Mặc định = bộ BỀN nhất từ sweep (scripts/sweep_ict_po3.py): tp về thanh khoản đối diện,
-    # bias_len 100, mss 3, confluence 3. Gần hòa vốn + maxDD thấp (KHÔNG phải bộ chắc lời).
+    # Mặc định = bộ BỀN nhất từ sweep (scripts/sweep_ict_po3.py) với MSS swing-structure:
+    # conf=2 retest, tp rr=1.5, bias_len 200, mss 2, swing 1. In-sample +1.65%, lời 3/4 thị trường.
     default_params = {
         "bias_mode": 1,        # 0=tắt (2 chiều) · 1=lọc theo EMA trend HTF (chỉ thuận trend)
-        "bias_len": 100,       # độ dài EMA bias (số nến ~ 4H/daily)
-        "confluence": 3,       # 1=MSS-breakout · 2=retest FVG · 3=retest FVG+OrderBlock
-        "mss_lookback": 3,     # số nến phản ứng tối thiểu sau sweep trước khi cho MSS
-        "tp_mode": 1,          # 0=TP theo rr_target · 1=TP về thanh khoản đối diện (Asia high/low)
-        "rr_target": 2.0,      # bội số R cho TP (khi tp_mode=0; cũng là fallback của tp_mode=1)
+        "bias_len": 200,       # độ dài EMA bias (số nến ~ 4H/daily)
+        "confluence": 2,       # 1=MSS-breakout · 2=retest FVG · 3=retest FVG+OrderBlock
+        "mss_lookback": 2,     # tối thiểu số nến kể từ sweep trước khi cho phép MSS (debounce)
+        "swing": 1,            # nửa-độ-rộng fractal để xác định swing high/low (MSS = phá swing)
+        "tp_mode": 0,          # 0=TP theo rr_target · 1=TP về thanh khoản đối diện (Asia high/low)
+        "rr_target": 1.5,      # bội số R cho TP (khi tp_mode=0; cũng là fallback của tp_mode=1)
         "sl_buffer_pct": 0.05,  # đệm SL ngoài điểm quét, theo % giá
         "asia_end_h": 8,       # giờ UTC kết thúc phiên Asia (chốt range)
         "flatten_h": 21,       # giờ UTC đóng hết lệnh (kết thúc NY)
@@ -54,6 +55,7 @@ class IctPo3(Strategy):
         "bias_len": {"type": "int", "min": 10, "max": 1000, "default": 200},
         "confluence": {"type": "int", "min": 1, "max": 3, "default": 2},
         "mss_lookback": {"type": "int", "min": 1, "max": 20, "default": 3},
+        "swing": {"type": "int", "min": 1, "max": 10, "default": 2},
         "tp_mode": {"type": "int", "min": 0, "max": 1, "default": 0},
         "rr_target": {"type": "float", "min": 0.5, "max": 10.0, "default": 2.0},
         "sl_buffer_pct": {"type": "float", "min": 0.0, "max": 2.0, "default": 0.05},
@@ -72,8 +74,7 @@ class IctPo3(Strategy):
         self._asia_low = None
         self._sweep = None            # "HIGH" (→SHORT) | "LOW" (→LONG) | None
         self._sweep_extreme = None    # điểm cực trị của cú quét (đặt SL ngoài đây)
-        self._react_high = None       # đỉnh phản ứng kể từ sweep (cho MSS LONG)
-        self._react_low = None        # đáy phản ứng kể từ sweep (cho MSS SHORT)
+        self._sweep_i = None          # index nến quét (để dò swing-structure SAU sweep)
         self._since = 0               # số nến đã qua kể từ sweep
         self._armed = False           # đã MSS, đang chờ giá retest FVG để vào (conf≥2)
         self._armed_dir = None        # hướng đã vũ trang
@@ -91,8 +92,7 @@ class IctPo3(Strategy):
 
     def _reset_setup(self) -> None:
         """Xoá trạng thái sweep/MSS/vũ trang để dò setup mới (cùng ngày)."""
-        self._sweep = self._sweep_extreme = None
-        self._react_high = self._react_low = None
+        self._sweep = self._sweep_extreme = self._sweep_i = None
         self._since = 0
         self._armed = False
         self._armed_dir = self._fvg_prox = None
@@ -106,6 +106,7 @@ class IctPo3(Strategy):
         if not candles:
             return []
         cur = candles[-1]
+        cur_i = len(candles) - 1
         dt = _utc(cur["ts"])
         day, hour = dt.date(), dt.hour
         asia_end_h, flatten_h = int(p["asia_end_h"]), int(p["flatten_h"])
@@ -174,22 +175,25 @@ class IctPo3(Strategy):
                 self._sweep, self._sweep_extreme = "HIGH", cur["high"]
             elif cur["low"] < self._asia_low:
                 self._sweep, self._sweep_extreme = "LOW", cur["low"]
-            if self._sweep is not None:  # khởi tạo phản ứng từ nến quét
-                self._react_high, self._react_low, self._since = cur["high"], cur["low"], 1
+            if self._sweep is not None:  # đánh dấu nến quét để dò swing-structure sau đó
+                self._sweep_i, self._since = cur_i, 1
             return out  # cần nến sau để xác nhận MSS
 
-        # 6. MSS — so close với đỉnh/đáy phản ứng (chưa tính nến hiện tại).
+        # 6. MSS = CHoCH: phá SWING gần nhất hình thành SAU cú quét (đảo cấu trúc thật).
+        #    LONG: close vượt swing-high gần nhất (lower-high của nhịp hồi). SHORT: ngược lại.
         direction = None
-        lb = int(p["mss_lookback"])
-        if self._since >= lb:
-            if self._sweep == "LOW" and close > self._react_high:
-                direction = "LONG"
-            elif self._sweep == "HIGH" and close < self._react_low:
-                direction = "SHORT"
+        w = int(p["swing"])
+        if self._since >= int(p["mss_lookback"]):
+            if self._sweep == "LOW":
+                ref = self._recent_swing(candles, self._sweep_i, cur_i, w, "high")
+                if ref is not None and close > ref:
+                    direction = "LONG"
+            else:
+                ref = self._recent_swing(candles, self._sweep_i, cur_i, w, "low")
+                if ref is not None and close < ref:
+                    direction = "SHORT"
 
-        # cập nhật phản ứng + cực trị sweep (sau khi đã so sánh).
-        self._react_high = max(self._react_high, cur["high"])
-        self._react_low = min(self._react_low, cur["low"])
+        # cập nhật điểm cực trị sweep (SL đặt ngoài đây).
         self._since += 1
         if self._sweep == "HIGH":
             self._sweep_extreme = max(self._sweep_extreme, cur["high"])
@@ -257,6 +261,26 @@ class IctPo3(Strategy):
         self._traded_today = True
         self._armed = False
         return sig
+
+    @staticmethod
+    def _recent_swing(candles: list[dict], start_i: int, end_i: int, w: int, kind: str):
+        """Swing (fractal) gần nhất trong [start_i, end_i): tâm cao/thấp hơn `w` nến mỗi bên.
+
+        kind='high' → swing-high (cho CHoCH long); 'low' → swing-low (cho short). None nếu chưa có.
+        Tâm cần `w` nến xác nhận phía sau (đều < end_i = nến hiện tại) nên có độ trễ tự nhiên.
+        """
+        key = "high" if kind == "high" else "low"
+        for j in range(end_i - 1 - w, max(start_i, w) - 1, -1):
+            v = candles[j][key]
+            if kind == "high":
+                if all(v > candles[j - d][key] for d in range(1, w + 1)) and \
+                   all(v > candles[j + d][key] for d in range(1, w + 1)):
+                    return v
+            else:
+                if all(v < candles[j - d][key] for d in range(1, w + 1)) and \
+                   all(v < candles[j + d][key] for d in range(1, w + 1)):
+                    return v
+        return None
 
     @staticmethod
     def _news_blocked(dt, hour: int, p: dict) -> bool:

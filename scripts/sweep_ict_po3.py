@@ -28,13 +28,14 @@ def build_grid() -> list[dict]:
     for conf in (2, 3):                       # 2=retest FVG, 3=+OB
         for tp_mode, rrs in ((0, (1.5, 2.0, 3.0)), (1, (2.0,))):  # tp_mode=1: rr chỉ là fallback
             for rr in rrs:
-                for bias_len in (100, 200, 400):
-                    for mss in (2, 3, 5):
-                        grid.append({
-                            "bias_mode": 1, "confluence": conf, "tp_mode": tp_mode,
-                            "rr_target": rr, "bias_len": bias_len, "mss_lookback": mss,
-                            "sl_buffer_pct": 0.05, "size": 0.001,
-                        })
+                for bias_len in (100, 200):
+                    for mss in (2, 3):
+                        for swing in (1, 2, 3):   # nửa-độ-rộng fractal cho MSS (swing-structure)
+                            grid.append({
+                                "bias_mode": 1, "confluence": conf, "tp_mode": tp_mode,
+                                "rr_target": rr, "bias_len": bias_len, "mss_lookback": mss,
+                                "swing": swing, "news_filter": 2, "sl_buffer_pct": 0.05, "size": 0.001,
+                            })
     return grid
 
 
@@ -80,7 +81,7 @@ def evaluate(params: dict, data: dict) -> dict:
 
 def fmt(p: dict) -> str:
     return (f"conf={p['confluence']} tp={p['tp_mode']} rr={p['rr_target']} "
-            f"bias_len={p['bias_len']} mss={p['mss_lookback']}")
+            f"bias_len={p['bias_len']} mss={p['mss_lookback']} swing={p['swing']}")
 
 
 async def main() -> None:

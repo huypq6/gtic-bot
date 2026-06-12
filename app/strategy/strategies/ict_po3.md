@@ -41,10 +41,11 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
 4. **Manipulation (sweep)** — trong cửa sổ `[asia_end_h, flatten_h)`, xét cú quét **đầu tiên** của ngày:
    - `high > asia_high` → ghi nhận **sweep HIGH** (setup SHORT), `sweep_extreme = high`.
    - `low < asia_low` → ghi nhận **sweep LOW** (setup LONG), `sweep_extreme = low`.
-5. **MSS (Market Structure Shift)** — sau khi có sweep, xác nhận đảo cấu trúc dựa trên **đỉnh/đáy phản ứng kể từ cú quét** (proxy của BOS, chỉ tham chiếu cấu trúc *sau* sweep nên không dính nhầm Asia High/Low):
-   - Đợi tối thiểu `mss_lookback` nến phản ứng sau cú quét (chống fire bởi 1 nến râu).
-   - Setup LONG: vào khi `close >` **đỉnh phản ứng** (max high các nến sau sweep, chưa tính nến hiện tại) → tạo higher-high.
-   - Setup SHORT: vào khi `close <` **đáy phản ứng** (min low các nến sau sweep) → tạo lower-low.
+5. **MSS = CHoCH (Change of Character)** — đảo cấu trúc THẬT bằng **swing-structure** (fractal), chỉ xét cấu trúc hình thành SAU cú quét:
+   - **Swing-high** (fractal): nến có high cao hơn `swing` nến mỗi bên; **swing-low** đối xứng. Cần `swing` nến xác nhận phía sau → có độ trễ tự nhiên.
+   - Setup LONG: vào khi `close >` **swing-high gần nhất** (lower-high của nhịp hồi) → phá cấu trúc lên (CHoCH).
+   - Setup SHORT: vào khi `close <` **swing-low gần nhất**.
+   - `mss_lookback` = debounce (tối thiểu số nến kể từ sweep mới cho MSS).
 6. **Confluence** (param `confluence`) — quyết định **CÁCH VÀO LỆNH**:
    - `1` = **MSS-breakout**: vào MARKET ngay tại nến MSS (giá xa SL → R:R kém, TP khó chạm — xem quan sát bên dưới).
    - `2` = **Retest FVG** (mặc định): khi MSS xảy ra + có **Fair Value Gap** cùng hướng → **VŨ TRANG** (chưa vào). Chờ giá **hồi về** mép gần FVG rồi mới vào (giá tốt hơn, **gần SL** → R:R đạt được).
@@ -74,11 +75,12 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
 | Param | Mặc định | Ý nghĩa |
 |---|---|---|
 | `bias_mode` | 1 | 0 = tắt lọc trend (2 chiều) · 1 = chỉ đánh thuận EMA trend HTF. |
-| `bias_len` | 100 | Độ dài EMA bias (số nến ~ 4H/daily; tuỳ TF). |
-| `confluence` | 3 | Cách vào: 1 = MSS-breakout (MARKET) · 2 = retest FVG · 3 = retest FVG+OB. |
-| `mss_lookback` | 3 | Số nến để xác định break cấu trúc (proxy MSS). |
-| `tp_mode` | 1 | TP: 0 = `rr_target` cố định · 1 = thanh khoản đối diện (đỉnh/đáy range Asia). |
-| `rr_target` | 2.0 | Bội số R cho TP khi `tp_mode=0` (cũng là fallback của `tp_mode=1`). |
+| `bias_len` | 200 | Độ dài EMA bias (số nến ~ 4H/daily; tuỳ TF). |
+| `confluence` | 2 | Cách vào: 1 = MSS-breakout (MARKET) · 2 = retest FVG · 3 = retest FVG+OB. |
+| `mss_lookback` | 2 | Debounce: tối thiểu số nến kể từ sweep mới cho MSS. |
+| `swing` | 1 | Nửa-độ-rộng fractal xác định swing high/low (MSS = phá swing). Nhỏ = nhạy/nhiều lệnh. |
+| `tp_mode` | 0 | TP: 0 = `rr_target` cố định · 1 = thanh khoản đối diện (đỉnh/đáy range Asia). |
+| `rr_target` | 1.5 | Bội số R cho TP khi `tp_mode=0` (cũng là fallback của `tp_mode=1`). |
 | `sl_buffer_pct` | 0.05 | Đệm SL ngoài điểm quét, theo % giá. |
 | `asia_end_h` | 8 | Giờ UTC kết thúc phiên Asia (chốt range). |
 | `flatten_h` | 21 | Giờ UTC đóng hết lệnh (kết thúc NY). |
@@ -120,16 +122,20 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
   lời 2/4 thị trường, win ~40%, maxDD 3.4%. Alt nhiều lệnh hơn: `conf=2` (tương tự, ~37 lệnh).
 - **Out-of-sample** (cửa sổ dài hơn + cặp chưa sweep): BTC/ETH 15m 90d ≈ −2.4…−2.7%; ETH 1h 200d **+0.88%**;
   SOL 1h 120d −3.3%. Cùng độ lớn với in-sample → **không overfit nặng**, nhưng **chưa phải edge có lời**.
-- **Lọc tin (`news_filter`, mặc định 2)**: chặn vào lệnh khung 12–14 UTC + ngày NFP cải thiện
-  **3/4 thị trường** và giảm drawdown rõ (ETH 1h 200d: +0.88% → **+6.34%**, win 56%→78%, DD 2.1%→1.1%);
-  trung bình 4 thị trường lật từ −1.67% sang **+0.36%**. BTC 15m hơi xấu đi (mẫu nhỏ). NFP-day (=2)
-  bằng window-only trên dữ liệu thử (không hại). Lưu ý: thị trường dương (ETH 1h, 9 lệnh) mẫu nhỏ → có thể may.
-- **Kết luận thẳng**: với lọc tin, ở mức **hòa vốn ± nhẹ, drawdown thấp** — KHẢ QUAN hơn nhưng mẫu nhỏ,
-  CHƯA nên tiền thật. Hướng tiếp: walk-forward nhiều cửa sổ, xét lại proxy MSS (swing-structure thật).
+- **Lọc tin (`news_filter`, mặc định 2)**: chặn vào lệnh khung 12–14 UTC + ngày NFP — cải thiện
+  3/4 thị trường, giảm drawdown (ETH 1h: +0.88%→+6.34%).
+- **MSS swing-structure (CHoCH) > proxy cũ**: thay đỉnh/đáy phản ứng bằng phá swing fractal làm
+  **lật in-sample sang dương**. Sweep (216 bộ) → bộ bền nhất = **mặc định hiện tại**
+  (`conf=2, tp_mode=0, rr=1.5, bias_len=200, mss=2, swing=1`): PnL TB **+1.65%**, lời **3/4** thị trường,
+  win ~38%, 57 lệnh, maxDD 5.1%. `swing=1` (nhạy) cho nhiều lệnh; `bias_len=200` ổn nhất.
+- **Out-of-sample** (cửa sổ dài hơn + SOL chưa sweep): ETH 15m **+3.14%**, SOL 1h **+0.60%**, ETH 1h +0.19%,
+  nhưng **BTC âm bền** (15m −2.6%, 1h −3.2%). Tức là **ăn ở ETH/SOL, thua ở BTC** → chưa phải edge xuyên thị trường.
+- **Kết luận thẳng**: tiến bộ rõ (in-sample dương, OOS hỗn hợp, DD thấp) nhưng **BTC vẫn thua bền** →
+  CHƯA nên tiền thật. Hướng tiếp: walk-forward; lọc/định cỡ theo biến động; hoặc bỏ BTC, tập trung cặp hợp.
 
 ## Giới hạn đã biết (tóm tắt cho người đọc code)
 
-1. MSS = phá đỉnh/đáy phản ứng sau sweep (đợi ≥ `mss_lookback` nến), proxy của BOS — không phải CHoCH/swing-structure đầy đủ.
+1. MSS = phá **swing fractal** (CHoCH) hình thành sau sweep; cần `swing` nến xác nhận → vào trễ `swing` nến. Đơn giản hơn CHoCH đa-khung của ICT thủ công.
 2. `conf≥2`: vào tại **retest FVG** nhưng fill ở **close** của nến chạm vùng (engine không mô phỏng LIMIT/intrabar) → giá vào xấp xỉ, không chính xác mép FVG.
 3. SL/TP kiểm theo `close` (không peek intrabar high/low) để khớp fill close của vectorbt.
 4. Phiên cố định theo UTC; chưa xử lý DST của London/NY (crypto dùng UTC nên chấp nhận được).
