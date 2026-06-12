@@ -1,0 +1,56 @@
+app/orders/models.py
+  s_97e667e10cf896::t_7c0f7c7dcd6000 150-160
+app/api/routes.py
+  s_97e667e10cf896::t_1730e24f512d40 7,13
+  s_97e667e10cf896::t_bf72b47de97bf0 59-85
+frontend/src/pages/Scanner.tsx
+  s_97e667e10cf896::t_bd803a6fbd2834 1-77
+frontend/src/main.tsx
+  s_97e667e10cf896::t_6cc96b46e856f4 9
+  s_97e667e10cf896::t_51be85161c98ae 24
+app/scanner/research.py
+  s_97e667e10cf896::t_268d8edb518108 1-76
+app/config.py
+  s_97e667e10cf896::t_05aa6056dd9023 42-46
+frontend/src/lib/api.ts
+  s_97e667e10cf896::t_cd783e78b74e74 172-182
+frontend/src/lib/ws.ts
+  s_97e667e10cf896::t_e36364181ea212 81
+  s_97e667e10cf896::t_4f361a5771e360 112-113
+  s_97e667e10cf896::t_7a0bb6f3682bcc 54-60,67
+app/main.py
+  s_97e667e10cf896::t_3efc6bf3471324 64
+  s_97e667e10cf896::t_96036ed340d700 30
+docs/IMPLEMENTATION-PLAN.md
+  s_97e667e10cf896::t_94eb3689f6a451 36
+  s_97e667e10cf896::t_cba9da2f5bf8fb 339-343,346-347,350,353-355
+  s_97e667e10cf896::t_e485071704d0a9 432
+tests/test_scanner.py
+  s_97e667e10cf896::t_a62817f2707d26 1-31
+alembic/versions/39fe80684728_scan_result.py
+  s_97e667e10cf896::t_da9095b888112b 11
+  s_97e667e10cf896::t_bae5e0eb3d1248 31
+  s_97e667e10cf896::t_b5c4a4352b7347 1-10,12-30,32-38
+frontend/src/pages/Dashboard.tsx
+  s_97e667e10cf896::t_0d7ffc309344db 3
+  s_97e667e10cf896::t_42725826942a04 55
+  s_97e667e10cf896::t_4f5a2dbbee056a 12-13,21,24-34
+frontend/src/components/AppLayout.tsx
+  s_97e667e10cf896::t_4d504503543c35 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "0d2ecad1ca8dc555660ab63a79e7f5880406045f",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
