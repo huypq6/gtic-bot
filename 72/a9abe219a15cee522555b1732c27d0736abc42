@@ -1,0 +1,36 @@
+app/strategy/strategies/macd_cross.py
+  s_97e667e10cf896::t_0393a587b8ca08 1-36
+tests/test_new_strategies.py
+  s_97e667e10cf896::t_aebf9094a20542 1-78
+app/strategy/ta.py
+  s_97e667e10cf896::t_cbbda54e2d02d0 15-90
+app/strategy/strategies/supertrend.md
+  s_97e667e10cf896::t_31e1aa61cc83f4 1-49
+frontend/src/pages/Backtest.tsx
+  s_97e667e10cf896::t_a0aef77eb22a71 100
+  s_97e667e10cf896::t_534cec07d651cb 130-138,141-146
+app/strategy/strategies/supertrend.py
+  s_97e667e10cf896::t_936cb8081d0555 1-33
+app/strategy/strategies/bollinger.md
+  s_97e667e10cf896::t_c7d94a541ed40c 1-45
+app/strategy/strategies/macd.md
+  s_97e667e10cf896::t_01fad9c9aeea61 1-45
+app/strategy/strategies/bollinger.py
+  s_97e667e10cf896::t_e6932c44e6a842 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "72a9abe219a15cee522555b1732c27d0736abc42",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
