@@ -1,0 +1,48 @@
+[project]
+name = "gtic-bot"
+version = "0.1.0"
+description = "Binance trading bot platform — single-user, self-hosted (FastAPI + asyncio)"
+readme = "CLAUDE.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "python-binance>=1.0.19",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "httpx>=0.28",
+    "websockets>=14.1",
+]
+
+[project.optional-dependencies]
+# Backtest deps are heavy (numba/llvmlite). Cài riêng khi tới P4: `uv sync --extra backtest`
+backtest = [
+    "vectorbt>=0.27",
+    "pandas>=2.2",
+    "numpy>=1.26",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "anyio>=4.7",
+    "ruff>=0.8",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

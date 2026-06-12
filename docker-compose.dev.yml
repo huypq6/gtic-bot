@@ -1,0 +1,58 @@
+# DEV: mở http://localhost:5173 (Vite, HMR) → proxy /api + /ws sang api :8000.
+# api chạy uvicorn --reload (bind-mount source). Dùng:
+#   docker compose -f docker-compose.dev.yml up --build
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: botuser
+      POSTGRES_PASSWORD: botpass
+      POSTGRES_DB: tradingbot
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U botuser -d tradingbot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: .
+      target: backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://botuser:botpass@db:5432/tradingbot
+      ENABLE_LIVE: "0"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Bind-mount source để uvicorn --reload bắt thay đổi.
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+      - ./tests:/app/tests
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+
+  web:
+    image: node:24-slim
+    working_dir: /app/frontend
+    volumes:
+      - ./frontend:/app/frontend
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    # Vite proxy trỏ tới localhost:8000 — trong container cần trỏ tới api:8000.
+    environment:
+      VITE_PROXY_TARGET: http://api:8000
+    depends_on:
+      - api
+    ports:
+      - "5173:5173"
+
+volumes:
+  pgdata_dev:
