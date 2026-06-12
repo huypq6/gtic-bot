@@ -218,6 +218,17 @@ không cú cháy. **BTC ×3: +13.77%/năm, maxDD 9.67% (vẫn <10%), tháng tệ
 Lưu ý: engine scale phí theo notional nhưng CHƯA mô phỏng funding perp (giữ lệnh intraday
 vài giờ, ~22 lệnh/năm → ảnh hưởng nhỏ); liquidation ×3 cách rất xa với DD này.
 
+**Quét rổ 14 cặp trên chuẩn 365 ngày (2026-06-13, `scripts/scan365_ict_po3_v4.py`)**: chỉ
+**3 cặp dương** — BTC +4.58% (DD 3.31%), **DOGE +3.96% (DD 1.70%, thấp nhất rổ, win 54.5%,
+tháng tệ nhất −1.31%, 10/13 cửa sổ không âm)**, SUI +2.81% (DD 6.22%). 11 cặp còn lại đều ÂM
+(ETH −1.1%, SOL −5.5%, XRP −6.1%, ADA −7.9%, INJ −9.0%…) — xác nhận lại "đẹp 120/180d ≠ bền"
+(XRP/DOGE từng lập lờ ở 180d; 365d mới phân thắng bại). **Đòn bẩy DOGE**: ×3 → +11.80%
+DD 5.04%; ×5 vẫn DD 8.30% nhưng KHUYẾN NGHỊ TRẦN ×3 — DOGE được chọn từ 12 ứng viên
+(multiple-comparison risk) và mẫu chỉ 11 lệnh/năm.
+
+**Rổ paper khuyến nghị (cập nhật)**: **BTC ×2–3 + DOGE ×3 + SUI ×1**, 15m, chia vốn đều
+→ kỳ vọng ~+8–9%/năm, DD danh mục ước <7% (3 cặp ít tương quan về thời điểm lệnh).
+
 ## Giới hạn đã biết (tóm tắt cho người đọc code)
 
 1. MSS = phá **swing fractal** (CHoCH) hình thành sau sweep; cần `swing` nến xác nhận → vào trễ `swing` nến. Đơn giản hơn CHoCH đa-khung của ICT thủ công.
