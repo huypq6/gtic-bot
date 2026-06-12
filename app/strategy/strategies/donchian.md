@@ -52,3 +52,21 @@ Quản trị rủi ro tùy chọn: bật `sl_pct` / `tp_pct` (% từ giá vào) 
 - Thử nhiều `period` (10/20/55) trên **nhiều cặp + nhiều giai đoạn** — tránh chọn 1 giá trị "đẹp" (overfit).
 - Tính cả **phí**; trend-following ít lệnh nên phí ảnh hưởng vừa phải, nhưng whipsaw vùng sideway có thể ăn mòn.
 - Đánh giá `max_dd` (chuỗi thua khi sideway) và độ dài thắng trung bình.
+
+## v2 — ATR trailing + kênh-thoát + lọc ADX/cuối tuần (`donchian_v2.py`)
+
+Screening 180 ngày cho thấy v1 thô lời ở 1h (ETH +66%) nhưng **maxDD > 60%** vì chỉ thoát khi
+breakout ngược (trả lại hết lãi khi trend gãy). v2 thêm exit chủ động + bộ lọc:
+
+| Param | Mặc định | Ý nghĩa |
+|---|---|---|
+| `exit_mode` | 2 | 0 = ATR trailing (chandelier) · 1 = kênh ngược ngắn (turtle) · 2 = cả hai. |
+| `exit_period` | 10 | Kênh ngược để thoát (long thoát khi thủng đáy M nến). |
+| `atr_len` / `atr_mult` | 14 / 2.5 | Trail = cực trị close kể từ entry ∓ mult×ATR (ratchet). |
+| `adx_min` | 0 (tắt) | Chỉ vào lệnh khi ADX ≥ ngưỡng — tránh whipsaw sideway. |
+| `dow_filter` | 0 (tắt) | 1 = không entry mới Sat 00:00 → Sun 20:00 UTC (vùng chop, nghiên cứu Concretum). |
+
+Breakout ngược kênh chính vẫn **đảo chiều** vị thế như v1.
+
+### Nghiên cứu (skill strategy-research)
+- (đang tiến hành — xem commit research)
