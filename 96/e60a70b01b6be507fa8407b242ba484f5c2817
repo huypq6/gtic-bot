@@ -1,0 +1,81 @@
+frontend/src/lib/indicators.ts
+  s_97e667e10cf896::t_ddf282eb6e3b1e 1-15
+app/market/feed.py
+  s_97e667e10cf896::t_c2727270970694 1-126
+frontend/src/components/chart/TimeframeSelector.tsx
+  s_97e667e10cf896::t_28ce971ca1136b 1-25
+app/main.py
+  s_97e667e10cf896::t_a4ffee06b1a15d 3-5,11-12,16,20,22-27,34-44,52-58,65-69
+  s_97e667e10cf896::t_c31f1cf0c2f0a3 45-51
+frontend/src/components/FeedBanner.tsx
+  s_97e667e10cf896::t_b57e8571752da6 1-24
+tests/test_store.py
+  s_97e667e10cf896::t_032a21b3c8217e 1-19,22-44
+  s_97e667e10cf896::t_5ed2f3c57992bb 20
+  s_97e667e10cf896::t_43ceec9ce199ea 21
+frontend/src/components/watchlist/Watchlist.tsx
+  s_97e667e10cf896::t_d45a407e05a45c 1-48
+app/market/bus.py
+  s_97e667e10cf896::t_ab6875c141d49f 1-55
+frontend/src/lib/ws.ts
+  s_97e667e10cf896::t_54dea0a413e5d9 1-77
+app/market/store.py
+  s_97e667e10cf896::t_e62000a0931794 36-39,41,44-51
+  s_97e667e10cf896::t_6d67bedc841302 1-35,40,42-43,52-121
+docs/IMPLEMENTATION-PLAN.md
+  s_97e667e10cf896::t_c2627d6c2f812a 150-156,159-166,169-171,174-177
+  s_97e667e10cf896::t_44a5ccd9b6cb87 30
+  s_97e667e10cf896::t_9e8f9498ccf224 415-416
+app/api/routes.py
+  s_97e667e10cf896::t_15470e400d953f 9,15-17,23-32
+  s_97e667e10cf896::t_ff175778fb0fe0 1,3-8,10-11,33-63
+alembic/versions/0001_kline_hypertable.py
+  s_97e667e10cf896::t_f39aa2e5a43c6d 1-41
+tests/test_bus.py
+  s_97e667e10cf896::t_5b31a89278e745 1-74
+app/market/models.py
+  s_97e667e10cf896::t_476c8eed13550c 8,19-20
+  s_97e667e10cf896::t_c22c48f2a6bfde 1-7,9-18,21-27
+frontend/src/components/chart/CandleChart.tsx
+  s_97e667e10cf896::t_f81889e39f1eaf 88
+  s_97e667e10cf896::t_c7abe37fbd79bc 31
+  s_97e667e10cf896::t_7f13f8297408ef 1-18,20-30,32-87,89-141
+  s_97e667e10cf896::t_b23e441834ccc2 19
+frontend/src/lib/api.ts
+  s_97e667e10cf896::t_c240109c33e0e9 14-34
+tests/test_feed.py
+  s_97e667e10cf896::t_73a925e4901fb3 1-123
+app/config.py
+  s_97e667e10cf896::t_33763e0c16fb1c 39-40
+tests/conftest.py
+  s_97e667e10cf896::t_57beedd43b4658 1-5
+app/api/ws.py
+  s_97e667e10cf896::t_85682f526f3cb8 1-43
+frontend/src/lib/datafeed.ts
+  s_97e667e10cf896::t_1112a308192f19 1-34
+frontend/src/App.tsx
+  s_97e667e10cf896::t_c6604b7d7773d7 1,3-9,12-46,49-54,56,58-60,62,64-75,77-100
+alembic/env.py
+  s_97e667e10cf896::t_b9609d2c622579 17-18,20
+  s_97e667e10cf896::t_9ec330f9273661 19
+.gitignore
+  s_97e667e10cf896::t_60e7349c7b3274 225
+pyproject.toml
+  s_97e667e10cf896::t_7e216c12694076 49-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "96e60a70b01b6be507fa8407b242ba484f5c2817",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
