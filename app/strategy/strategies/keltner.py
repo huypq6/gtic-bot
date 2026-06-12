@@ -5,7 +5,7 @@
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
-from app.strategy.ta import atr, ema
+from app.strategy.ta import atr, ema, keltner_bands
 
 
 @register
@@ -34,3 +34,6 @@ class KeltnerBreakout(Strategy):
         if ctx.price < lower:
             return [Signal("SELL", ctx.symbol, size)]  # bứt phá xuống
         return []
+
+    def plot(self, candles):
+        return keltner_bands(candles, self.params["period"], self.params["mult"])

@@ -5,7 +5,7 @@
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
-from app.strategy.ta import adx_dmi
+from app.strategy.ta import adx_dmi, adx_series
 
 
 @register
@@ -32,3 +32,9 @@ class AdxDmi(Strategy):
         if pp >= mp and pn < mn:  # +DI cắt xuống → xu hướng giảm mạnh
             return [Signal("SELL", ctx.symbol, p["size"])]
         return []
+
+    def plot(self, candles):
+        return adx_series(candles, self.params["period"])
+
+    def plot_pane(self):
+        return {"+DI": 1, "-DI": 1, "ADX": 1}  # oscillator → pane phụ

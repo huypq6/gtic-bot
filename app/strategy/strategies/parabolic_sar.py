@@ -5,7 +5,7 @@
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
-from app.strategy.ta import psar
+from app.strategy.ta import psar, psar_line
 
 
 @register
@@ -30,3 +30,6 @@ class ParabolicSar(Strategy):
         if prev == 1 and now == -1:
             return [Signal("SELL", ctx.symbol, self.params["size"])]
         return []
+
+    def plot(self, candles):
+        return {"PSAR": psar_line(candles, self.params["step"], self.params["max_af"])}

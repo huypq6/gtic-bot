@@ -60,3 +60,11 @@ class Strategy(ABC):
         Mặc định rỗng (chỉ chiến thuật overlay-được mới override). Dùng cho viz backtest.
         """
         return {}
+
+    def plot_pane(self) -> dict[str, int]:
+        """Tên series → pane: 0 = overlay trên giá (mặc định), 1 = pane phụ cho oscillator.
+
+        Oscillator (RSI/ADX/Stoch/MACD) thang 0–100 hoặc nhỏ → để pane riêng, không
+        đè lên thang giá. Series không khai báo → pane 0.
+        """
+        return {}

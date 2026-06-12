@@ -5,7 +5,7 @@
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
-from app.strategy.ta import stochastic_k
+from app.strategy.ta import stochastic_k, stochastic_series
 
 
 @register
@@ -31,3 +31,9 @@ class Stochastic(Strategy):
         if k > p["overbought"]:
             return [Signal("SELL", ctx.symbol, p["size"])]
         return []
+
+    def plot(self, candles):
+        return {"%K": stochastic_series(candles, self.params["period"])}
+
+    def plot_pane(self):
+        return {"%K": 1}  # oscillator 0–100 → pane phụ

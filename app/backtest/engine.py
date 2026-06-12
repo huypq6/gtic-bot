@@ -86,14 +86,19 @@ def run_backtest(
     long_e, long_x, short_e, short_x, sltp = _build_signals(strategy, candles)
 
     # đường indicator overlay theo chiến lược (US-11 mở rộng).
-    indicators: dict[str, list] = {}
+    # Shape: {name: {"pane": 0|1, "data": [[ts, value], ...]}}. pane 1 = oscillator (RSI/ADX/…).
+    indicators: dict[str, dict] = {}
     try:
+        pane_map = strategy.plot_pane()
         for name, series in strategy.plot(candles).items():
-            indicators[name] = [
-                [candles[i]["ts"], round(float(v), 6)]
-                for i, v in enumerate(series)
-                if v is not None
-            ]
+            indicators[name] = {
+                "pane": int(pane_map.get(name, 0)),
+                "data": [
+                    [candles[i]["ts"], round(float(v), 6)]
+                    for i, v in enumerate(series)
+                    if v is not None
+                ],
+            }
     except Exception:  # noqa: BLE001 — lỗi plot không được chặn backtest
         indicators = {}
 

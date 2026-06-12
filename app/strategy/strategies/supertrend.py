@@ -5,7 +5,7 @@
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
-from app.strategy.ta import supertrend
+from app.strategy.ta import supertrend, supertrend_line
 
 
 @register
@@ -31,3 +31,7 @@ class Supertrend(Strategy):
         if prev == 1 and now == -1:  # đảo xuống xu hướng giảm
             return [Signal("SELL", ctx.symbol, p["size"])]
         return []
+
+    def plot(self, candles):
+        p = self.params
+        return {f"Supertrend {p['period']}": supertrend_line(candles, p["period"], p["mult"])}

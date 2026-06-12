@@ -186,6 +186,10 @@ export function fetchOrders(filters: Record<string, string> = {}) {
 }
 
 // ---- backtest (P4) ----
+// Series indicator: dạng mới {pane, data} (pane 0 = overlay giá, 1 = oscillator),
+// hoặc dạng cũ (run đã lưu trước đây) là mảng [[ts, value]] — xem là pane 0.
+export type IndicatorSeries = [number, number][] | { pane?: number; data: [number, number][] };
+
 export interface BacktestTrade {
   side: string;
   entry_ts: number | null;
@@ -214,7 +218,7 @@ export interface BacktestResult {
   liquidated?: boolean;
   from_ts: number | null;
   to_ts: number | null;
-  indicators: Record<string, [number, number][]>;
+  indicators: Record<string, IndicatorSeries>;
   equity_curve: [number, number][];
   trades: BacktestTrade[];
 }
@@ -243,4 +247,5 @@ export const runBacktest = (body: {
   market: string;
   leverage: number;
   fee_rate?: number | null;
+  params?: Record<string, unknown> | null;
 }) => postJson<BacktestResult>("/api/backtest", body);

@@ -5,7 +5,7 @@
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
-from app.strategy.ta import rsi
+from app.strategy.ta import pad_left, rsi
 
 
 @register
@@ -33,3 +33,10 @@ class RsiReversal(Strategy):
         if last > p["overbought"]:
             return [Signal("SELL", ctx.symbol, p["size"])]
         return []
+
+    def plot(self, candles):
+        closes = [c["close"] for c in candles]
+        return {"RSI": pad_left(rsi(closes, self.params["period"]), len(candles))}
+
+    def plot_pane(self):
+        return {"RSI": 1}  # oscillator 0–100 → pane phụ

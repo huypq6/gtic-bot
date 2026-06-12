@@ -13,16 +13,24 @@ import {
 import { loadRange } from "../../lib/datafeed";
 import { chartColors } from "../../lib/chartTheme";
 import { useTheme } from "../../lib/theme";
-import type { BacktestTrade } from "../../lib/api";
+import type { BacktestTrade, IndicatorSeries } from "../../lib/api";
 
 const LINE_COLORS = ["#8b9cba", "#5cc3b4", "#e0a458", "#c98bdb", "#6fb1e0", "#d98b8b"];
+const OSC_PANE = 1; // pane phụ cho oscillator (RSI/ADX/Stoch/MACD)
+const OSC_PANE_HEIGHT = 130;
+
+// Chuẩn hóa series về {pane, data} — run cũ lưu mảng [[ts,v]] (pane 0).
+function normSeries(raw: IndicatorSeries): { pane: number; data: [number, number][] } {
+  if (Array.isArray(raw)) return { pane: 0, data: raw };
+  return { pane: raw.pane ?? 0, data: raw.data };
+}
 
 interface Props {
   symbol: string;
   tf: string;
   from: number;
   to: number;
-  indicators: Record<string, [number, number][]>;
+  indicators: Record<string, IndicatorSeries>;
   trades: BacktestTrade[];
   onSelect?: (i: number) => void; // click marker/trade
 }
@@ -64,17 +72,25 @@ export default function BacktestChart({ symbol, tf, from, to, indicators, trades
       if (cancelled) return;
       candle.setData(bars);
 
-      // đường indicator
-      Object.entries(indicators).forEach(([name, pts], idx) => {
-        const ls = chart.addSeries(LineSeries, {
-          color: LINE_COLORS[idx % LINE_COLORS.length],
-          lineWidth: 1,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          title: name,
-        });
-        ls.setData(pts.map(([ts, v]) => ({ time: (ts / 1000) as Time, value: v })));
+      // đường indicator — pane 0 overlay trên giá, pane 1 cho oscillator (thang riêng).
+      let hasOscPane = false;
+      Object.entries(indicators).forEach(([name, raw], idx) => {
+        const { pane, data } = normSeries(raw);
+        if (pane === OSC_PANE) hasOscPane = true;
+        const ls = chart.addSeries(
+          LineSeries,
+          {
+            color: LINE_COLORS[idx % LINE_COLORS.length],
+            lineWidth: 1,
+            priceLineVisible: false,
+            lastValueVisible: pane === OSC_PANE, // oscillator: hiện giá trị cuối cho dễ đọc
+            title: name,
+          },
+          pane,
+        );
+        ls.setData(data.map(([ts, v]) => ({ time: (ts / 1000) as Time, value: v })));
       });
+      if (hasOscPane) chart.panes()[OSC_PANE]?.setHeight(OSC_PANE_HEIGHT);
 
       // marker vào/ra mỗi lệnh
       const markers: SeriesMarker<Time>[] = [];
@@ -108,8 +124,9 @@ export default function BacktestChart({ symbol, tf, from, to, indicators, trades
       chartRef.current = null;
       candleRef.current = null;
     };
+    // indicators/trades đổi khi chạy backtest mới cùng symbol+tf+range → phải vẽ lại.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, tf, from, to, theme]);
+  }, [symbol, tf, from, to, theme, indicators, trades]);
 
   return <div ref={ref} className="h-96 w-full" />;
 }

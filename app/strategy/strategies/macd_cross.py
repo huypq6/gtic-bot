@@ -5,7 +5,7 @@
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
-from app.strategy.ta import macd
+from app.strategy.ta import macd, pad_left
 
 
 @register
@@ -34,3 +34,12 @@ class MacdCross(Strategy):
         if mp >= sp and mn < sn:
             return [Signal("SELL", ctx.symbol, p["size"])]
         return []
+
+    def plot(self, candles):
+        p = self.params
+        m, s = macd([c["close"] for c in candles], p["fast"], p["slow"], p["signal"])
+        n = len(candles)
+        return {"MACD": pad_left(m, n), "Signal": pad_left(s, n)}
+
+    def plot_pane(self):
+        return {"MACD": 1, "Signal": 1}  # oscillator (quanh 0) → pane phụ

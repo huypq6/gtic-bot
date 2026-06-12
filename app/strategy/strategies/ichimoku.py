@@ -5,7 +5,7 @@
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
-from app.strategy.ta import ichimoku
+from app.strategy.ta import ichimoku, ichimoku_lines
 
 
 @register
@@ -36,3 +36,7 @@ class Ichimoku(Strategy):
         if cross_down and price < ich["cloud_bottom"]:  # cắt xuống + dưới mây → giảm
             return [Signal("SELL", ctx.symbol, p["size"])]
         return []
+
+    def plot(self, candles):
+        p = self.params
+        return ichimoku_lines(candles, p["conv"], p["base"], p["span_b"], p["base"])
