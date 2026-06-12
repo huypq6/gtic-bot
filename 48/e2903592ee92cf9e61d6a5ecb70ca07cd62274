@@ -1,0 +1,26 @@
+app/main.py
+  s_97e667e10cf896::t_442765fa59fd9e 17
+  s_97e667e10cf896::t_d15978ea1cb95a 121-130
+frontend/src/components/AppLayout.tsx
+  s_97e667e10cf896::t_41d4df54858505 20-32
+app/config.py
+  s_97e667e10cf896::t_a9cc740b658b9d 35-37
+frontend/vite.config.ts
+  s_97e667e10cf896::t_cc7a763da192ec 11-15,19,21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "48e2903592ee92cf9e61d6a5ecb70ca07cd62274",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
