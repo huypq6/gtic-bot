@@ -161,8 +161,16 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
   vốn chỉ ~1 lệnh/ngày; "100 lệnh" là cộng 4 thị trường qua 45–200 ngày). ⇒ phí KHÔNG phải nút thắt.
 - **Nút thắt là THỊ TRƯỜNG, không phải tần suất**: trên cửa sổ 60–200 ngày, ETH 15m **+1.46%**, ETH 1h
   **+2.67%**, SOL 1h **+1.23%** (win 53–67%) — chỉ **BTC −2.66%** kéo xuống.
-- **Kết luận thẳng**: bộ ATR-SL hiện tại ăn ổn ở **ETH/SOL** (3/4 thị trường dương, DD thấp), thua bền ở **BTC**.
-  Lever hiệu quả là **chọn cặp** (tập trung ETH/SOL), không phải siết tần suất. Vẫn nên walk-forward trước tiền thật.
+- **Quét rổ cặp (`scripts/scan_pairs_ict_po3.py`, 14 cặp × 15m/1h):** yếu tố quyết định là **KHUNG TF**:
+  - **15m: 12/14 cặp DƯƠNG** (60 ngày) — DOT +5.6%, INJ +4.8%, DOGE +4.2%, AVAX +2.7%, XRP +1.7%, BTC +1.4%,
+    ETH/SOL/ADA/LTC/LINK/NEAR dương nhẹ; chỉ **BNB −1.8%, SUI −2.2%** âm.
+  - **1h: hầu hết ÂM** (chỉ SUI/ETH/DOGE dương; INJ −12.5%) → **không hợp 1h** (ít nến/ngày, hay flatten).
+  - Dương cả 2 TF: **ETH, DOGE**.
+- **Rổ cặp khuyến nghị: chạy ở 15m**, diversify nhiều cặp thanh khoản (ETH, SOL, DOT, DOGE, AVAX, XRP, LTC, ADA);
+  **tránh 1h** và tránh BNB/SUI (âm 15m). PnL từng cặp **nhạy cửa sổ** (BTC +1.4% ở đây nhưng âm ở cửa sổ khác)
+  → dựa vào diversification + walk-forward, đừng tin 1 con số.
+- **Kết luận thẳng**: edge yếu nhưng **dương diện rộng trên 15m** (DD thấp); 1h không dùng. Cần walk-forward
+  rổ 15m trước khi nghĩ tới testnet/tiền thật.
 
 ## Giới hạn đã biết (tóm tắt cho người đọc code)
 
