@@ -55,7 +55,12 @@ async def create_backtest(
 
     # đảm bảo có dữ liệu lịch sử.
     await sync_historical(session, body.symbol, body.tf, body.start)
-    candles = await get_klines(session, body.symbol, body.tf, limit=5000)
+    # Lọc theo start — DB có thể chứa lịch sử dài hơn nhiều so với khoảng user chọn
+    # (nếu không lọc, "Số ngày" mất tác dụng: luôn lấy 5000 nến mới nhất).
+    import dateparser
+
+    start_dt = dateparser.parse(body.start, settings={"RETURN_AS_TIMEZONE_AWARE": True})
+    candles = await get_klines(session, body.symbol, body.tf, start=start_dt, limit=5000)
     if len(candles) < 5:
         raise HTTPException(400, "không đủ dữ liệu lịch sử để backtest")
 
