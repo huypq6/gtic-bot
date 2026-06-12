@@ -13,6 +13,7 @@ import ModeBadge from "../components/ModeBadge";
 import PositionsTable from "../components/orders/PositionsTable";
 import ManualOrderForm from "../components/orders/ManualOrderForm";
 import ParamsForm from "../components/strategy/ParamsForm";
+import EnableLiveModal from "../components/live/EnableLiveModal";
 
 export default function Trading() {
   const qc = useQueryClient();
@@ -25,6 +26,7 @@ export default function Trading() {
   const [tf, setTf] = useState("");
   const [mode, setMode] = useState("PAPER");
   const [params, setParams] = useState<Record<string, unknown>>({});
+  const [showLiveModal, setShowLiveModal] = useState(false);
 
   const selectedStrat = strategies?.find((s) => s.id === stratId);
 
@@ -48,16 +50,25 @@ export default function Trading() {
   };
 
   const create = useMutation({
-    mutationFn: () =>
+    mutationFn: (confirm?: string) =>
       createBot({
         strategy_id: stratId as number,
         symbol,
         tf,
         mode,
         params,
+        confirm,
       }),
-    onSuccess: refresh,
+    onSuccess: () => {
+      setShowLiveModal(false);
+      refresh();
+    },
   });
+
+  const onCreate = () => {
+    if (mode === "LIVE") setShowLiveModal(true);
+    else create.mutate(undefined);
+  };
 
   const setStatus = useMutation({
     mutationFn: (v: { id: number; status: string }) => patchBot(v.id, { status: v.status }),
@@ -114,14 +125,19 @@ export default function Trading() {
             >
               <option>PAPER</option>
               <option>TESTNET</option>
+              <option>LIVE</option>
             </select>
           </Field>
           <button
-            onClick={() => create.mutate()}
+            onClick={onCreate}
             disabled={create.isPending || stratId === ""}
-            className="rounded-md bg-accent-500 px-3 py-1.5 text-sm font-semibold text-ink-950 hover:bg-accent-400 disabled:opacity-50"
+            className={`rounded-md px-3 py-1.5 text-sm font-semibold disabled:opacity-50 ${
+              mode === "LIVE"
+                ? "bg-down text-ink-950 hover:bg-down/90"
+                : "bg-accent-500 text-ink-950 hover:bg-accent-400"
+            }`}
           >
-            {create.isPending ? "Đang tạo…" : "Tạo & chạy"}
+            {create.isPending ? "Đang tạo…" : mode === "LIVE" ? "Tạo (LIVE)" : "Tạo & chạy"}
           </button>
         </div>
         {selectedStrat && Object.keys(selectedStrat.param_schema ?? {}).length > 0 && (
@@ -180,6 +196,14 @@ export default function Trading() {
           </div>
         )}
       </section>
+
+      {showLiveModal && (
+        <EnableLiveModal
+          symbol={symbol}
+          onConfirm={() => create.mutate("LIVE")}
+          onCancel={() => setShowLiveModal(false)}
+        />
+      )}
 
       {/* Lệnh tay */}
       <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">

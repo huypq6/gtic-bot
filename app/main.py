@@ -62,6 +62,9 @@ async def lifespan(app: FastAPI):
             )
         )
         tasks.append(asyncio.create_task(run_scanner(bus, async_session), name="scanner"))
+        tasks.append(
+            asyncio.create_task(_feed_autopause_watcher(bus, bot_manager), name="feed-autopause")
+        )
         await _restore_running_bots(bot_manager)
     try:
         yield
@@ -72,6 +75,17 @@ async def lifespan(app: FastAPI):
         for t in tasks:
             t.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+
+
+async def _feed_autopause_watcher(bus: EventBus, bot_manager: BotManager) -> None:
+    """Mất feed (DOWN) → auto-pause mọi bot RUNNING (US-27). Nối lại KHÔNG tự resume."""
+    sub = bus.subscribe("feed")
+    while True:
+        msg = await sub.get()
+        if msg.get("status") == "DOWN":
+            n = await bot_manager.pause_all_running("feed DOWN")
+            if n:
+                logging.warning("feed DOWN → auto-pause %d bot", n)
 
 
 async def _restore_running_bots(bot_manager: BotManager) -> None:

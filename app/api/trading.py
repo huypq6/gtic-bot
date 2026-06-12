@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.db import get_session
 from app.orders.models import BacktestRun, Bot, OrderModel, PositionModel, StrategyModel
 from app.strategy.base import Signal
@@ -90,6 +91,7 @@ class CreateBot(BaseModel):
     tf: str = "1m"
     mode: str = "PAPER"
     params: dict = {}
+    confirm: str | None = None  # mode LIVE bắt buộc = "LIVE"
 
 
 class PatchBot(BaseModel):
@@ -120,8 +122,14 @@ async def create_bot(
     strat = await session.get(StrategyModel, body.strategy_id)
     if not strat:
         raise HTTPException(404, "strategy không tồn tại")
-    if body.mode not in ("PAPER", "TESTNET"):
-        raise HTTPException(400, f"mode {body.mode} chưa hỗ trợ (LIVE ở P8)")
+    if body.mode not in ("PAPER", "TESTNET", "LIVE"):
+        raise HTTPException(400, f"mode {body.mode} không hợp lệ")
+    if body.mode == "LIVE":
+        # Rào chắn: cờ env + xác nhận gõ "LIVE" (NFR an toàn).
+        if not settings.enable_live:
+            raise HTTPException(403, "mode LIVE bị khóa — cần ENABLE_LIVE=1")
+        if body.confirm != "LIVE":
+            raise HTTPException(400, "mode LIVE cần xác nhận gõ 'LIVE'")
     try:
         params = validate_params(_schema_for(strat), body.params)
     except ParamError as e:

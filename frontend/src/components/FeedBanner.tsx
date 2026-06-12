@@ -16,8 +16,8 @@ export default function FeedBanner() {
       {down ? <AlertTriangle className="h-4 w-4" /> : <Wifi className="h-4 w-4" />}
       <span>
         {feed === "CONNECTING" && "Đang kết nối feed…"}
-        {feed === "RECONNECTING" && "Mất feed — đang kết nối lại, bot sẽ tạm dừng."}
-        {feed === "DOWN" && "Feed DOWN — không có dữ liệu realtime."}
+        {feed === "RECONNECTING" && "Mất feed — đang kết nối lại…"}
+        {feed === "DOWN" && "Feed DOWN — bot đã tự động PAUSE (US-27). Nối lại không tự resume."}
       </span>
     </div>
   );

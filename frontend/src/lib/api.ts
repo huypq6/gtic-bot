@@ -88,6 +88,7 @@ export const createBot = (body: {
   tf: string;
   mode: string;
   params: Record<string, unknown>;
+  confirm?: string;
 }) => postJson<BotInfo>("/api/bots", body);
 
 export async function patchBot(id: number, body: { status?: string; params?: object }) {

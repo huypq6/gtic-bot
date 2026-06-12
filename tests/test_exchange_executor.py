@@ -5,7 +5,7 @@ Không cần key thật: dùng FakeClient + FakeBus + fake session_factory (no-o
 
 import asyncio
 
-from app.execution.testnet import TestnetExecutor
+from app.execution.exchange import ExchangeExecutor
 from app.strategy.base import Signal
 
 
@@ -75,7 +75,7 @@ def make_sf(store):
 def make_exec(client, timeout=None):
     bus = FakeBus()
     store: list = []
-    ex = TestnetExecutor(1, "BTCUSDT", "TESTNET", bus, make_sf(store), client, timeout=timeout)
+    ex = ExchangeExecutor(1, "BTCUSDT", "TESTNET", bus, make_sf(store), client, timeout=timeout)
     return ex, bus, store
 
 

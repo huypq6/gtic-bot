@@ -127,20 +127,20 @@ class BotManager:
     ) -> Executor:
         if mode == "PAPER":
             return PaperExecutor(bot_id, symbol, mode, self._bus, self._sf)
+        timeout = params.get("timeout")
         if mode == "TESTNET":
-            from app.execution.binance_client import BinanceClient
-            from app.execution.testnet import TestnetExecutor
+            from app.execution.testnet import make_testnet_executor
 
-            if not settings.binance_testnet_key or not settings.binance_testnet_secret:
-                raise ValueError("cần BINANCE_TESTNET_KEY/SECRET trong .env để chạy mode TESTNET")
-            client = await BinanceClient.create(
-                settings.binance_testnet_key, settings.binance_testnet_secret, testnet=True
+            return await make_testnet_executor(
+                bot_id, symbol, self._bus, self._sf, settings, timeout
             )
-            return TestnetExecutor(
-                bot_id, symbol, mode, self._bus, self._sf, client,
-                timeout=params.get("timeout"),
+        if mode == "LIVE":
+            from app.execution.live import make_live_executor
+
+            return await make_live_executor(
+                bot_id, symbol, self._bus, self._sf, settings, timeout
             )
-        raise ValueError(f"mode {mode} chưa hỗ trợ (LIVE ở P8)")
+        raise ValueError(f"mode {mode} không hợp lệ")
 
     def get_executor(self, bot_id: int) -> Executor | None:
         r = self._runners.get(bot_id)
@@ -150,6 +150,25 @@ class BotManager:
         r = self._runners.get(bot_id)
         if r:
             r.status = status
+
+    async def pause_all_running(self, reason: str) -> int:
+        """Auto-pause mọi bot đang RUNNING (vd mất feed — US-27). Ghi audit SYSTEM."""
+        from sqlalchemy import update as sa_update
+
+        from app.orders.models import Bot
+
+        paused = [r for r in self._runners.values() if r.status == "RUNNING"]
+        for r in paused:
+            r.status = "PAUSED"
+            async with self._sf() as s:
+                await s.execute(sa_update(Bot).where(Bot.id == r.bot_id).values(status="PAUSED"))
+                await s.commit()
+            if self._om:
+                await self._om.write_audit(
+                    source="SYSTEM", action="PAUSE", mode=r.mode,
+                    bot_id=r.bot_id, symbol=r.symbol, detail={"reason": reason},
+                )
+        return len(paused)
 
     async def stop_bot(self, bot_id: int) -> None:
         r = self._runners.pop(bot_id, None)

@@ -34,7 +34,7 @@
 | **P5** | Strategy versioning + params UI | US-06,07,08 | ✅ | 100% |
 | **P6** | Testnet integration | US-13,15 | ✅ | 100% |
 | **P7** | Scanner đề xuất cặp | US-22,23 | ✅ | 100% |
-| **P8** | Live + rào chắn an toàn | US-14,26,27 | ⬜ | 0% |
+| **P8** | Live + rào chắn an toàn | US-14,26,27 | ✅ | 100%¹ |
 
 > Thứ tự cố ý: **an toàn (paper/backtest) trước, tiền thật (live) sau cùng.** Không nhảy phase nếu DoD phase trước chưa đạt.
 
@@ -362,26 +362,29 @@ gtic-bot/
 **User Stories:** US-14 (live có rào chắn), US-26 (không treo limit — hoàn thiện), US-27 (cảnh báo mất kết nối — hoàn thiện).
 **⚠️ Trước khi bắt đầu phase này: HỎI LẠI user (theo CLAUDE.md "Hỏi lại trước khi chạm mode LIVE").**
 
+> ¹ Code + rào chắn xong + verified (mock/API, KHÔNG tiền thật). Smoke test lệnh thật trên live do **user tự thực hiện** với key thật (mục cuối).
+
 ### Backend
-- [ ] `app/execution/live.py` — **LiveExecutor** qua `python-binance` prod (key `BINANCE_*`). **Chỉ khởi tạo khi `ENABLE_LIVE=1`**; nếu không → từ chối tạo bot LIVE.
-- [ ] Guard tạo bot mode=LIVE: server kiểm `ENABLE_LIVE=1`; client modal gõ đúng "LIVE" mới gửi.
-- [ ] Audit log bắt buộc trước mọi call; auto-cancel limit theo timeout (đã có từ P6) áp dụng live.
-- [ ] Mất feed (US-27): khi `feed=DOWN` → **bot auto-pause** + push banner; nối lại không tự resume (cần xác nhận).
-- [ ] Kiểm tra cấu hình key live: nhắc tắt quyền rút, whitelist IP (doc + cảnh báo, không tự thay đổi key).
+- [x] `app/execution/exchange.py` **ExchangeExecutor** dùng chung testnet+live; `app/execution/live.py` `make_live_executor` (rào: `ENABLE_LIVE=1` + có `BINANCE_*` mới khởi tạo); `testnet.py` factory tương ứng.
+- [x] Guard tạo bot LIVE (server): `ENABLE_LIVE=0`→403; thiếu `confirm=="LIVE"`→400; thiếu key→400 + **rollback bot** (không dangling).
+- [x] Audit qua OrderManager trước mọi call; auto-cancel limit theo timeout (từ P6) áp dụng live.
+- [x] Mất feed (US-27): watcher `feed=DOWN` → `BotManager.pause_all_running` (bot RUNNING→PAUSED + audit SYSTEM/PAUSE); nối lại KHÔNG auto-resume.
+- [x] Doc nhắc key live tắt quyền rút + whitelist IP (trong modal + live.py docstring; không tự đổi key).
 
 ### Frontend
-- [ ] `components/live/EnableLiveModal.tsx` — modal confirm gõ "LIVE" + cảnh báo đỏ (US-14).
-- [ ] Badge mode LIVE = **đỏ**; toàn UI bot live nhuốm cảnh báo (URD §3).
-- [ ] Banner mất kết nối + trạng thái auto-pause rõ ràng (US-27).
+- [x] `components/live/EnableLiveModal.tsx` — modal gõ "LIVE" + cảnh báo đỏ (US-14); mode LIVE ở dropdown.
+- [x] Badge LIVE = đỏ (ModeBadge); nút tạo LIVE màu đỏ.
+- [x] FeedBanner: DOWN → thông báo bot đã auto-PAUSE, nối lại không tự resume (US-27).
 
 ### Tests
-- [ ] `test_live_guard.py` — `ENABLE_LIVE=0` → tạo bot LIVE bị từ chối; =1 + thiếu confirm → từ chối.
-- [ ] `test_feed_autopause.py` — `feed=DOWN` → bot chuyển PAUSED + audit `PAUSE/SYSTEM`.
-- [ ] (KHÔNG test đặt lệnh thật trên live; chỉ mock python-binance.)
+- [x] `test_live_guard.py` (5) — LIVE thiếu ENABLE_LIVE→raise; thiếu key→raise; `pause_all_running` chỉ pause RUNNING + audit SYSTEM/PAUSE.
+- [x] `test_exchange_executor.py` (6) — executor sàn (mock client), auto-cancel timeout.
+- [x] KHÔNG đặt lệnh thật; chỉ mock + guard.
 
 ### Definition of Done
-- Không thể vào LIVE nếu thiếu cờ/confirm; badge đỏ; mất feed → auto-pause + cảnh báo; mọi lệnh live có audit trước.
-- Smoke test live bằng key thật (số lượng tối thiểu) do **user tự thực hiện**, không tự động hoá.
+- [x] Không vào LIVE nếu thiếu cờ/confirm/key (verified live API: 403/400/400 + rollback); badge đỏ; feed DOWN → auto-pause + audit; mọi lệnh có audit trước.
+- [x] 75 pytest xanh, ruff sạch, build OK.
+- [ ] ⚠️ **Smoke test lệnh thật trên live**: user tự chạy với `BINANCE_KEY/SECRET` thật + `ENABLE_LIVE=1` (key tắt quyền rút + whitelist IP). Không tự động hóa.
 
 ---
 
@@ -429,6 +432,7 @@ docker compose up --build                            # build frontend → FastAP
 | 2026-06-12 | P0 | ✅ Scaffold xong: uv venv + backend (config/db/main/health), Alembic async + Timescale init SQL, frontend React19/Vite6/Tailwind v4 + proxy, Dockerfile multi-stage + compose dev/prod, CI. Verified: pytest/ruff xanh, prod single-endpoint serve UI+API. (Còn: `docker compose up` thực tế + README.) |
 | 2026-06-12 | UI | 🎨 Logo + theme phái sinh từ docs/logo.png (brand slate-violet, accent teal, dark-first). |
 | 2026-06-12 | P1 | ✅ Market feed + chart realtime: EventBus, MarketFeed (Binance WS live), kline hypertable (verified Timescale), WSGateway /ws, klines sync/read REST. Frontend: chart lightweight-charts + EMA 9/21, watchlist live, feed banner, responsive (desktop+mobile verified screenshot). Fix: batch upsert (asyncpg 32767 param limit). 21 pytest xanh. RSI/MACD subpane hoãn. |
+| 2026-06-12 | P8 | ✅ Live + rào chắn (code, KHÔNG tiền thật): ExchangeExecutor dùng chung testnet/live, live.py factory + guard ENABLE_LIVE, confirm "LIVE" server-side, rollback bot khi thiếu key. Feed DOWN → auto-pause bot + audit SYSTEM (US-27). Frontend: EnableLiveModal (gõ LIVE, cảnh báo đỏ), badge LIVE đỏ, banner auto-pause. **Verified API: 403/400/400 + rollback; auto-pause unit test.** Modal verified-by-build (browse/React-19 khó drive headless). ⚠️ Smoke live cần key user. 75 pytest xanh. |
 | 2026-06-12 | P7 | ✅ Scanner: score_symbol (RSI+momentum) + task định kỳ, ScanResult (migration 0005), GET /scan + publish WS, config scan_symbols. Frontend: Scanner page realtime + click→chart (?symbol). **Verified live: 5 symbol chấm điểm thật, BNB→BUY; click→XRP chart (screenshot).** 72 pytest xanh. |
 | 2026-06-12 | P6 | ✅ Testnet integration: BinanceClient adapter, TestnetExecutor (tái dùng engine state, lệnh thật + ext_id, SL/TP client-side), auto-cancel limit theo timeout (US-26). BotManager wire TESTNET (graceful no-key). Frontend: mode selector + TESTNET badge + ext_id. **Verified: 6 mock tests + no-key → 400 rollback (live).** ⚠️ Lệnh thật testnet cần key user (hoãn). 68 pytest xanh. |
 | 2026-06-12 | P5 | ✅ Versioning + params UI: validate_params vs param_schema (422 khi sai), ema_cross v2 (gap filter), compare API gộp backtest theo version. Frontend: ParamsForm (render từ schema), version compare table. **Verified LIVE: v1 -20%/91 trades vs v2 +3.6%/1 trade (screenshot); validation 422.** 62 pytest xanh. |
