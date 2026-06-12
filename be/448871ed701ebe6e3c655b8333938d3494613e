@@ -1,0 +1,52 @@
+alembic/versions/d9539815ac78_backtest_tables.py
+  s_97e667e10cf896::t_0d04743b181e77 1-10,13-54,56-63
+  s_97e667e10cf896::t_f2f7a1e305f7d9 55
+  s_97e667e10cf896::t_7db0eab3ed476f 11-12
+docs/IMPLEMENTATION-PLAN.md
+  s_97e667e10cf896::t_9c684c3011f995 258-262,265-267,270,273-275
+  s_97e667e10cf896::t_075cc2cb7ddeb3 33
+  s_97e667e10cf896::t_186ca98b1435da 425
+app/orders/models.py
+  s_97e667e10cf896::t_5d0a549cd60660 116-149
+frontend/src/pages/Backtest.tsx
+  s_97e667e10cf896::t_27b057b3287b76 1-173
+app/main.py
+  s_97e667e10cf896::t_78cf52671c4c4b 20
+  s_97e667e10cf896::t_5bc81d594c7f53 103
+frontend/src/main.tsx
+  s_97e667e10cf896::t_7357bb2a6334dc 8
+  s_97e667e10cf896::t_9d24e1a0d523da 22
+frontend/src/components/AppLayout.tsx
+  s_97e667e10cf896::t_fe725c237500a3 25
+app/api/backtest.py
+  s_97e667e10cf896::t_8b0d141f1820c2 1-131
+tests/test_backtest_engine.py
+  s_97e667e10cf896::t_1dfd312f1334ec 1-37
+Dockerfile
+  s_97e667e10cf896::t_d65d6334649147 22
+frontend/src/components/backtest/EquityCurve.tsx
+  s_97e667e10cf896::t_cbf20fe39c02cd 1-41
+app/api/ws.py
+  s_97e667e10cf896::t_801098257beb5b 11
+  s_97e667e10cf896::t_426ab2ff1f1ead 34,38,40
+frontend/src/lib/api.ts
+  s_97e667e10cf896::t_53d8a99a69af61 133-166
+app/backtest/engine.py
+  s_97e667e10cf896::t_08fa31c3ae09c8 1-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "be448871ed701ebe6e3c655b8333938d3494613e",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
