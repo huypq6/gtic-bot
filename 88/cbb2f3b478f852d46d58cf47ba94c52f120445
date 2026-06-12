@@ -1,0 +1,32 @@
+scripts/sweep_ict_po3.py
+  s_dd1d383719b312::t_c97cfde51f39c5 87-89
+  s_dd1d383719b312::t_d863f79db4fc10 27-28,30-42
+app/strategy/strategies/ict_po3.py
+  s_dd1d383719b312::t_5296a73befe880 99
+  s_dd1d383719b312::t_6cb95fdedaaec5 152-153,156
+  s_dd1d383719b312::t_0b7e5c3eb8df6e 75
+  s_dd1d383719b312::t_25c493dbe3c81b 275
+  s_dd1d383719b312::t_87bf7842b353e3 91
+  s_dd1d383719b312::t_02dc5a1c0bd0be 55
+app/strategy/strategies/ict_po3.md
+  s_dd1d383719b312::t_a7f701a01bac5a 109
+  s_dd1d383719b312::t_ab2bc1401d6b1b 159-165
+tests/test_ict_po3.py
+  s_dd1d383719b312::t_68b3ef0a654448 135-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "88cbb2f3b478f852d46d58cf47ba94c52f120445",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
