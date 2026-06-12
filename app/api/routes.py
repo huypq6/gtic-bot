@@ -69,12 +69,19 @@ async def scan(session: AsyncSession = Depends(get_session)) -> list[dict]:
     rows = (
         await session.execute(select(ScanResult).join(sub, ScanResult.id == sub.c.mid))
     ).scalars().all()
+    def f(v):
+        return float(v) if v is not None else None
+
     out = [
         {
             "symbol": r.symbol,
-            "score": float(r.score) if r.score is not None else None,
+            "score": f(r.score),
             "signal": r.signal,
             "reason": r.reason,
+            "entry": f(r.entry),
+            "atr": f(r.atr),
+            "sl": f(r.sl),
+            "tp": f(r.tp),
             "ts": r.ts.isoformat() if r.ts else None,
         }
         for r in rows

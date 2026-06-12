@@ -156,6 +156,10 @@ class ScanResult(Base):
     score: Mapped[float | None] = mapped_column(Numeric)
     signal: Mapped[str | None] = mapped_column(String)
     reason: Mapped[str | None] = mapped_column(String)
+    entry: Mapped[float | None] = mapped_column(Numeric)  # giá hiện tại
+    atr: Mapped[float | None] = mapped_column(Numeric)
+    sl: Mapped[float | None] = mapped_column(Numeric)  # SL đề xuất (ATR)
+    tp: Mapped[float | None] = mapped_column(Numeric)  # TP đề xuất (ATR)
 
 
 class AuditLog(Base):

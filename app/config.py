@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     scan_symbols: list[str] = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
     scan_tf: str = "15m"
     scan_interval_sec: int = 60
+    # SL/TP đề xuất theo ATR: SL = entry ∓ sl×ATR, TP = entry ± tp×ATR.
+    scan_sl_atr: float = 1.5
+    scan_tp_atr: float = 2.0
 
 
 @lru_cache

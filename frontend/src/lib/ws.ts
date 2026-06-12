@@ -56,6 +56,10 @@ export interface ScanRow {
   score: number;
   signal: string;
   reason: string;
+  entry?: number | null;
+  atr?: number | null;
+  sl?: number | null;
+  tp?: number | null;
 }
 
 interface WsState {

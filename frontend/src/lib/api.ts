@@ -145,6 +145,32 @@ export interface AuditRow {
 
 export const fetchAudit = () => getJson<AuditRow[]>("/api/audit");
 
+export interface OrderRow {
+  id: number;
+  bot_id: number | null;
+  ext_id: string | null;
+  source: string;
+  mode: string;
+  symbol: string;
+  side: string;
+  type: string;
+  qty: number | null;
+  price: number | null;
+  sl: number | null;
+  tp: number | null;
+  filled_qty: number | null;
+  avg_price: number | null;
+  fee: number | null;
+  status: string;
+  created_at: string | null;
+}
+
+export function fetchOrders(filters: Record<string, string> = {}) {
+  const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v));
+  const q = qs.toString();
+  return getJson<OrderRow[]>(`/api/orders${q ? `?${q}` : ""}`);
+}
+
 // ---- backtest (P4) ----
 export interface BacktestTrade {
   side: string;
@@ -176,6 +202,10 @@ export interface ScanResultRow {
   score: number | null;
   signal: string;
   reason: string;
+  entry: number | null;
+  atr: number | null;
+  sl: number | null;
+  tp: number | null;
   ts: string | null;
 }
 

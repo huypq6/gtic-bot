@@ -14,7 +14,7 @@ from app.config import settings
 from app.market.bus import EventBus
 from app.market.store import get_klines, sync_historical
 from app.orders.models import ScanResult
-from app.strategy.ta import rsi
+from app.strategy.ta import atr, rsi
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,28 @@ def score_symbol(closes: list[float], rsi_period: int = 14) -> tuple[float, str,
     return round(score, 2), signal, reason
 
 
+def analyze_symbol(candles: list[dict], rsi_period: int = 14) -> dict:
+    """Chấm điểm + đề xuất entry/SL/TP (theo ATR) cho 1 cặp."""
+    closes = [c["close"] for c in candles]
+    score, signal, reason = score_symbol(closes, rsi_period)
+    entry = closes[-1] if closes else None
+    atr_val = atr(candles)
+    sl = tp = None
+    if signal in ("BUY", "SELL") and entry and atr_val:
+        if signal == "BUY":
+            sl = round(entry - settings.scan_sl_atr * atr_val, 6)
+            tp = round(entry + settings.scan_tp_atr * atr_val, 6)
+        else:
+            sl = round(entry + settings.scan_sl_atr * atr_val, 6)
+            tp = round(entry - settings.scan_tp_atr * atr_val, 6)
+    return {
+        "score": score, "signal": signal, "reason": reason,
+        "entry": round(entry, 6) if entry else None,
+        "atr": round(atr_val, 6) if atr_val else None,
+        "sl": sl, "tp": tp,
+    }
+
+
 async def scan_once(session_factory: async_sessionmaker) -> list[dict]:
     """Quét 1 lượt các symbol cấu hình → lưu scan_result, trả về list kết quả."""
     results: list[dict] = []
@@ -50,12 +72,14 @@ async def scan_once(session_factory: async_sessionmaker) -> list[dict]:
             try:
                 await sync_historical(session, symbol, settings.scan_tf, "1 day ago UTC")
                 candles = await get_klines(session, symbol, settings.scan_tf, limit=100)
-                closes = [c["close"] for c in candles]
-                score, signal, reason = score_symbol(closes)
-                session.add(ScanResult(symbol=symbol, score=score, signal=signal, reason=reason))
-                results.append(
-                    {"symbol": symbol, "score": score, "signal": signal, "reason": reason}
+                a = analyze_symbol(candles)
+                session.add(
+                    ScanResult(
+                        symbol=symbol, score=a["score"], signal=a["signal"], reason=a["reason"],
+                        entry=a["entry"], atr=a["atr"], sl=a["sl"], tp=a["tp"],
+                    )
                 )
+                results.append({"symbol": symbol, **a})
             except Exception:  # noqa: BLE001 — 1 symbol lỗi không chặn cả lượt
                 logger.exception("scan %s lỗi", symbol)
         await session.commit()

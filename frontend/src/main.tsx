@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import AppLayout from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Trading from "./pages/Trading";
+import Orders from "./pages/Orders";
 import Backtest from "./pages/Backtest";
 import Scanner from "./pages/Scanner";
 import Audit from "./pages/Audit";
@@ -20,6 +21,7 @@ createRoot(document.getElementById("root")!).render(
           <Route element={<AppLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="trade" element={<Trading />} />
+            <Route path="orders" element={<Orders />} />
             <Route path="backtest" element={<Backtest />} />
             <Route path="scanner" element={<Scanner />} />
             <Route path="audit" element={<Audit />} />

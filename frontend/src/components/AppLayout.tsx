@@ -26,6 +26,7 @@ export default function AppLayout() {
           <nav className="flex items-center gap-1 text-sm">
             <Tab to="/">Chart</Tab>
             <Tab to="/trade">Trading</Tab>
+            <Tab to="/orders">Orders</Tab>
             <Tab to="/backtest">Backtest</Tab>
             <Tab to="/scanner">Scanner</Tab>
             <Tab to="/audit">Audit</Tab>

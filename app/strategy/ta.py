@@ -12,6 +12,22 @@ def ema(values: list[float], period: int) -> list[float]:
     return out
 
 
+def atr(candles: list[dict], period: int = 14) -> float | None:
+    """Average True Range (Wilder) — biến động giá. candles có high/low/close."""
+    if len(candles) < period + 1:
+        return None
+    trs: list[float] = []
+    for i in range(1, len(candles)):
+        h, low = candles[i]["high"], candles[i]["low"]
+        prev_close = candles[i - 1]["close"]
+        trs.append(max(h - low, abs(h - prev_close), abs(low - prev_close)))
+    # Wilder smoothing
+    a = sum(trs[:period]) / period
+    for tr in trs[period:]:
+        a = (a * (period - 1) + tr) / period
+    return a
+
+
 def rsi(values: list[float], period: int = 14) -> list[float]:
     """RSI (Wilder), độ dài = len(values)-period (rỗng nếu thiếu)."""
     if len(values) <= period:

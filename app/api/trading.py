@@ -227,17 +227,35 @@ async def list_positions(session: AsyncSession = Depends(get_session)) -> list[d
 
 @router.get("/orders")
 async def list_orders(
-    limit: int = 50, session: AsyncSession = Depends(get_session)
+    limit: int = 200,
+    mode: str | None = None,
+    source: str | None = None,
+    status: str | None = None,
+    symbol: str | None = None,
+    session: AsyncSession = Depends(get_session),
 ) -> list[dict]:
-    rows = (
-        await session.execute(select(OrderModel).order_by(OrderModel.id.desc()).limit(limit))
-    ).scalars().all()
+    q = select(OrderModel).order_by(OrderModel.id.desc())
+    if mode:
+        q = q.where(OrderModel.mode == mode)
+    if source:
+        q = q.where(OrderModel.source == source)
+    if status:
+        q = q.where(OrderModel.status == status)
+    if symbol:
+        q = q.where(OrderModel.symbol == symbol)
+    rows = (await session.execute(q.limit(limit))).scalars().all()
+
+    def f(v):
+        return float(v) if v is not None else None
+
     return [
         {
             "id": o.id, "bot_id": o.bot_id, "ext_id": o.ext_id, "source": o.source,
             "mode": o.mode, "symbol": o.symbol, "side": o.side, "type": o.type,
-            "qty": float(o.qty), "price": float(o.price) if o.price is not None else None,
+            "qty": f(o.qty), "price": f(o.price), "sl": f(o.sl), "tp": f(o.tp),
+            "filled_qty": f(o.filled_qty), "avg_price": f(o.avg_price), "fee": f(o.fee),
             "status": o.status,
+            "created_at": o.created_at.isoformat() if o.created_at else None,
         }
         for o in rows
     ]

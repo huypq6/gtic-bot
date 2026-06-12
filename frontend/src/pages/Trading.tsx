@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router";
 import { Pause, Play, Square, Trash2 } from "lucide-react";
 import {
   createBot,
@@ -21,6 +22,8 @@ export default function Trading() {
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: fetchConfig });
   const { data: bots } = useQuery({ queryKey: ["bots"], queryFn: fetchBots, refetchInterval: 5000 });
 
+  const [searchParams] = useSearchParams();
+  const urlSymbol = searchParams.get("symbol");
   const [stratId, setStratId] = useState<number | "">("");
   const [symbol, setSymbol] = useState("");
   const [tf, setTf] = useState("");
@@ -29,10 +32,18 @@ export default function Trading() {
   const [showLiveModal, setShowLiveModal] = useState(false);
 
   const selectedStrat = strategies?.find((s) => s.id === stratId);
+  // symbol từ scanner (?symbol=) có thể ngoài watchlist → thêm vào options.
+  const symbolOptions =
+    config && urlSymbol && !config.symbols.includes(urlSymbol)
+      ? [urlSymbol, ...config.symbols]
+      : (config?.symbols ?? []);
 
   useEffect(() => {
     if (strategies?.length && stratId === "") setStratId(strategies[0].id);
   }, [strategies, stratId]);
+  useEffect(() => {
+    if (urlSymbol) setSymbol(urlSymbol);
+  }, [urlSymbol]);
   // reset params về default khi đổi strategy/version.
   useEffect(() => {
     if (selectedStrat) setParams({ ...selectedStrat.default_params });
@@ -101,7 +112,7 @@ export default function Trading() {
               onChange={(e) => setSymbol(e.target.value)}
               className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
             >
-              {config?.symbols.map((s) => (
+              {symbolOptions.map((s) => (
                 <option key={s}>{s}</option>
               ))}
             </select>
