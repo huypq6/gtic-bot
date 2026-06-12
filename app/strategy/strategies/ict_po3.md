@@ -70,7 +70,8 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
 7. **Vào lệnh** (MARKET tại close):
    - `conf=1`: vào ngay khi MSS.
    - `conf≥2`: sau khi vũ trang, vào khi giá **retest** về FVG. Nếu giá **phá sâu hơn điểm quét** trước khi retest → **huỷ setup** (dò lại). Nếu hết `flatten_h` chưa retest → bỏ.
-   - Đặt `traded_today = True` → **tối đa 1 lệnh/ngày**.
+   - **1 lệnh tại 1 thời điểm** (đang có lệnh thì không mở thêm); **KHÔNG giới hạn số lệnh/ngày** —
+     đóng lệnh xong sẽ dò setup mới (sweep→MSS→[retest]) cùng ngày, chỉ vào khi đủ điều kiện.
 
 ## SL / TP & thoát trong ngày
 
@@ -111,7 +112,7 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
 ## Ưu / Nhược
 
 - ✅ Bám logic ICT (liquidity sweep + đảo chiều), R:R cố định 2R, kỷ luật trong ngày, không rủi ro qua đêm.
-- ✅ Lọc bias HTF (chỉ đánh thuận trend) + chỉ 1 lệnh/ngày → ít overtrade, ít lệnh ngược trend.
+- ✅ Lọc bias HTF (chỉ đánh thuận trend); 1 lệnh/thời điểm, vào lại sau khi đóng → bám sát cấu trúc.
 - ❌ MSS dùng proxy **break N nến**, không phải swing-structure đầy đủ → có thể vào sớm/trễ so với ICT thủ công.
 - ❌ FVG/OB là **bộ lọc xác nhận** (vào MARKET tại close), không mô phỏng lệnh LIMIT chờ tại FVG → fill thực tế (paper/live) có thể khác giá tối ưu ICT.
 - ❌ Range Asia kém ý nghĩa vào ngày tin lớn/biến động bất thường (NFP/CPI…).
@@ -125,7 +126,7 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
 
 - Cần nhiều ngày dữ liệu (đặt "số ngày" ≥ 14) để có đủ mẫu phiên. Tham số chỉnh trực tiếp trên form backtest (bias_mode, confluence, bias_len, rr_target…).
 - Quét `(bias_mode, bias_len, confluence, mss_lookback, rr_target)`; mặc định 1 / 200 / 2 / 3 / 2.0.
-- Kiểm chứng: số lệnh ≤ số ngày (tối đa 1/ngày); không lệnh nào giữ qua 00:00 UTC.
+- Kiểm chứng: 1 lệnh/thời điểm; có thể nhiều lệnh/ngày; không lệnh nào giữ qua 00:00 UTC.
 
 ### Quan sát thực nghiệm + quét tham số (`scripts/sweep_ict_po3.py`)
 

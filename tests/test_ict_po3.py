@@ -109,14 +109,27 @@ def test_no_overnight_rollover_close():
     assert a == ["BUY", "CLOSE"]
 
 
-# ---- Tối đa 1 lệnh/ngày ----
-def test_max_one_trade_per_day():
+# ---- 1 lệnh tại 1 thời điểm: đang có lệnh thì KHÔNG mở thêm ----
+def test_one_position_at_a_time():
+    bars = asia(0) + LONG_RETEST[:5] + [   # BUY tại h12
+        c(0, 13, 99.8, 100, 99, 99.5),     # lại chạm vùng FVG nhưng đang có lệnh → bỏ qua
+        c(0, 14, 99.5, 108, 99.5, 107),    # TP
+    ]
+    a = acts(replay(IctPo3({**MECH, "confluence": 2}), bars))
+    assert a == ["BUY", "CLOSE"]
+
+
+# ---- Không giới hạn số lệnh/ngày: đóng xong có thể vào lệnh mới (LONG rồi SHORT) ----
+def test_multiple_trades_per_day():
     bars = asia(0) + LONG_BRK + [
-        c(0, 12, 102, 113, 102, 112.5),   # TP → CLOSE
-        c(0, 13, 100, 100, 96, 97), c(0, 14, 97, 102, 97, 101), c(0, 15, 101, 103, 101, 102),
+        c(0, 12, 102, 113, 102, 112.5),    # TP LONG → CLOSE
+        c(0, 13, 112, 113, 111, 112),      # sweep HIGH mới (giá đang cao)
+        c(0, 14, 112, 112.5, 110, 111),    # swing-low = 110
+        c(0, 15, 111, 112, 110.5, 111.5),  # xác nhận swing
+        c(0, 16, 111, 111, 105, 106),      # MSS down: close 106 < 110 → SELL
     ]
     a = acts(replay(IctPo3({**MECH, "confluence": 1}), bars))
-    assert a.count("BUY") == 1
+    assert a[:2] == ["BUY", "CLOSE"] and "SELL" in a  # 2 lệnh tuần tự trong ngày
 
 
 # ---- MSS thật: KHÔNG có swing-high thì KHÔNG vào (giá đi thẳng, không lập cấu trúc) ----

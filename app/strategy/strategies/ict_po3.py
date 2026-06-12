@@ -79,7 +79,6 @@ class IctPo3(Strategy):
         self._armed = False           # đã MSS, đang chờ giá retest FVG để vào (conf≥2)
         self._armed_dir = None        # hướng đã vũ trang
         self._fvg_prox = None         # mép gần của FVG (mức retest để fill)
-        self._traded_today = False
         self._side = None             # "LONG" | "SHORT" | None (lệnh đang mở)
         self._sl = None
         self._tp = None
@@ -88,7 +87,6 @@ class IctPo3(Strategy):
         self._day = day
         self._asia_high = self._asia_low = None
         self._reset_setup()
-        self._traded_today = False
 
     def _reset_setup(self) -> None:
         """Xoá trạng thái sweep/MSS/vũ trang để dò setup mới (cùng ngày)."""
@@ -136,10 +134,12 @@ class IctPo3(Strategy):
             if hit or hour >= flatten_h:
                 out.append(Signal("CLOSE", ctx.symbol))
                 self._clear_trade()
+                self._reset_setup()  # đóng xong → dò setup MỚI cùng ngày (không giới hạn số lệnh)
             return out
 
-        # 4. Ngoài cửa sổ săn lệnh / chưa có range Asia / đã trade → không vào mới.
-        if hour >= flatten_h or self._asia_high is None or self._asia_low is None or self._traded_today:
+        # 4. Ngoài cửa sổ săn lệnh / chưa có range Asia → không vào mới.
+        #    (Không giới hạn số lệnh/ngày; chỉ 1 lệnh/thời điểm — đã chặn ở bước 3 khi đang có lệnh.)
+        if hour >= flatten_h or self._asia_high is None or self._asia_low is None:
             return out
 
         # 4a. Lọc tin: không MỞ/ARM/FILL lệnh mới trong khung giờ tin (hoặc ngày NFP).
@@ -258,7 +258,6 @@ class IctPo3(Strategy):
                 tp = self._asia_low
             sig = Signal("SELL", ctx.symbol, float(p["size"]), sl=sl, tp=tp)
         self._side, self._sl, self._tp = direction, sl, sig.tp
-        self._traded_today = True
         self._armed = False
         return sig
 
