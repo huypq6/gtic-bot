@@ -1,0 +1,41 @@
+app/api/backtest.py
+  s_97e667e10cf896::t_cb2f92a8f72ea7 52-54
+  s_97e667e10cf896::t_fbb4a3a4eacea1 25-28,36-37,43-51,66,75
+  s_97e667e10cf896::t_d4841e4a291e73 138-140
+  s_97e667e10cf896::t_c76b86ddb6d016 118-119
+tests/test_backtest_engine.py
+  s_97e667e10cf896::t_99e9c2326dbc73 38-50
+frontend/src/lib/api.ts
+  s_97e667e10cf896::t_a7cc432b3ecf94 229-231
+  s_97e667e10cf896::t_88e14b69016361 195-197,203
+frontend/src/pages/Backtest.tsx
+  s_97e667e10cf896::t_06f8e97f03b065 12-13,18-22,33-38,48-49
+  s_97e667e10cf896::t_b5659735a6acda 84-95,98-106,116-120
+  s_97e667e10cf896::t_27a2da6c58f62c 126-141
+app/config.py
+  s_97e667e10cf896::t_2fa634cb024f7c 50-54
+app/orders/models.py
+  s_97e667e10cf896::t_5a790e4755eeaa 128-129
+alembic/versions/3d53f1accfea_backtest_market_leverage.py
+  s_97e667e10cf896::t_5c5978c0927842 11
+  s_97e667e10cf896::t_f59ab157336239 1-10,12-23,25-32
+  s_97e667e10cf896::t_6d8f5f4978c481 24
+app/backtest/engine.py
+  s_97e667e10cf896::t_6819d0c920d94f 65,67-72,79,89,102-126,129,144,149,151-152,154-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "753fae1230c79c0004a1665e230df1a6eda0010b",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
