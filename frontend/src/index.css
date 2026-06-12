@@ -1,1 +1,51 @@
 @import "tailwindcss";
+
+/* ============================================================
+   Theme — phái sinh từ docs/logo.png ("stealth trader")
+   brand  = áo hoodie slate-violet + periwinkle highlight
+   accent = màn hình phone teal/emerald → hành động / lãi / long
+   ink    = nền tối lạnh
+   ============================================================ */
+@theme {
+  /* Brand — slate-violet / periwinkle */
+  --color-brand-300: #b8c2d9;
+  --color-brand-400: #9aa6c4;
+  --color-brand-500: #8b9cba; /* periwinkle highlight */
+  --color-brand-600: #64667f; /* hoodie (primary) */
+  --color-brand-700: #4f5167;
+  --color-brand-800: #363746;
+
+  /* Accent — teal/emerald (phone screen) */
+  --color-accent-300: #7ad3c6;
+  --color-accent-400: #5cc3b4;
+  --color-accent-500: #46a99c; /* action / positive */
+  --color-accent-600: #38887e;
+
+  /* Ink — cool dark neutrals */
+  --color-ink-950: #0c0d12; /* app background */
+  --color-ink-900: #13141b; /* surface */
+  --color-ink-850: #181a23;
+  --color-ink-800: #1f2130; /* card */
+  --color-ink-700: #2a2c3c; /* border */
+  --color-ink-500: #6c7186;
+  --color-ink-400: #9da1b3; /* muted text */
+  --color-ink-100: #e7e8ee; /* primary text */
+
+  /* Trading semantics */
+  --color-up: #46a99c; /* long / profit — teal (theo accent) */
+  --color-down: #e5544b; /* short / loss — đỏ (bổ sung, không có trong logo) */
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-ink-950);
+  color: var(--color-ink-100);
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
