@@ -44,6 +44,9 @@ class IctPo3(Strategy):
         "sl_buffer_pct": 0.05,  # đệm SL ngoài điểm quét, theo % giá
         "asia_end_h": 8,       # giờ UTC kết thúc phiên Asia (chốt range)
         "flatten_h": 21,       # giờ UTC đóng hết lệnh (kết thúc NY)
+        "news_filter": 2,      # 0=tắt · 1=chặn vào lệnh trong khung giờ tin · 2=+chặn ngày NFP
+        "news_start_h": 12,    # khung giờ tin US (UTC): 8:30 ET = 12:30 (hè) / 13:30 (đông)
+        "news_end_h": 14,
         "size": 0.001,
     }
     param_schema = {
@@ -56,6 +59,9 @@ class IctPo3(Strategy):
         "sl_buffer_pct": {"type": "float", "min": 0.0, "max": 2.0, "default": 0.05},
         "asia_end_h": {"type": "int", "min": 1, "max": 23, "default": 8},
         "flatten_h": {"type": "int", "min": 1, "max": 23, "default": 21},
+        "news_filter": {"type": "int", "min": 0, "max": 2, "default": 0},
+        "news_start_h": {"type": "int", "min": 0, "max": 23, "default": 12},
+        "news_end_h": {"type": "int", "min": 0, "max": 23, "default": 14},
         "size": {"type": "float", "min": 0.0, "default": 0.001},
     }
 
@@ -133,6 +139,11 @@ class IctPo3(Strategy):
 
         # 4. Ngoài cửa sổ săn lệnh / chưa có range Asia / đã trade → không vào mới.
         if hour >= flatten_h or self._asia_high is None or self._asia_low is None or self._traded_today:
+            return out
+
+        # 4a. Lọc tin: không MỞ/ARM/FILL lệnh mới trong khung giờ tin (hoặc ngày NFP).
+        #     Lệnh đang mở vẫn được quản (đã xử lý ở bước 3) — chỉ chặn vào mới.
+        if self._news_blocked(dt, hour, p):
             return out
 
         close = cur["close"]
@@ -246,6 +257,18 @@ class IctPo3(Strategy):
         self._traded_today = True
         self._armed = False
         return sig
+
+    @staticmethod
+    def _news_blocked(dt, hour: int, p: dict) -> bool:
+        """Có chặn vào lệnh mới vì tin không. NFP = thứ Sáu đầu tháng (day≤7, weekday=4)."""
+        nf = int(p.get("news_filter", 0))
+        if nf < 1:
+            return False
+        if int(p["news_start_h"]) <= hour < int(p["news_end_h"]):
+            return True
+        if nf >= 2 and dt.weekday() == 4 and dt.day <= 7:  # ngày NFP
+            return True
+        return False
 
     @staticmethod
     def _find_fvg(candles: list[dict], direction: str) -> float | None:

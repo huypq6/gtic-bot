@@ -82,6 +82,8 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
 | `sl_buffer_pct` | 0.05 | Đệm SL ngoài điểm quét, theo % giá. |
 | `asia_end_h` | 8 | Giờ UTC kết thúc phiên Asia (chốt range). |
 | `flatten_h` | 21 | Giờ UTC đóng hết lệnh (kết thúc NY). |
+| `news_filter` | 2 | Lọc tin: 0 = tắt · 1 = chặn vào lệnh trong khung giờ tin · 2 = + chặn ngày NFP (thứ Sáu đầu tháng). |
+| `news_start_h` / `news_end_h` | 12 / 14 | Khung giờ tin US (UTC): 8:30 ET = 12:30 (hè) / 13:30 (đông). |
 | `size` | 0.001 | Khối lượng. |
 
 ## Hiển thị (chart backtest)
@@ -118,8 +120,12 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
   lời 2/4 thị trường, win ~40%, maxDD 3.4%. Alt nhiều lệnh hơn: `conf=2` (tương tự, ~37 lệnh).
 - **Out-of-sample** (cửa sổ dài hơn + cặp chưa sweep): BTC/ETH 15m 90d ≈ −2.4…−2.7%; ETH 1h 200d **+0.88%**;
   SOL 1h 120d −3.3%. Cùng độ lớn với in-sample → **không overfit nặng**, nhưng **chưa phải edge có lời**.
-- **Kết luận thẳng**: hiện ở mức **gần hòa vốn, drawdown thấp** — chưa nên chạy tiền thật. Hướng tiếp:
-  walk-forward, lọc ngày tin (NFP/CPI), hoặc xét lại proxy MSS (dùng swing-structure thật).
+- **Lọc tin (`news_filter`, mặc định 2)**: chặn vào lệnh khung 12–14 UTC + ngày NFP cải thiện
+  **3/4 thị trường** và giảm drawdown rõ (ETH 1h 200d: +0.88% → **+6.34%**, win 56%→78%, DD 2.1%→1.1%);
+  trung bình 4 thị trường lật từ −1.67% sang **+0.36%**. BTC 15m hơi xấu đi (mẫu nhỏ). NFP-day (=2)
+  bằng window-only trên dữ liệu thử (không hại). Lưu ý: thị trường dương (ETH 1h, 9 lệnh) mẫu nhỏ → có thể may.
+- **Kết luận thẳng**: với lọc tin, ở mức **hòa vốn ± nhẹ, drawdown thấp** — KHẢ QUAN hơn nhưng mẫu nhỏ,
+  CHƯA nên tiền thật. Hướng tiếp: walk-forward nhiều cửa sổ, xét lại proxy MSS (swing-structure thật).
 
 ## Giới hạn đã biết (tóm tắt cho người đọc code)
 

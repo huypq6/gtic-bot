@@ -228,6 +228,29 @@ def test_bias_blocks_long_in_downtrend():
     assert "BUY" not in a
 
 
+# ---- Lọc tin (NFP / khung giờ tin) ----
+def test_news_blocked_window():
+    tue = datetime(2025, 1, 7, 12, tzinfo=timezone.utc)  # thứ Ba
+    p = {"news_filter": 1, "news_start_h": 12, "news_end_h": 14}
+    assert IctPo3._news_blocked(tue, 12, p) is True   # trong khung giờ tin
+    assert IctPo3._news_blocked(tue, 15, p) is False  # ngoài khung
+    assert IctPo3._news_blocked(tue, 12, {"news_filter": 0}) is False  # tắt
+
+
+def test_news_blocked_nfp_day():
+    fri = datetime(2025, 1, 3, 16, tzinfo=timezone.utc)  # thứ Sáu đầu tháng 1/2025 = NFP
+    base = {"news_start_h": 12, "news_end_h": 14}
+    assert IctPo3._news_blocked(fri, 16, {**base, "news_filter": 2}) is True   # chặn ngày NFP
+    assert IctPo3._news_blocked(fri, 16, {**base, "news_filter": 1}) is False  # chỉ-khung-giờ, ngoài giờ
+
+
+def test_news_filter_blocks_entry():
+    # khung giờ tin phủ nến vào lệnh (10–13h) → không vào.
+    bars = asia(0) + RETEST
+    pr = {**MECH, "confluence": 2, "news_filter": 1, "news_start_h": 10, "news_end_h": 13}
+    assert "BUY" not in acts(replay(IctPo3(pr), bars))
+
+
 # ---- registry ----
 def test_registered():
     discover()
