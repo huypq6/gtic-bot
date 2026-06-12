@@ -11,6 +11,7 @@
 | **v1** | `ict_po3_v1.py` | MSS **proxy** (phá đỉnh/đáy phản ứng) + bias + retest FVG/OB + tp_mode. CHƯA lọc tin. |
 | **v2** | `ict_po3_v2.py` | = v1 + **lọc tin** (NFP/khung giờ US). |
 | **v3** | `ict_po3.py` | = v2 nhưng MSS đổi sang **swing-structure (CHoCH)** + param `swing`. |
+| **v4** | `ict_po3_v4.py` | = v3 + sửa 4 **lỗi mô hình**: rejection sweep, displacement MSS, giờ-vào-cuối, min R:R. **Bản khuyến nghị.** |
 
 **So sánh có kiểm soát (cùng params, chỉ khác MSS), 90–200 ngày BTC/ETH:** v2(proxy) TB +0.08% vs
 v3(swing) TB −0.60% — **v3 KHÔNG vượt v2 rõ ràng** (v3 chỉ thắng ETH 15m). Con số "+1.65% in-sample"
@@ -173,10 +174,30 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
   chỉ **3/6 cửa sổ dương** — 3 kỳ đầu (Dec–Mar) ÂM, 3 kỳ cuối (Mar–Jun) dương → **edge phụ thuộc regime,
   KHÔNG ổn định theo thời gian**. Quét rổ 60 ngày trước trông đẹp vì rơi đúng giai đoạn gần đây thuận lợi.
   Per-cặp chỉ **DOGE 5/6, DOT 4/6, XRP 4/6** dương quá nửa; ETH 2/6, SOL 1/6 → KHÔNG ổn định.
-- **KẾT LUẬN CUỐI (thẳng)**: ict_po3 là bản ICT PO3 dựng tử tế, kỷ luật tốt (1 lệnh/thời điểm, SL ATR,
-  lọc tin, flatten, DD thấp ~2–6%) NHƯNG **không có edge bền theo thời gian** trên dữ liệu thử →
-  **KHÔNG nên chạy tiền thật**. Nếu theo đuổi: chỉ paper-trade quan sát (ưu tiên DOGE/DOT/XRP 15m),
-  kỳ vọng thấp; cần ý tưởng alpha mới (không chỉ tinh chỉnh tham số) để có edge thực.
+- **Kết luận v3**: kỷ luật tốt nhưng không có edge bền theo thời gian → dừng v3, cần sửa MÔ HÌNH.
+
+### v4 — sửa 4 lỗi mô hình (không phải tinh chỉnh tham số)
+
+Chẩn đoán dữ liệu thật (ETH 15m, 181 ngày): **54% "sweep" của v3 là nến đóng NGOÀI range** (breakout
+thật) → v3 fade trend hơn nửa số ngày. v4 sửa:
+1. `reject_sweep` — sweep chỉ hợp lệ khi nến **đóng ngược vào trong range** (rejection/SFP).
+2. `disp_mult` — MSS phải có **displacement** (thân nến ≥ k×ATR), loại MSS yếu giữa chop.
+3. `entry_cutoff_h` — không vào lệnh mới sau 15h UTC (lệnh muộn chết vì flatten 21h, không phải sai hướng).
+4. `min_rr` — (tp_mode=1) bỏ entry nếu TP đối diện gần hơn k×risk, chờ retest sâu hơn.
+
+**Kết quả (BTCUSDT 15m, 180 ngày, params mặc định, phí 0.05%/chiều):**
+- PnL **+3.43%** · maxDD **3.31%** · win 58% · 12 lệnh.
+- Walk-forward TUẦN (`scripts/walkforward_ict_po3_v4.py`): **85% tuần không âm** (5 dương + 17 đứng + 4 âm /26),
+  tuần tệ nhất **−1.29%**; theo tháng không có tháng thảm họa (tệ nhất −1.07%) — **dương qua cả regime
+  Dec–Mar nơi v3 âm nặng**.
+- **Lân cận tham số đều dương** (8/8 biến thể +1.3…+3.4%, DD <4%) → cao nguyên ổn định, không phải đỉnh may mắn.
+- Đối chứng cùng-params: v4-fix cải thiện 3/4 thị trường so với hành-vi-v3 (vd ETH 5m −1.35%→+1.48%).
+- ETH 15m/BTC 5m vẫn âm nhẹ qua 180/60 ngày → **chỉ khuyến nghị BTC 15m** (đúng mục tiêu "ổn định ≥1 cặp×1 TF").
+
+**Verdict v4 (theo mục tiêu)**: maxDD ✅ (3.3% < 10%) · ổn định ✅ (robust lân cận + không sập theo regime)
+· "luôn dương mỗi tuần" ⚠️ gần đạt (85% tuần không âm, 4 tuần âm nhỏ /26 — không chiến thuật nào đạt 100% theo
+nghĩa đen). Lưu ý: **12 lệnh/180 ngày** = tần suất thấp, PnL khiêm tốn (~7%/năm chưa đòn bẩy), nhiều tuần đứng
+do không có lệnh. Đề xuất: **paper-trade BTC 15m bằng v4** để xác nhận forward, CHƯA tiền thật.
 
 ## Giới hạn đã biết (tóm tắt cho người đọc code)
 
