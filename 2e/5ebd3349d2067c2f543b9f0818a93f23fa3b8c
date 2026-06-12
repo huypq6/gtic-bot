@@ -1,0 +1,24 @@
+app/strategy/strategies/ichimoku_v2.py
+  s_dd1d383719b312::t_d05bc4bc99b17d 1-80
+tests/test_ichimoku_v2.py
+  s_dd1d383719b312::t_ce6da6e65a25a8 1-22,25-39
+  s_dd1d383719b312::t_87d76f7a51f73b 23-24
+app/strategy/strategies/ichimoku.md
+  s_dd1d383719b312::t_9494b86fcac363 5-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "2e5ebd3349d2067c2f543b9f0818a93f23fa3b8c",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
