@@ -34,3 +34,14 @@ class VwapCross(Strategy):
         if price_prev >= vw_prev and price_now < vw_now:
             return [Signal("SELL", ctx.symbol, self.params["size"])]
         return []
+
+    def plot(self, candles):
+        p, n = self.params["period"], len(candles)
+        line: list = [None] * n
+        for i in range(p - 1, n):
+            w = candles[i - p + 1 : i + 1]
+            tv = sum(c["volume"] for c in w)
+            if tv:
+                num = sum(((c["high"] + c["low"] + c["close"]) / 3) * c["volume"] for c in w)
+                line[i] = num / tv
+        return {"VWAP": line}

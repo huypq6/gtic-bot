@@ -1,6 +1,11 @@
 """Chỉ báo kỹ thuật thuần (pure) cho strategy. Dùng được cả paper/backtest/live."""
 
 
+def pad_left(series: list[float], n: int) -> list[float | None]:
+    """Căn series về độ dài n bằng cách chèn None ở đầu (cho warmup indicator)."""
+    return [None] * max(0, n - len(series)) + list(series)
+
+
 def ema(values: list[float], period: int) -> list[float]:
     """EMA series, độ dài = len(values)-period+1 (rỗng nếu thiếu dữ liệu)."""
     if len(values) < period:

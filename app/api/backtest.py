@@ -72,9 +72,11 @@ async def create_backtest(
 
     run = BacktestRun(
         strategy_id=body.strategy_id, params=params, symbol=body.symbol, tf=body.tf,
+        from_ts=_ms(res["from_ts"]), to_ts=_ms(res["to_ts"]),
         capital=body.capital, fee_rate=fee, market=market, leverage=leverage,
         pnl_pct=res["pnl_pct"], winrate=res["winrate"], max_dd=res["max_dd"],
         sharpe=res["sharpe"], n_trades=res["n_trades"], equity_curve=res["equity_curve"],
+        indicators=res["indicators"],
     )
     session.add(run)
     await session.flush()
@@ -84,6 +86,7 @@ async def create_backtest(
                 run_id=run.id, side=t["side"],
                 entry_ts=_ms(t["entry_ts"]), entry=t["entry"],
                 exit_ts=_ms(t["exit_ts"]), exit=t["exit"], pnl_pct=t["pnl_pct"],
+                sl=t["sl"], tp=t["tp"],
             )
         )
     await session.commit()
@@ -137,6 +140,9 @@ async def _run_dict(session: AsyncSession, run_id: int) -> dict:
     out = _summary(run)
     eq = run.equity_curve or []
     out["equity_curve"] = eq
+    out["indicators"] = run.indicators or {}
+    out["from_ts"] = int(run.from_ts.timestamp() * 1000) if run.from_ts else None
+    out["to_ts"] = int(run.to_ts.timestamp() * 1000) if run.to_ts else None
     out["liquidated"] = bool(eq and eq[-1][1] <= 0)  # cháy tài khoản nếu equity về 0
     out["trades"] = [
         {
@@ -146,6 +152,8 @@ async def _run_dict(session: AsyncSession, run_id: int) -> dict:
             "exit_ts": int(t.exit_ts.timestamp() * 1000) if t.exit_ts else None,
             "exit": float(t.exit) if t.exit is not None else None,
             "pnl_pct": float(t.pnl_pct) if t.pnl_pct is not None else None,
+            "sl": float(t.sl) if t.sl is not None else None,
+            "tp": float(t.tp) if t.tp is not None else None,
         }
         for t in trades
     ]

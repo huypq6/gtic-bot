@@ -37,6 +37,26 @@ def test_backtest_too_short_raises():
         run_backtest("ema_cross", "1", {}, _candles([10, 11]), tf="1m")
 
 
+def test_plot_returns_aligned_overlay():
+    from app.strategy.strategies.ema_cross import EmaCross
+
+    candles = _candles([float(c) for c in range(1, 40)])
+    plot = EmaCross({"fast": 3, "slow": 6}).plot(candles)
+    assert "EMA 3" in plot and "EMA 6" in plot
+    assert len(plot["EMA 3"]) == len(candles)  # căn đủ độ dài (None ở warmup)
+    assert plot["EMA 3"][0] is None and plot["EMA 3"][-1] is not None
+
+
+def test_backtest_returns_indicators_range_and_trade_sltp():
+    prices = [10, 10, 10, 10, 9, 8, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 13, 12, 11, 10]
+    res = run_backtest("ema_cross", "1", {"fast": 3, "slow": 6, "size": 1},
+                       _candles(prices), capital=1000, fee_rate=0.0005, tf="1m")
+    assert "indicators" in res and "EMA 3" in res["indicators"]
+    assert res["from_ts"] and res["to_ts"] and res["to_ts"] > res["from_ts"]
+    if res["trades"]:
+        assert "sl" in res["trades"][0] and "tp" in res["trades"][0]
+
+
 def test_leverage_scales_pnl_and_reports():
     prices = [10, 10, 10, 10, 9, 8, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 13, 12, 11, 10]
     base = run_backtest("ema_cross", "1", {"fast": 3, "slow": 6, "size": 1},

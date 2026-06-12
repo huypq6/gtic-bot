@@ -24,6 +24,7 @@ def _build_signals(strategy, candles: list[dict]):
     short_e = [False] * n
     short_x = [False] * n
     pos: Position | None = None  # theo dõi vị thế để bơm vào ctx.position (như live)
+    sltp: dict[int, tuple] = {}  # ts vào lệnh → (sl, tp) để gắn vào trade
     for i in range(n):
         price = candles[i]["close"]
         symbol = candles[i].get("symbol", "")
@@ -33,15 +34,17 @@ def _build_signals(strategy, candles: list[dict]):
                 long_e[i] = True
                 short_x[i] = True
                 pos = Position(symbol, "LONG", sig.size, price)
+                sltp[candles[i]["ts"]] = (sig.sl, sig.tp)
             elif sig.action == "SELL":
                 short_e[i] = True
                 long_x[i] = True
                 pos = Position(symbol, "SHORT", sig.size, price)
+                sltp[candles[i]["ts"]] = (sig.sl, sig.tp)
             elif sig.action == "CLOSE":
                 long_x[i] = True
                 short_x[i] = True
                 pos = None
-    return long_e, long_x, short_e, short_x
+    return long_e, long_x, short_e, short_x, sltp
 
 
 def _safe(v) -> float | None:
@@ -80,7 +83,19 @@ def run_backtest(
 
     discover()
     strategy = get(strategy_name, strategy_version)(params)
-    long_e, long_x, short_e, short_x = _build_signals(strategy, candles)
+    long_e, long_x, short_e, short_x, sltp = _build_signals(strategy, candles)
+
+    # đường indicator overlay theo chiến lược (US-11 mở rộng).
+    indicators: dict[str, list] = {}
+    try:
+        for name, series in strategy.plot(candles).items():
+            indicators[name] = [
+                [candles[i]["ts"], round(float(v), 6)]
+                for i, v in enumerate(series)
+                if v is not None
+            ]
+    except Exception:  # noqa: BLE001 — lỗi plot không được chặn backtest
+        indicators = {}
 
     idx = pd.to_datetime([c["ts"] for c in candles], unit="ms", utc=True)
     close = pd.Series([c["close"] for c in candles], index=idx)
@@ -132,16 +147,20 @@ def run_backtest(
     trades = []
     rec = pf.trades.records_readable
     for _, t in rec.iterrows():
+        entry_ts = int(pd.Timestamp(t["Entry Timestamp"]).timestamp() * 1000)
+        sl, tp = sltp.get(entry_ts, (None, None))
         trades.append(
             {
                 "side": str(t["Direction"]),
-                "entry_ts": int(pd.Timestamp(t["Entry Timestamp"]).timestamp() * 1000),
+                "entry_ts": entry_ts,
                 "entry": _safe(t["Avg Entry Price"]),
                 "exit_ts": int(pd.Timestamp(t["Exit Timestamp"]).timestamp() * 1000)
                 if pd.notna(t["Exit Timestamp"])
                 else None,
                 "exit": _safe(t["Avg Exit Price"]),
                 "pnl_pct": round((_safe(t["Return"]) or 0.0) * 100 * leverage, 4),  # ×đòn bẩy
+                "sl": _safe(sl),
+                "tp": _safe(tp),
             }
         )
 
@@ -153,6 +172,9 @@ def run_backtest(
         "n_trades": int(pf.trades.count()),
         "leverage": leverage,
         "liquidated": liquidated,
+        "from_ts": candles[0]["ts"],
+        "to_ts": candles[-1]["ts"],
+        "indicators": indicators,
         "equity_curve": equity,
         "trades": trades,
     }

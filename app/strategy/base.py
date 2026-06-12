@@ -53,3 +53,10 @@ class Strategy(ABC):
     def on_candle(self, ctx: Context) -> list[Signal]:
         """Nhận Context (chỉ đọc), trả về list Signal. Gọi mỗi khi 1 nến đóng."""
         ...
+
+    def plot(self, candles: list[dict]) -> dict[str, list]:
+        """Các đường overlay trên chart (tên → list giá trị, None ở warmup, dài = len(candles)).
+
+        Mặc định rỗng (chỉ chiến thuật overlay-được mới override). Dùng cho viz backtest.
+        """
+        return {}

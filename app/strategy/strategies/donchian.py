@@ -35,6 +35,16 @@ class DonchianBreakout(Strategy):
             return [self._signal(ctx.symbol, "SELL", price)]
         return []
 
+    def plot(self, candles):
+        p, n = self.params["period"], len(candles)
+        up: list = [None] * n
+        lo: list = [None] * n
+        for i in range(p, n):
+            w = candles[i - p : i]
+            up[i] = max(c["high"] for c in w)
+            lo[i] = min(c["low"] for c in w)
+        return {"Kênh trên": up, "Kênh dưới": lo}
+
     def _signal(self, symbol: str, action: str, price: float) -> Signal:
         size = self.params["size"]
         sl_pct, tp_pct = self.params["sl_pct"], self.params["tp_pct"]

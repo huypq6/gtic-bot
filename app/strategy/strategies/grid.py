@@ -43,3 +43,14 @@ class Grid(Strategy):
         if pos.side == "SHORT" and price <= ref:
             return [Signal("CLOSE", ctx.symbol)]
         return []
+
+    def plot(self, candles):
+        closes = [c["close"] for c in candles]
+        p, step, n = self.params["period"], self.params["step_pct"], len(candles)
+        mid: list = [None] * n
+        up: list = [None] * n
+        lo: list = [None] * n
+        for i in range(p - 1, n):
+            m = sum(closes[i - p + 1 : i + 1]) / p
+            mid[i], up[i], lo[i] = m, m * (1 + step / 100), m * (1 - step / 100)
+        return {"Mốc (SMA)": mid, "Nấc trên": up, "Nấc dưới": lo}

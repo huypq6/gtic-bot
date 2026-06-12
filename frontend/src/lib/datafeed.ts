@@ -32,3 +32,16 @@ export async function loadHistory(
   );
   return raw.map(toBar);
 }
+
+// Nến trong khoảng [from, to] (ms) — cho chart backtest.
+export async function loadRange(
+  symbol: string,
+  tf: string,
+  from: number,
+  to: number,
+): Promise<CandlestickData[]> {
+  const raw = await getJson<RawKline[]>(
+    `/api/klines?symbol=${symbol}&tf=${tf}&start=${from}&end=${to}&limit=5000`,
+  );
+  return raw.map(toBar);
+}

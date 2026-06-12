@@ -193,6 +193,8 @@ export interface BacktestTrade {
   exit_ts: number | null;
   exit: number | null;
   pnl_pct: number | null;
+  sl: number | null;
+  tp: number | null;
 }
 
 export interface BacktestResult {
@@ -210,6 +212,9 @@ export interface BacktestResult {
   sharpe: number | null;
   n_trades: number | null;
   liquidated?: boolean;
+  from_ts: number | null;
+  to_ts: number | null;
+  indicators: Record<string, [number, number][]>;
   equity_curve: [number, number][];
   trades: BacktestTrade[];
 }

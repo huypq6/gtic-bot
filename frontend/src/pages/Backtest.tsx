@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchConfig, fetchStrategies, runBacktest, type BacktestResult } from "../lib/api";
 import EquityCurve from "../components/backtest/EquityCurve";
+import BacktestChart from "../components/backtest/BacktestChart";
+import TradeDetail from "../components/backtest/TradeDetail";
 import VersionCompare from "../components/strategy/VersionCompare";
 import InfoTip from "../components/InfoTip";
 
@@ -21,6 +23,7 @@ export default function Backtest() {
   const [leverage, setLeverage] = useState("1");
   const [fee, setFee] = useState(FEE_PRESET.SPOT);
   const [feeEdited, setFeeEdited] = useState(false);
+  const [selected, setSelected] = useState<number | null>(null);
 
   useEffect(() => {
     if (strategies?.length && stratId === "") setStratId(strategies[0].id);
@@ -152,15 +155,36 @@ export default function Backtest() {
             <Metric label="Số lệnh" term="n_trades" value={res.n_trades} />
           </section>
 
+          {res.from_ts && res.to_ts && (
+            <section className="rounded-xl border border-border bg-surface p-4">
+              <h3 className="mb-2 text-sm font-semibold">
+                Chart backtest — nến + đường chiến lược + marker vào/ra
+              </h3>
+              <BacktestChart
+                symbol={res.symbol}
+                tf={res.tf}
+                from={res.from_ts}
+                to={res.to_ts}
+                indicators={res.indicators}
+                trades={res.trades}
+              />
+            </section>
+          )}
+
           <section className="rounded-xl border border-border bg-surface p-4">
-            <h3 className="mb-2 text-sm font-semibold">Trades ({res.trades.length})</h3>
+            <h3 className="mb-2 text-sm font-semibold">
+              Trades ({res.trades.length}) — bấm 1 lệnh để xem chi tiết + mô phỏng thời gian
+            </h3>
             <div className="max-h-80 overflow-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-surface">
                   <tr className="text-left text-xs uppercase tracking-wide text-faint">
+                    <th className="px-2 py-1.5">#</th>
                     <th className="px-2 py-1.5">Side</th>
-                    <th className="px-2 py-1.5">Entry</th>
-                    <th className="px-2 py-1.5">Exit</th>
+                    <th className="px-2 py-1.5">Vào lúc</th>
+                    <th className="px-2 py-1.5">Ra lúc</th>
+                    <th className="px-2 py-1.5 text-right">Entry</th>
+                    <th className="px-2 py-1.5 text-right">Exit</th>
                     <th className="px-2 py-1.5 text-right">PnL %</th>
                   </tr>
                 </thead>
@@ -168,12 +192,23 @@ export default function Backtest() {
                   {res.trades.map((t, i) => {
                     const up = (t.pnl_pct ?? 0) >= 0;
                     return (
-                      <tr key={i} className="border-t border-border">
+                      <tr
+                        key={i}
+                        onClick={() => setSelected(i)}
+                        className="cursor-pointer border-t border-border hover:bg-surface-2"
+                      >
+                        <td className="px-2 py-1 text-faint">{i + 1}</td>
                         <td className={`px-2 py-1 font-medium ${t.side === "Long" ? "text-up" : "text-down"}`}>
                           {t.side}
                         </td>
-                        <td className="px-2 py-1 tabular-nums">{t.entry?.toFixed(2) ?? "—"}</td>
-                        <td className="px-2 py-1 tabular-nums">{t.exit?.toFixed(2) ?? "—"}</td>
+                        <td className="px-2 py-1 text-xs tabular-nums text-muted">
+                          {t.entry_ts ? new Date(t.entry_ts).toLocaleString() : "—"}
+                        </td>
+                        <td className="px-2 py-1 text-xs tabular-nums text-muted">
+                          {t.exit_ts ? new Date(t.exit_ts).toLocaleString() : "—"}
+                        </td>
+                        <td className="px-2 py-1 text-right tabular-nums">{t.entry?.toFixed(2) ?? "—"}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{t.exit?.toFixed(2) ?? "—"}</td>
                         <td className={`px-2 py-1 text-right tabular-nums ${up ? "text-up" : "text-down"}`}>
                           {t.pnl_pct != null ? `${up ? "+" : ""}${t.pnl_pct.toFixed(2)}` : "—"}
                         </td>
@@ -193,6 +228,16 @@ export default function Backtest() {
               <p className="text-sm text-faint">Không đủ dữ liệu vẽ equity.</p>
             )}
           </section>
+
+          {selected != null && res.trades[selected] && (
+            <TradeDetail
+              symbol={res.symbol}
+              tf={res.tf}
+              index={selected}
+              trade={res.trades[selected]}
+              onClose={() => setSelected(null)}
+            />
+          )}
         </>
       )}
 

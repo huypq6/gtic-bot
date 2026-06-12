@@ -6,7 +6,15 @@ Tăng `version` khi đổi logic; DB lưu version + params instance đang chạy
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
-from app.strategy.ta import ema
+from app.strategy.ta import ema, pad_left
+
+
+def _ema_plot(closes: list[float], fast: int, slow: int) -> dict[str, list]:
+    n = len(closes)
+    return {
+        f"EMA {fast}": pad_left(ema(closes, fast), n),
+        f"EMA {slow}": pad_left(ema(closes, slow), n),
+    }
 
 
 @register
@@ -36,6 +44,9 @@ class EmaCross(Strategy):
         if fp >= sp and fn < sn:
             return [Signal("SELL", ctx.symbol, size)]
         return []
+
+    def plot(self, candles):
+        return _ema_plot([c["close"] for c in candles], self.params["fast"], self.params["slow"])
 
 
 @register
@@ -69,3 +80,6 @@ class EmaCrossV2(Strategy):
         if fp >= sp and fn < sn:
             return [Signal("SELL", ctx.symbol, p["size"])]
         return []
+
+    def plot(self, candles):
+        return _ema_plot([c["close"] for c in candles], self.params["fast"], self.params["slow"])

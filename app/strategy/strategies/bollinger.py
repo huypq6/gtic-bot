@@ -33,3 +33,16 @@ class BollingerReversion(Strategy):
         if ctx.price >= upper:
             return [Signal("SELL", ctx.symbol, size)]  # quá mua → rơi về mid
         return []
+
+    def plot(self, candles):
+        closes = [c["close"] for c in candles]
+        p, mult, n = self.params["period"], self.params["mult"], len(candles)
+        mid: list = [None] * n
+        up: list = [None] * n
+        lo: list = [None] * n
+        for i in range(p - 1, n):
+            w = closes[i - p + 1 : i + 1]
+            m = sum(w) / p
+            sd = (sum((x - m) ** 2 for x in w) / p) ** 0.5
+            mid[i], up[i], lo[i] = m, m + mult * sd, m - mult * sd
+        return {"BB mid": mid, "BB upper": up, "BB lower": lo}

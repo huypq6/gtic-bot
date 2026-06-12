@@ -133,6 +133,7 @@ class BacktestRun(Base):
     sharpe: Mapped[float | None] = mapped_column(Numeric)
     n_trades: Mapped[int | None] = mapped_column(Integer)
     equity_curve: Mapped[list | None] = mapped_column(JSONB)  # [[ts_ms, equity], ...]
+    indicators: Mapped[dict | None] = mapped_column(JSONB)  # {name: [[ts, value], ...]}
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -147,6 +148,8 @@ class BacktestTrade(Base):
     exit_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     exit: Mapped[float | None] = mapped_column(Numeric)
     pnl_pct: Mapped[float | None] = mapped_column(Numeric)
+    sl: Mapped[float | None] = mapped_column(Numeric)
+    tp: Mapped[float | None] = mapped_column(Numeric)
 
 
 class ScanResult(Base):
