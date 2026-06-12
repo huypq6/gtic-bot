@@ -88,6 +88,88 @@ def supertrend(candles: list[dict], period: int = 10, mult: float = 3.0) -> list
     return directions
 
 
+def psar(candles: list[dict], step: float = 0.02, max_af: float = 0.2) -> list[int]:
+    """Parabolic SAR → list direction (1 = up, -1 = down) theo từng nến. Dùng [-2],[-1] bắt đảo."""
+    n = len(candles)
+    if n < 2:
+        return []
+    highs = [c["high"] for c in candles]
+    lows = [c["low"] for c in candles]
+    uptrend = highs[1] >= highs[0]
+    af = step
+    sar = lows[0] if uptrend else highs[0]
+    ep = highs[0] if uptrend else lows[0]
+    directions = [1 if uptrend else -1]
+    for i in range(1, n):
+        sar = sar + af * (ep - sar)
+        if uptrend:
+            sar = min(sar, lows[i - 1], lows[i - 2] if i >= 2 else lows[i - 1])
+            if lows[i] < sar:
+                uptrend, sar, ep, af = False, ep, lows[i], step
+            elif highs[i] > ep:
+                ep, af = highs[i], min(af + step, max_af)
+        else:
+            sar = max(sar, highs[i - 1], highs[i - 2] if i >= 2 else highs[i - 1])
+            if highs[i] > sar:
+                uptrend, sar, ep, af = True, ep, highs[i], step
+            elif lows[i] < ep:
+                ep, af = lows[i], min(af + step, max_af)
+        directions.append(1 if uptrend else -1)
+    return directions
+
+
+def adx_dmi(candles: list[dict], period: int = 14) -> dict | None:
+    """ADX/DMI → {plus_di(_prev/_now), minus_di(_prev/_now), adx}. None nếu thiếu."""
+    n = len(candles)
+    if n < 2 * period:
+        return None
+    plus_dm, minus_dm, trs = [], [], []
+    for i in range(1, n):
+        up = candles[i]["high"] - candles[i - 1]["high"]
+        down = candles[i - 1]["low"] - candles[i]["low"]
+        plus_dm.append(up if (up > down and up > 0) else 0.0)
+        minus_dm.append(down if (down > up and down > 0) else 0.0)
+        h, low, pc = candles[i]["high"], candles[i]["low"], candles[i - 1]["close"]
+        trs.append(max(h - low, abs(h - pc), abs(low - pc)))
+
+    def _wilder(vals: list[float]) -> list[float]:
+        out = [sum(vals[:period])]
+        for v in vals[period:]:
+            out.append(out[-1] - out[-1] / period + v)
+        return out
+
+    sp, sm, st = _wilder(plus_dm), _wilder(minus_dm), _wilder(trs)
+    plus_di, minus_di, dx = [], [], []
+    for p, m, t in zip(sp, sm, st, strict=False):
+        pdi = 100 * p / t if t else 0.0
+        mdi = 100 * m / t if t else 0.0
+        plus_di.append(pdi)
+        minus_di.append(mdi)
+        denom = pdi + mdi
+        dx.append(100 * abs(pdi - mdi) / denom if denom else 0.0)
+    if len(dx) < period or len(plus_di) < 2:
+        return None
+    adx = sum(dx[:period]) / period
+    for v in dx[period:]:
+        adx = (adx * (period - 1) + v) / period
+    return {
+        "plus_di_prev": plus_di[-2], "plus_di_now": plus_di[-1],
+        "minus_di_prev": minus_di[-2], "minus_di_now": minus_di[-1], "adx": adx,
+    }
+
+
+def stochastic_k(candles: list[dict], period: int = 14) -> float | None:
+    """%K của Stochastic Oscillator (0–100) tại nến cuối."""
+    if len(candles) < period:
+        return None
+    w = candles[-period:]
+    hh = max(c["high"] for c in w)
+    ll = min(c["low"] for c in w)
+    if hh == ll:
+        return 50.0
+    return 100 * (candles[-1]["close"] - ll) / (hh - ll)
+
+
 def vwap(candles: list[dict], period: int) -> float | None:
     """Rolling VWAP (typical price (h+l+c)/3, trọng số volume) của `period` nến cuối."""
     if len(candles) < period:
