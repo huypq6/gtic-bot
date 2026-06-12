@@ -1,0 +1,30 @@
+tests/test_ict_po3_v4.py
+  s_dd1d383719b312::t_43b57274c39f94 1-78
+app/strategy/strategies/ict_po3_v4.py
+  s_dd1d383719b312::t_030c7a9e4b309f 1-51,54-75,78-346
+  s_dd1d383719b312::t_56dd1a3b9a4e21 76-77
+  s_dd1d383719b312::t_37fa402e277c78 52-53
+app/strategy/strategies/ict_po3.md
+  s_dd1d383719b312::t_ba01f67187c1a5 177-200
+  s_dd1d383719b312::t_6252a94cd264e4 14
+scripts/walkforward_ict_po3_v4.py
+  s_dd1d383719b312::t_9ef47dd2a0f81d 1-74
+scripts/sweep_ict_po3_v4.py
+  s_dd1d383719b312::t_f6345d01fdc81e 1-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6e5ceabe37e8a2e2afd9f66c52471ec3fb59e907",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
