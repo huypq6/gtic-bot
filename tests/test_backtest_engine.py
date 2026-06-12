@@ -35,3 +35,16 @@ def test_ema_cross_backtest_runs_and_returns_metrics():
 def test_backtest_too_short_raises():
     with pytest.raises(ValueError):
         run_backtest("ema_cross", "1", {}, _candles([10, 11]), tf="1m")
+
+
+def test_leverage_scales_pnl_and_reports():
+    prices = [10, 10, 10, 10, 9, 8, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 13, 12, 11, 10]
+    base = run_backtest("ema_cross", "1", {"fast": 3, "slow": 6, "size": 1},
+                        _candles(prices), capital=1000, fee_rate=0.0005, tf="1m", leverage=1)
+    lev = run_backtest("ema_cross", "1", {"fast": 3, "slow": 6, "size": 1},
+                       _candles(prices), capital=1000, fee_rate=0.0005, tf="1m", leverage=5)
+    assert base["leverage"] == 1 and lev["leverage"] == 5
+    assert "liquidated" in lev
+    # mỗi trade pnl_pct ở x5 = pnl_pct x1 × 5
+    if base["trades"] and lev["trades"]:
+        assert abs(lev["trades"][0]["pnl_pct"] - base["trades"][0]["pnl_pct"] * 5) < 1e-6

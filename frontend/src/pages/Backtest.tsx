@@ -9,12 +9,17 @@ export default function Backtest() {
   const { data: strategies } = useQuery({ queryKey: ["strategies"], queryFn: fetchStrategies });
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: fetchConfig });
 
+  // Phí Binance taker (VIP0): Spot 0.10%, Futures 0.05%.
+  const FEE_PRESET: Record<string, string> = { SPOT: "0.001", FUTURES: "0.0005" };
   const [stratId, setStratId] = useState<number | "">("");
   const [symbol, setSymbol] = useState("");
   const [tf, setTf] = useState("");
   const [days, setDays] = useState("7");
-  const [capital, setCapital] = useState("10000");
-  const [fee, setFee] = useState("0.001");
+  const [capital, setCapital] = useState("1000");
+  const [market, setMarket] = useState("SPOT");
+  const [leverage, setLeverage] = useState("1");
+  const [fee, setFee] = useState(FEE_PRESET.SPOT);
+  const [feeEdited, setFeeEdited] = useState(false);
 
   useEffect(() => {
     if (strategies?.length && stratId === "") setStratId(strategies[0].id);
@@ -25,6 +30,12 @@ export default function Backtest() {
       setTf(config.default_tf);
     }
   }, [config, symbol]);
+  // đổi thị trường → tự áp phí Binance (nếu chưa sửa tay).
+  useEffect(() => {
+    if (!feeEdited) setFee(FEE_PRESET[market]);
+    if (market === "SPOT") setLeverage("1");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [market]);
 
   const run = useMutation({
     mutationFn: () =>
@@ -34,6 +45,8 @@ export default function Backtest() {
         tf,
         start: `${days} days ago UTC`,
         capital: Number(capital),
+        market,
+        leverage: Number(leverage),
         fee_rate: Number(fee),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["compare"] }),
@@ -68,11 +81,29 @@ export default function Backtest() {
           <F label="Số ngày">
             <input value={days} onChange={(e) => setDays(e.target.value)} className={inp} />
           </F>
-          <F label="Vốn">
+          <F label="Thị trường">
+            <select value={market} onChange={(e) => setMarket(e.target.value)} className={sel}>
+              <option value="SPOT">Spot</option>
+              <option value="FUTURES">Futures</option>
+            </select>
+          </F>
+          {market === "FUTURES" && (
+            <F label="Đòn bẩy ×">
+              <input value={leverage} onChange={(e) => setLeverage(e.target.value)} className={inp} />
+            </F>
+          )}
+          <F label="Vốn (USDT)">
             <input value={capital} onChange={(e) => setCapital(e.target.value)} className={inp} />
           </F>
-          <F label="Phí">
-            <input value={fee} onChange={(e) => setFee(e.target.value)} className={inp} />
+          <F label="Phí 1 chiều">
+            <input
+              value={fee}
+              onChange={(e) => {
+                setFee(e.target.value);
+                setFeeEdited(true);
+              }}
+              className={inp}
+            />
           </F>
           <button
             onClick={() => run.mutate()}
@@ -82,11 +113,32 @@ export default function Backtest() {
             {run.isPending ? "Đang chạy…" : "Chạy backtest"}
           </button>
         </div>
+        <p className="mt-2 text-xs text-faint">
+          Phí Binance taker (VIP0): Spot {(+FEE_PRESET.SPOT * 100).toFixed(2)}% · Futures{" "}
+          {(+FEE_PRESET.FUTURES * 100).toFixed(3)}% (mỗi chiều). Futures cho đòn bẩy — hợp vốn nhỏ
+          nhưng rủi ro cháy tài khoản cao.
+        </p>
         {run.isError && <p className="mt-2 text-sm text-down">Lỗi: {String(run.error)}</p>}
       </section>
 
       {res && (
         <>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+            <span className="rounded border border-border px-2 py-0.5">
+              {res.market ?? "SPOT"}
+              {(res.leverage ?? 1) > 1 ? ` · ×${res.leverage}` : ""}
+            </span>
+            <span className="rounded border border-border px-2 py-0.5">
+              phí {((res.fee_rate ?? 0) * 100).toFixed(3)}%/chiều
+            </span>
+            <span>vốn {res.capital} USDT</span>
+          </div>
+          {res.liquidated && (
+            <div className="rounded-lg border border-down/40 bg-down/10 px-3 py-2 text-sm text-down">
+              ⚠️ Cháy tài khoản (liquidated): equity về 0 do đòn bẩy ×{res.leverage}. Giảm đòn bẩy
+              hoặc dùng SL.
+            </div>
+          )}
           <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <Metric label="PnL %" value={res.pnl_pct} suffix="%" good={(res.pnl_pct ?? 0) >= 0} />
             <Metric label="Win rate" value={res.winrate} suffix="%" />

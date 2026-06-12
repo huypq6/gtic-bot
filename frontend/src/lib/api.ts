@@ -192,11 +192,15 @@ export interface BacktestResult {
   symbol: string;
   tf: string;
   capital: number | null;
+  fee_rate: number | null;
+  market: string | null;
+  leverage: number | null;
   pnl_pct: number | null;
   winrate: number | null;
   max_dd: number | null;
   sharpe: number | null;
   n_trades: number | null;
+  liquidated?: boolean;
   equity_curve: [number, number][];
   trades: BacktestTrade[];
 }
@@ -222,5 +226,7 @@ export const runBacktest = (body: {
   tf: string;
   start: string;
   capital: number;
-  fee_rate: number;
+  market: string;
+  leverage: number;
+  fee_rate?: number | null;
 }) => postJson<BacktestResult>("/api/backtest", body);

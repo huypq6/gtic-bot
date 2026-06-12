@@ -125,6 +125,8 @@ class BacktestRun(Base):
     to_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     capital: Mapped[float | None] = mapped_column(Numeric)
     fee_rate: Mapped[float | None] = mapped_column(Numeric)
+    market: Mapped[str | None] = mapped_column(String)  # SPOT | FUTURES
+    leverage: Mapped[int | None] = mapped_column(Integer)
     pnl_pct: Mapped[float | None] = mapped_column(Numeric)
     winrate: Mapped[float | None] = mapped_column(Numeric)
     max_dd: Mapped[float | None] = mapped_column(Numeric)

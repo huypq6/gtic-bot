@@ -22,8 +22,10 @@ class BacktestReq(BaseModel):
     symbol: str
     tf: str = "1m"
     start: str = "7 days ago UTC"  # tải lịch sử nếu thiếu
-    capital: float = 10_000.0
-    fee_rate: float = 0.001
+    capital: float = 1_000.0
+    market: str = "SPOT"  # SPOT | FUTURES
+    leverage: int = 1  # chỉ áp cho FUTURES
+    fee_rate: float | None = None  # None → lấy phí Binance theo market
     params: dict | None = None
 
 
@@ -31,10 +33,25 @@ class BacktestReq(BaseModel):
 async def create_backtest(
     body: BacktestReq, session: AsyncSession = Depends(get_session)
 ) -> dict:
+    from app.config import settings
+
     strat = await session.get(StrategyModel, body.strategy_id)
     if not strat:
         raise HTTPException(404, "strategy không tồn tại")
     params = body.params if body.params is not None else dict(strat.default_params)
+
+    market = body.market.upper()
+    if market not in ("SPOT", "FUTURES"):
+        raise HTTPException(400, "market phải SPOT hoặc FUTURES")
+    # phí khớp Binance theo thị trường (override được).
+    if body.fee_rate is not None:
+        fee = body.fee_rate
+    else:
+        fee = settings.binance_futures_fee if market == "FUTURES" else settings.binance_spot_fee
+    # đòn bẩy: chỉ Futures, kẹp 1..max.
+    leverage = 1
+    if market == "FUTURES":
+        leverage = max(1, min(body.leverage, settings.futures_max_leverage))
 
     # đảm bảo có dữ liệu lịch sử.
     await sync_historical(session, body.symbol, body.tf, body.start)
@@ -46,7 +63,7 @@ async def create_backtest(
         res = await to_thread.run_sync(
             lambda: run_backtest(
                 strat.name, strat.version, params, candles,
-                body.capital, body.fee_rate, body.tf,
+                body.capital, fee, body.tf, leverage,
             )
         )
     except Exception as exc:  # noqa: BLE001
@@ -55,7 +72,7 @@ async def create_backtest(
 
     run = BacktestRun(
         strategy_id=body.strategy_id, params=params, symbol=body.symbol, tf=body.tf,
-        capital=body.capital, fee_rate=body.fee_rate,
+        capital=body.capital, fee_rate=fee, market=market, leverage=leverage,
         pnl_pct=res["pnl_pct"], winrate=res["winrate"], max_dd=res["max_dd"],
         sharpe=res["sharpe"], n_trades=res["n_trades"], equity_curve=res["equity_curve"],
     )
@@ -98,6 +115,8 @@ def _summary(r: BacktestRun) -> dict:
     return {
         "id": r.id, "strategy_id": r.strategy_id, "symbol": r.symbol, "tf": r.tf,
         "capital": float(r.capital) if r.capital is not None else None,
+        "fee_rate": float(r.fee_rate) if r.fee_rate is not None else None,
+        "market": r.market, "leverage": r.leverage,
         "pnl_pct": float(r.pnl_pct) if r.pnl_pct is not None else None,
         "winrate": float(r.winrate) if r.winrate is not None else None,
         "max_dd": float(r.max_dd) if r.max_dd is not None else None,
@@ -116,7 +135,9 @@ async def _run_dict(session: AsyncSession, run_id: int) -> dict:
         )
     ).scalars().all()
     out = _summary(run)
-    out["equity_curve"] = run.equity_curve or []
+    eq = run.equity_curve or []
+    out["equity_curve"] = eq
+    out["liquidated"] = bool(eq and eq[-1][1] <= 0)  # cháy tài khoản nếu equity về 0
     out["trades"] = [
         {
             "side": t.side,

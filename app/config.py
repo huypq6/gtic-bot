@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     scan_sl_atr: float = 1.5
     scan_tp_atr: float = 2.0
 
+    # --- Phí Binance (taker, VIP 0) — dùng cho backtest ---
+    binance_spot_fee: float = 0.001  # Spot 0.10%
+    binance_futures_fee: float = 0.0005  # Futures (USDⓈ-M) 0.05%
+    futures_max_leverage: int = 50
+
 
 @lru_cache
 def get_settings() -> Settings:

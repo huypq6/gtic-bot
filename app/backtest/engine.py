@@ -62,14 +62,21 @@ def run_backtest(
     capital: float = 10_000.0,
     fee_rate: float = 0.001,
     tf: str = "1m",
+    leverage: int = 1,
 ) -> dict:
-    """Trả về dict metrics + equity_curve + trades. `candles` theo thời gian tăng dần."""
+    """Backtest. `fee_rate` = phí 1 chiều (Binance spot 0.001 / futures 0.0005).
+
+    `leverage` (Futures): khuếch đại lợi nhuận & lỗ & phí theo notional = vốn × đòn bẩy.
+    Mô phỏng bằng cách scale lợi nhuận từng nến × leverage trên VỐN thực; nếu equity
+    chạm 0 → đánh dấu `liquidated` (cháy tài khoản).
+    """
     import numpy as np
     import pandas as pd
     import vectorbt as vbt
 
     if len(candles) < 5:
         raise ValueError("không đủ dữ liệu để backtest")
+    leverage = max(1, int(leverage))
 
     discover()
     strategy = get(strategy_name, strategy_version)(params)
@@ -79,6 +86,7 @@ def run_backtest(
     close = pd.Series([c["close"] for c in candles], index=idx)
     freq = _TF_FREQ.get(tf, "1min")
 
+    # vbt chạy ở notional = capital (1×); leverage áp ở hậu kỳ trên VỐN.
     pf = vbt.Portfolio.from_signals(
         close,
         entries=np.array(long_e),
@@ -91,11 +99,34 @@ def run_backtest(
     )
 
     value = pf.value()
-    # downsample equity curve ~500 điểm cho JSONB.
-    step = max(1, len(value) // 500)
+    vals = value.values.astype(float)
+    # lợi nhuận từng nến (đã gồm phí) → khuếch đại × leverage trên vốn thực.
+    eq = np.empty(len(vals))
+    eq[0] = capital
+    liquidated = False
+    for i in range(1, len(vals)):
+        if liquidated:
+            eq[i] = 0.0
+            continue
+        r = (vals[i] / vals[i - 1] - 1.0) if vals[i - 1] else 0.0
+        nxt = eq[i - 1] * (1 + r * leverage)
+        if nxt <= 0:
+            eq[i] = 0.0
+            liquidated = True
+        else:
+            eq[i] = nxt
+
+    # metrics trên equity đã đòn bẩy.
+    final = float(eq[-1])
+    pnl_pct = (final / capital - 1) * 100
+    peak = np.maximum.accumulate(eq)
+    dd = (eq - peak) / np.where(peak == 0, 1, peak)
+    max_dd = float(abs(dd.min())) * 100
+
+    step = max(1, len(eq) // 500)
     equity = [
         [int(ts.timestamp() * 1000), round(float(v), 2)]
-        for ts, v in zip(value.index[::step], value.values[::step], strict=False)
+        for ts, v in zip(value.index[::step], eq[::step], strict=False)
     ]
 
     trades = []
@@ -110,16 +141,18 @@ def run_backtest(
                 if pd.notna(t["Exit Timestamp"])
                 else None,
                 "exit": _safe(t["Avg Exit Price"]),
-                "pnl_pct": round((_safe(t["Return"]) or 0.0) * 100, 4),
+                "pnl_pct": round((_safe(t["Return"]) or 0.0) * 100 * leverage, 4),  # ×đòn bẩy
             }
         )
 
     return {
-        "pnl_pct": round((_safe(pf.total_return()) or 0.0) * 100, 4),
+        "pnl_pct": round(pnl_pct, 4),
         "winrate": round((_safe(pf.trades.win_rate()) or 0.0) * 100, 2),
-        "max_dd": round(abs(_safe(pf.max_drawdown()) or 0.0) * 100, 4),
-        "sharpe": _safe(pf.sharpe_ratio()),
+        "max_dd": round(max_dd, 4),
+        "sharpe": _safe(pf.sharpe_ratio()),  # ~bất biến theo đòn bẩy (trước khi cháy)
         "n_trades": int(pf.trades.count()),
+        "leverage": leverage,
+        "liquidated": liquidated,
         "equity_curve": equity,
         "trades": trades,
     }
