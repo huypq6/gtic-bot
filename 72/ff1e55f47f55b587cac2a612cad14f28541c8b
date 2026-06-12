@@ -1,0 +1,40 @@
+app/execution/paper_engine.py
+  s_97e667e10cf896::t_66cb1b88e946c7 97-113
+tests/test_testnet_executor.py
+  s_97e667e10cf896::t_9242400713b212 1-134
+docs/IMPLEMENTATION-PLAN.md
+  s_97e667e10cf896::t_469e15a4cbf0dc 35
+  s_97e667e10cf896::t_3d2b74faadf466 312-316,319-320,323,326-329
+  s_97e667e10cf896::t_13724d8fbfa19e 429
+app/api/trading.py
+  s_97e667e10cf896::t_4b206bc32c9829 229-232
+  s_97e667e10cf896::t_f425dd2c5bd877 123-124,137-144
+frontend/src/pages/Trading.tsx
+  s_97e667e10cf896::t_fd94b2fc8d2dd1 56
+  s_97e667e10cf896::t_e28f31768c1d55 26
+  s_97e667e10cf896::t_b8f98330377386 109-118
+app/strategy/runner.py
+  s_97e667e10cf896::t_618dc29fd214d0 14
+  s_97e667e10cf896::t_c144e11636c1d7 117,125-143
+app/execution/binance_client.py
+  s_97e667e10cf896::t_c74a4d0c1522cd 1-58
+app/execution/testnet.py
+  s_97e667e10cf896::t_3920c5269446fb 28-29
+  s_97e667e10cf896::t_1c456ea51ce302 1-27,30-255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "72ff1e55f47f55b587cac2a612cad14f28541c8b",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
