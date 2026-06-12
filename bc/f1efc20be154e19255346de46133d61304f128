@@ -1,0 +1,19 @@
+app/api/backtest.py
+  s_dd1d383719b312::t_56cb62812a7d68 58-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "bcf1efc20be154e19255346de46133d61304f128",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
