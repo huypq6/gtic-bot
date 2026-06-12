@@ -1,0 +1,21 @@
+scripts/scan_pairs_ict_po3.py
+  s_dd1d383719b312::t_5061e062727af3 1-86
+app/strategy/strategies/ict_po3.md
+  s_dd1d383719b312::t_caa721c1364ad2 164-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1c4c9fd83d376bc78b47f2f1d19371607ce6c12d",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
