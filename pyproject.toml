@@ -46,3 +46,8 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+# B008: FastAPI dùng Depends()/Query() làm default argument — idiom hợp lệ.
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"alembic/env.py" = ["E402"]  # import model sau khi cấu hình context

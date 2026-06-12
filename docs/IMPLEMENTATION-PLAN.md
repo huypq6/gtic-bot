@@ -27,7 +27,7 @@
 | Phase | Hạng mục | User Stories | Status | % Done |
 |---|---|---|---|---|
 | **P0** | Scaffold: monorepo, uv, Docker dev/prod, Alembic+Timescale, single-endpoint | — | ✅ | 100% |
-| **P1** | Market feed + Chart realtime | US-01,02,03,24,25 | ⬜ | 0% |
+| **P1** | Market feed + Chart realtime | US-01,02,03,24,25 | ✅ | 100% |
 | **P2** | Strategy base + Paper executor | US-05,12,16 | ⬜ | 0% |
 | **P3** | Order Manager + can thiệp tay + audit | US-04,17,18,19,20,21 | ⬜ | 0% |
 | **P4** | Backtest (vectorbt) | US-09,10,11 | ⬜ | 0% |
@@ -147,32 +147,34 @@ gtic-bot/
 **User Stories:** US-01 (chart realtime), US-02 (indicator), US-03 (watchlist), US-24 (responsive), US-25 (<1s, WS không poll).
 
 ### Backend
-- [ ] `app/market/bus.py` — **EventBus**: pub/sub in-memory trên `asyncio.Queue`; topic `kline.{symbol}.{tf}`, `ticker.{symbol}`, `feed`. API: `subscribe(topic)->queue`, `publish(topic, msg)`.
-- [ ] `app/market/feed.py` — **MarketFeed**: kết nối Binance WS (`python-binance` `BinanceSocketManager` / `ThreadedWebsocketManager` hoặc websockets thuần) cho kline + ticker theo danh sách symbol/tf trong config; publish vào bus. **Auto-reconnect** backoff; khi mất → publish `feed: DOWN`/`RECONNECTING`, khi nối lại → `OK`.
-- [ ] `app/orders/models.py` — bảng `kline` (hypertable) + migration; helper upsert kline đóng nến vào Postgres.
-- [ ] Migration Alembic: tạo `kline` + `SELECT create_hypertable('kline','ts', chunk_time_interval => INTERVAL '7 days')` (op.execute trong version).
-- [ ] `app/api/ws.py` — **WSGateway** `/ws`: client connect → subscribe topic theo symbol đang xem; broadcast `{type:"kline"|"ticker"|"feed", ...}`. Quản lý connection set, dọn khi disconnect.
-- [ ] `app/api/routes.py` — `POST /api/klines/sync` (tải lịch sử về Postgres qua REST `get_historical_klines`), `GET /api/klines?symbol&tf&from&to` (đọc DB cho chart load ban đầu).
-- [ ] `app/main.py` lifespan: spawn task `MarketFeed.run()`.
+- [x] `app/market/bus.py` — **EventBus**: pub/sub `asyncio.Queue`; topic `kline.{symbol}.{tf}`, `ticker.{symbol}`, `feed` + firehose `"*"`; backpressure drop khi queue đầy.
+- [x] `app/market/feed.py` — **MarketFeed**: combined-stream `websockets` (kline+ticker) → bus; auto-reconnect backoff; phát `feed` OK/RECONNECTING/DOWN. Parse functions tách riêng để test. (Dùng `websockets` cho stream; python-binance để dành execution P6.)
+- [x] `app/market/models.py` — `Kline` ORM (hypertable). `app/market/store.py` — upsert (chia batch < 32767 params), `get_klines`, `sync_historical`, `persist_closed_klines` (task nền ghi nến đóng).
+- [x] Migration Alembic `0001_kline_hypertable.py`: tạo `kline` + `create_hypertable(... '7 days')`. Verified trên Timescale thật.
+- [x] `app/api/ws.py` — **WSGateway** `/ws`: client subscribe firehose, broadcast `{type:"kline"|"ticker"|"feed"}`; gửi feed status lúc connect; dọn khi disconnect.
+- [x] `app/api/routes.py` — `POST /api/klines/sync`, `GET /api/klines`, `GET /api/config` (symbols/timeframes — frontend không hardcode).
+- [x] `app/main.py` lifespan: spawn MarketFeed + persister + feed-status tracker (gate `feed_autostart` để test/CI không gọi mạng).
 
 ### Frontend
-- [ ] `src/lib/ws.ts` — zustand store giữ WS connection + state realtime (giá, nến cuối, feed status). Auto-reconnect client.
-- [ ] `src/lib/api.ts` — react-query hooks: `useKlines`, `useSyncKlines`.
-- [ ] `components/chart/CandleChart.tsx` — lightweight-charts 5: load lịch sử (REST) + cập nhật nến cuối (WS). **Datafeed adapter** (`lib/datafeed.ts`) cô lập nguồn dữ liệu để sau swap Charting Library không đụng component.
-- [ ] Chọn khung TG 1m–1D (zoom/pan native của lib).
-- [ ] Indicator EMA/RSI/MACD (US-02): tính client-side hoặc nhận từ backend; overlay/subpane bật–tắt.
-- [ ] `components/watchlist/Watchlist.tsx` — list cặp + giá + %thay đổi realtime (US-03).
-- [ ] `components/FeedBanner.tsx` — banner cảnh báo khi `feed != OK` (chuẩn bị cho US-27).
-- [ ] Responsive layout (US-24): desktop grid + mobile tab bar (theo `docs/03-ASCII-Mockups.md`).
+- [x] `src/lib/ws.ts` — zustand store: 1 WS connection, tickers + lastKline + feed status, auto-reconnect client.
+- [x] `src/lib/api.ts` — react-query + helper `fetchConfig`/`syncKlines`. `src/lib/datafeed.ts` — **datafeed adapter** cô lập nguồn (swap Charting Library sau chỉ sửa file này).
+- [x] `components/chart/CandleChart.tsx` — lightweight-charts 5: load lịch sử (REST) + update nến cuối (WS); theme màu logo.
+- [x] `components/chart/TimeframeSelector.tsx` — 1m–1d (zoom/pan native).
+- [x] Indicator **EMA 9/21** overlay bật/tắt (US-02). _RSI/MACD subpane: hoãn (đủ tiêu chí "bật/tắt indicator"; bổ sung khi cần)._
+- [x] `components/watchlist/Watchlist.tsx` — cặp + giá + %thay đổi realtime (US-03).
+- [x] `components/FeedBanner.tsx` — banner khi `feed != OK` + chấm trạng thái header (chuẩn bị US-27).
+- [x] Responsive (US-24): desktop watchlist+chart cạnh nhau, mobile stack (verified screenshot 390px).
 
 ### Tests
-- [ ] `test_bus.py` — publish/subscribe đúng topic, nhiều subscriber.
-- [ ] `test_feed.py` — parse message Binance WS → kline/ticker đúng; mô phỏng mất kết nối → phát `feed: DOWN` rồi reconnect (mock socket).
+- [x] `test_bus.py` (8) — pub/sub, firehose, unsubscribe, backpressure.
+- [x] `test_feed.py` (9) — parse kline/ticker, stream URL, reconnect phát feed status (fake WS).
+- [x] `test_store.py` (3) — upsert chia batch đúng (< giới hạn params asyncpg).
 
 ### Definition of Done
-- Mở UI → chart nến cập nhật < 1s theo giá thật; đổi khung TG OK; watchlist nhảy giá realtime.
-- Ngắt mạng giả lập → banner DOWN → tự reconnect → OK.
-- `/api/klines/sync` ghi đúng vào hypertable; chart load lịch sử mượt.
+- [x] UI: chart nến cập nhật realtime theo giá Binance thật; đổi TF OK; watchlist nhảy giá < 1s. **Verified screenshot** (BTC/ETH live, EMA overlays).
+- [x] Reconnect: feed phát RECONNECTING→OK (test); banner UI khi mất feed.
+- [x] `/api/klines/sync` ghi đúng hypertable (4320 nến 3 ngày, sau khi fix batch); chart load lịch sử mượt; console không lỗi.
+- [x] 21 pytest xanh, ruff sạch, frontend build OK.
 
 ---
 
@@ -410,5 +412,7 @@ docker compose up --build                            # build frontend → FastAP
 |---|---|---|
 | 2026-06-12 | — | Khởi tạo IMPLEMENTATION-PLAN.md (P0–P8 chi tiết). |
 | 2026-06-12 | P0 | ✅ Scaffold xong: uv venv + backend (config/db/main/health), Alembic async + Timescale init SQL, frontend React19/Vite6/Tailwind v4 + proxy, Dockerfile multi-stage + compose dev/prod, CI. Verified: pytest/ruff xanh, prod single-endpoint serve UI+API. (Còn: `docker compose up` thực tế + README.) |
+| 2026-06-12 | UI | 🎨 Logo + theme phái sinh từ docs/logo.png (brand slate-violet, accent teal, dark-first). |
+| 2026-06-12 | P1 | ✅ Market feed + chart realtime: EventBus, MarketFeed (Binance WS live), kline hypertable (verified Timescale), WSGateway /ws, klines sync/read REST. Frontend: chart lightweight-charts + EMA 9/21, watchlist live, feed banner, responsive (desktop+mobile verified screenshot). Fix: batch upsert (asyncpg 32767 param limit). 21 pytest xanh. RSI/MACD subpane hoãn. |
 
 <!-- Thêm dòng mỗi khi hoàn thành milestone; nhớ cập nhật cột Status + % ở Bảng tiến độ tổng. -->

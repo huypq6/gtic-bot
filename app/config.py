@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     # --- Market feed (P1+): danh sách symbol/tf theo dõi mặc định ---
     default_symbols: list[str] = ["BTCUSDT", "ETHUSDT"]
     default_tf: str = "1m"
+    # Tắt để không kết nối Binance WS khi chạy test/CI.
+    feed_autostart: bool = True
 
 
 @lru_cache

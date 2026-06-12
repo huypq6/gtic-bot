@@ -14,8 +14,10 @@ from alembic import context
 from app.config import settings
 from app.db import Base
 
-# P2+: import models để chúng đăng ký vào Base.metadata, ví dụ:
-# from app.orders import models  # noqa: F401
+# Import models để chúng đăng ký vào Base.metadata (autogenerate thấy được).
+from app.market import models as _market_models  # noqa: F401,E402
+
+# P2+: from app.orders import models  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

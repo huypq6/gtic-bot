@@ -222,3 +222,4 @@ node_modules/
 frontend/dist/
 *.local
 *.tsbuildinfo
+.gstack/
