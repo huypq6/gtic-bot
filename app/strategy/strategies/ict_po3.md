@@ -75,12 +75,14 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
 
 ## SL / TP & thoát trong ngày
 
-| Hướng | SL | Risk | TP |
-|---|---|---|---|
-| LONG | `sweep_low − buffer` | `entry − SL` | `entry + rr_target × risk` |
-| SHORT | `sweep_high + buffer` | `SL − entry` | `entry − rr_target × risk` |
+**Risk (khoảng cách SL từ entry)** theo `sl_mode`:
+- `sl_mode=0`: `risk = |entry − sweep_extreme| + buffer` (điểm quét — thường XA → TP/SL hiếm chạm, hay flatten).
+- `sl_mode=1` (mặc định): `risk = atr_mult × ATR(atr_len)` (GẦN, thích nghi biến động → TP/SL chạm được trong ngày).
 
-- `buffer = sl_buffer_pct% × entry` (mặc định 0.05%).
+| Hướng | SL | TP |
+|---|---|---|
+| LONG | `entry − risk` | `entry + rr_target × risk` (hoặc Asia High nếu `tp_mode=1`) |
+| SHORT | `entry + risk` | `entry − rr_target × risk` (hoặc Asia Low nếu `tp_mode=1`) |
 - Mỗi nến khi đang có lệnh, kiểm tra theo **close** (khớp cách fill của vectorbt):
   - LONG: `close ≤ SL` (cắt lỗ) hoặc `close ≥ TP` (chốt lời) → `CLOSE`.
   - SHORT đối xứng.
@@ -95,9 +97,11 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
 | `confluence` | 2 | Cách vào: 1 = MSS-breakout (MARKET) · 2 = retest FVG · 3 = retest FVG+OB. |
 | `mss_lookback` | 2 | Debounce: tối thiểu số nến kể từ sweep mới cho MSS. |
 | `swing` | 1 | Nửa-độ-rộng fractal xác định swing high/low (MSS = phá swing). Nhỏ = nhạy/nhiều lệnh. |
-| `tp_mode` | 0 | TP: 0 = `rr_target` cố định · 1 = thanh khoản đối diện (đỉnh/đáy range Asia). |
-| `rr_target` | 1.5 | Bội số R cho TP khi `tp_mode=0` (cũng là fallback của `tp_mode=1`). |
-| `sl_buffer_pct` | 0.05 | Đệm SL ngoài điểm quét, theo % giá. |
+| `tp_mode` | 1 | TP: 0 = `rr_target` cố định · 1 = thanh khoản đối diện (đỉnh/đáy range Asia). |
+| `rr_target` | 2.0 | Bội số R cho TP khi `tp_mode=0` (cũng là fallback của `tp_mode=1`). |
+| `sl_mode` | 1 | SL: 0 = tại điểm quét (xa → hay flatten) · 1 = theo **ATR** (gần → TP/SL chạm được). |
+| `atr_len` / `atr_mult` | 14 / 1.0 | SL cách entry = `atr_mult × ATR(atr_len)` khi `sl_mode=1`. |
+| `sl_buffer_pct` | 0.05 | Đệm SL ngoài điểm quét, theo % giá (chỉ `sl_mode=0`). |
 | `asia_end_h` | 8 | Giờ UTC kết thúc phiên Asia (chốt range). |
 | `flatten_h` | 21 | Giờ UTC đóng hết lệnh (kết thúc NY). |
 | `news_filter` | 2 | Lọc tin: 0 = tắt · 1 = chặn vào lệnh trong khung giờ tin · 2 = + chặn ngày NFP (thứ Sáu đầu tháng). |
@@ -146,8 +150,14 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
   win ~38%, 57 lệnh, maxDD 5.1%. `swing=1` (nhạy) cho nhiều lệnh; `bias_len=200` ổn nhất.
 - **Out-of-sample** (cửa sổ dài hơn + SOL chưa sweep): ETH 15m **+3.14%**, SOL 1h **+0.60%**, ETH 1h +0.19%,
   nhưng **BTC âm bền** (15m −2.6%, 1h −3.2%). Tức là **ăn ở ETH/SOL, thua ở BTC** → chưa phải edge xuyên thị trường.
-- **Kết luận thẳng**: tiến bộ rõ (in-sample dương, OOS hỗn hợp, DD thấp) nhưng **BTC vẫn thua bền** →
-  CHƯA nên tiền thật. Hướng tiếp: walk-forward; lọc/định cỡ theo biến động; hoặc bỏ BTC, tập trung cặp hợp.
+- **Lệnh hay bị flatten cuối ngày (SL/TP đặt sai) → thêm `sl_mode`**: với SL tại điểm quét (xa),
+  ~80–90% lệnh thoát bằng flatten lúc 21:00, gần như KHÔNG chạm SL/TP → TP vô nghĩa. Đổi sang **SL theo ATR**
+  (`sl_mode=1`, mặc định) làm SL/TP **chạm được trong ngày**: win lên ~45–50% (15m), SL bắt đầu cắt lỗ thật.
+  Bù lại số lệnh tăng → **phí ăn mòn** (≈0,1%/vòng × nhiều lệnh) kéo PnL về ~hòa. Khung **1h vẫn hay flatten**
+  (ít nến/ngày) — ATR SL hợp 15m hơn.
+- **Kết luận thẳng**: SL/TP giờ hợp lý (không còn flatten-dominated trên 15m), win ~45–50%, DD thấp,
+  nhưng PnL TB ~hòa (phí + BTC thua bền) → **CHƯA phải edge, chưa nên tiền thật**. Hướng tiếp: giảm tần suất
+  lệnh (tăng confluence/swing) để bớt phí; walk-forward; bỏ BTC, tập trung ETH/SOL.
 
 ## Giới hạn đã biết (tóm tắt cho người đọc code)
 

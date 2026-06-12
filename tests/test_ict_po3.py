@@ -43,8 +43,8 @@ def acts(sigs):
     return [s.action for s in sigs]
 
 
-# Tham số cơ chế: tắt bias + tắt lọc tin (cô lập sweep/MSS), swing=1, debounce mss_lookback=2.
-MECH = {"bias_mode": 0, "news_filter": 0, "mss_lookback": 2, "swing": 1, "size": 1}
+# Tham số cơ chế: tắt bias + lọc tin, SL theo điểm quét (sl_mode=0) để giá trị tất định.
+MECH = {"bias_mode": 0, "news_filter": 0, "sl_mode": 0, "mss_lookback": 2, "swing": 1, "size": 1}
 
 # LONG breakout: sweep low (h8) → swing-high tại h9 (=99.2) → MSS khi close vượt 99.2 (h11).
 LONG_BRK = [
@@ -227,6 +227,17 @@ def test_plot_asia_levels():
     p = s.plot(asia(0) + [c(0, 10, 100, 101, 99, 100)])
     assert {"Asia High", "Asia Low"} <= set(p)
     assert p["Asia High"][-1] == 101.0 and p["Asia Low"][-1] == 99.0
+
+
+# ---- sl_mode=1 (ATR) cho SL gần entry hơn sl_mode=0 (điểm quét) → TP dễ chạm ----
+def test_sl_mode_atr_is_tighter():
+    bars = asia(0) + LONG_BRK  # MSS LONG tại h11, entry close = 102
+    b0 = next(s for s in replay(IctPo3({**MECH, "confluence": 1, "sl_mode": 0}), bars)
+              if s.action == "BUY")
+    b1 = next(s for s in replay(IctPo3({**MECH, "confluence": 1, "sl_mode": 1,
+                                        "atr_len": 5, "atr_mult": 1.0}), bars)
+              if s.action == "BUY")
+    assert (102 - b1.sl) < (102 - b0.sl)  # risk ATR < risk điểm-quét
 
 
 # ---- swing helper trực tiếp ----

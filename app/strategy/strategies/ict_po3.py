@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
-from app.strategy.ta import ema, pad_left
+from app.strategy.ta import atr, ema, pad_left
 
 
 def _utc(ts_ms: int) -> datetime:
@@ -32,17 +32,21 @@ class IctPo3(Strategy):
         "[v3] ICT PO3 — MSS swing-structure (CHoCH) + bias HTF + retest FVG/OB + tp_mode + "
         "lọc tin. Bản KHUYẾN NGHỊ (in-sample dương, OOS hỗn hợp). Xem ict_po3.md."
     )
-    # Mặc định = bộ BỀN nhất từ sweep (scripts/sweep_ict_po3.py) với MSS swing-structure:
-    # conf=2 retest, tp rr=1.5, bias_len 200, mss 2, swing 1. In-sample +1.65%, lời 3/4 thị trường.
+    # Mặc định = bộ BỀN nhất từ sweep (scripts/sweep_ict_po3.py) sau khi thêm SL theo ATR:
+    # conf=2 retest, tp=thanh khoản đối diện, SL=ATR×1.0, bias_len 100. SL/TP CHẠM được (không còn
+    # flatten-dominated), win ~45%. Nhưng PnL TB ~hòa (phí ăn mòn do nhiều lệnh). KHÔNG phải bộ chắc lời.
     default_params = {
         "bias_mode": 1,        # 0=tắt (2 chiều) · 1=lọc theo EMA trend HTF (chỉ thuận trend)
-        "bias_len": 200,       # độ dài EMA bias (số nến ~ 4H/daily)
+        "bias_len": 100,       # độ dài EMA bias (số nến ~ 4H/daily)
         "confluence": 2,       # 1=MSS-breakout · 2=retest FVG · 3=retest FVG+OrderBlock
         "mss_lookback": 2,     # tối thiểu số nến kể từ sweep trước khi cho phép MSS (debounce)
         "swing": 1,            # nửa-độ-rộng fractal để xác định swing high/low (MSS = phá swing)
-        "tp_mode": 0,          # 0=TP theo rr_target · 1=TP về thanh khoản đối diện (Asia high/low)
-        "rr_target": 1.5,      # bội số R cho TP (khi tp_mode=0; cũng là fallback của tp_mode=1)
-        "sl_buffer_pct": 0.05,  # đệm SL ngoài điểm quét, theo % giá
+        "tp_mode": 1,          # 0=TP theo rr_target · 1=TP về thanh khoản đối diện (Asia high/low)
+        "rr_target": 2.0,      # bội số R cho TP (khi tp_mode=0; cũng là fallback của tp_mode=1)
+        "sl_mode": 1,          # 0=SL tại điểm quét (xa, hay bị flatten) · 1=SL theo ATR (gần, TP dễ chạm)
+        "atr_len": 14,         # chu kỳ ATR cho sl_mode=1
+        "atr_mult": 1.0,       # SL cách entry = atr_mult × ATR (sl_mode=1)
+        "sl_buffer_pct": 0.05,  # đệm SL ngoài điểm quét, theo % giá (sl_mode=0)
         "asia_end_h": 8,       # giờ UTC kết thúc phiên Asia (chốt range)
         "flatten_h": 21,       # giờ UTC đóng hết lệnh (kết thúc NY)
         "news_filter": 2,      # 0=tắt · 1=chặn vào lệnh trong khung giờ tin · 2=+chặn ngày NFP
@@ -58,6 +62,9 @@ class IctPo3(Strategy):
         "swing": {"type": "int", "min": 1, "max": 10, "default": 2},
         "tp_mode": {"type": "int", "min": 0, "max": 1, "default": 0},
         "rr_target": {"type": "float", "min": 0.5, "max": 10.0, "default": 2.0},
+        "sl_mode": {"type": "int", "min": 0, "max": 1, "default": 1},
+        "atr_len": {"type": "int", "min": 2, "max": 100, "default": 14},
+        "atr_mult": {"type": "float", "min": 0.3, "max": 6.0, "default": 1.5},
         "sl_buffer_pct": {"type": "float", "min": 0.0, "max": 2.0, "default": 0.05},
         "asia_end_h": {"type": "int", "min": 1, "max": 23, "default": 8},
         "flatten_h": {"type": "int", "min": 1, "max": 23, "default": 21},
@@ -230,30 +237,29 @@ class IctPo3(Strategy):
         self._armed, self._armed_dir, self._fvg_prox = True, direction, prox
         return out
 
-    def _open(self, ctx: Context, direction: str, entry: float, p: dict) -> Signal | None:
-        """Mở lệnh tại `entry`: SL ngoài điểm quét (sweep_extreme).
-
-        TP: tp_mode=0 → entry ± rr×risk; tp_mode=1 → thanh khoản đối diện (Asia high/low),
-        fallback về rr nếu mức đối diện không hợp lệ (đã vượt qua entry).
-        """
+    def _sl_distance(self, ctx: Context, entry: float, p: dict) -> float:
+        """Khoảng cách SL từ entry. sl_mode=0: tới điểm quét (xa) + đệm. sl_mode=1: atr_mult×ATR (gần)."""
+        if int(p.get("sl_mode", 0)) == 1:
+            a = atr(ctx.candles, int(p["atr_len"]))
+            dist = float(p["atr_mult"]) * a if a else 0.0
+            return dist if dist > 0 else entry * 0.005  # fallback 0.5% nếu thiếu ATR
         buf = entry * float(p["sl_buffer_pct"]) / 100.0
+        return abs(entry - self._sweep_extreme) + buf
+
+    def _open(self, ctx: Context, direction: str, entry: float, p: dict) -> Signal | None:
+        """Mở lệnh tại `entry`. SL theo `sl_mode` (điểm quét / ATR). TP theo `tp_mode` (rr / thanh khoản)."""
         rr = float(p["rr_target"])
         tp_mode = int(p.get("tp_mode", 0))
+        risk = self._sl_distance(ctx, entry, p)
+        if risk <= 0:
+            return None
         if direction == "LONG":
-            sl = self._sweep_extreme - buf
-            risk = entry - sl
-            if risk <= 0:
-                return None
-            tp = entry + rr * risk
+            sl, tp = entry - risk, entry + rr * risk
             if tp_mode == 1 and self._asia_high is not None and self._asia_high > entry:
                 tp = self._asia_high  # đối diện = đỉnh range Asia
             sig = Signal("BUY", ctx.symbol, float(p["size"]), sl=sl, tp=tp)
         else:
-            sl = self._sweep_extreme + buf
-            risk = sl - entry
-            if risk <= 0:
-                return None
-            tp = entry - rr * risk
+            sl, tp = entry + risk, entry - rr * risk
             if tp_mode == 1 and self._asia_low is not None and self._asia_low < entry:
                 tp = self._asia_low
             sig = Signal("SELL", ctx.symbol, float(p["size"]), sl=sl, tp=tp)
