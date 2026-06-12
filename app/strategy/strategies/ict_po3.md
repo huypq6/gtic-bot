@@ -169,8 +169,14 @@ Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (th
 - **Rổ cặp khuyến nghị: chạy ở 15m**, diversify nhiều cặp thanh khoản (ETH, SOL, DOT, DOGE, AVAX, XRP, LTC, ADA);
   **tránh 1h** và tránh BNB/SUI (âm 15m). PnL từng cặp **nhạy cửa sổ** (BTC +1.4% ở đây nhưng âm ở cửa sổ khác)
   → dựa vào diversification + walk-forward, đừng tin 1 con số.
-- **Kết luận thẳng**: edge yếu nhưng **dương diện rộng trên 15m** (DD thấp); 1h không dùng. Cần walk-forward
-  rổ 15m trước khi nghĩ tới testnet/tiền thật.
+- **Walk-forward (`scripts/walkforward_ict_po3.py`, rổ 8 cặp 15m, 6 cửa sổ × 30 ngày, params cố định):**
+  chỉ **3/6 cửa sổ dương** — 3 kỳ đầu (Dec–Mar) ÂM, 3 kỳ cuối (Mar–Jun) dương → **edge phụ thuộc regime,
+  KHÔNG ổn định theo thời gian**. Quét rổ 60 ngày trước trông đẹp vì rơi đúng giai đoạn gần đây thuận lợi.
+  Per-cặp chỉ **DOGE 5/6, DOT 4/6, XRP 4/6** dương quá nửa; ETH 2/6, SOL 1/6 → KHÔNG ổn định.
+- **KẾT LUẬN CUỐI (thẳng)**: ict_po3 là bản ICT PO3 dựng tử tế, kỷ luật tốt (1 lệnh/thời điểm, SL ATR,
+  lọc tin, flatten, DD thấp ~2–6%) NHƯNG **không có edge bền theo thời gian** trên dữ liệu thử →
+  **KHÔNG nên chạy tiền thật**. Nếu theo đuổi: chỉ paper-trade quan sát (ưu tiên DOGE/DOT/XRP 15m),
+  kỳ vọng thấp; cần ý tưởng alpha mới (không chỉ tinh chỉnh tham số) để có edge thực.
 
 ## Giới hạn đã biết (tóm tắt cho người đọc code)
 
