@@ -1,0 +1,57 @@
+app/strategy/strategies/donchian.md
+  s_97e667e10cf896::t_4035ed5510a610 1-54
+app/strategy/strategies/rsi_rev.py
+  s_97e667e10cf896::t_e7265055e1e381 15
+frontend/src/components/AppLayout.tsx
+  s_97e667e10cf896::t_e11a0ee40fc116 28
+app/strategy/strategies/donchian.py
+  s_97e667e10cf896::t_cefb51e35f2666 1-13,15-47
+  s_97e667e10cf896::t_1b7714e3bac8bd 14
+app/strategy/base.py
+  s_97e667e10cf896::t_56d07f7ce2593c 47
+docs/05-Strategy-Dev-Guide.md
+  s_97e667e10cf896::t_64b0176ce96fde 103-108
+app/api/trading.py
+  s_97e667e10cf896::t_65c7e7baf753b7 35,44-46
+  s_97e667e10cf896::t_5cc36cf12728ac 52-67
+app/strategy/strategies/rsi_rev.md
+  s_97e667e10cf896::t_417a82190f6ff9 1-53
+frontend/package.json
+  s_97e667e10cf896::t_7f0de8bff5c555 20,22
+app/strategy/strategies/ema_cross.py
+  s_97e667e10cf896::t_66719b304814a9 47
+  s_97e667e10cf896::t_a4fbfba0f70634 16
+frontend/src/components/Markdown.tsx
+  s_97e667e10cf896::t_1dd48f6d705727 1-43
+frontend/src/pages/Library.tsx
+  s_97e667e10cf896::t_f00a44c3ede852 1-120
+frontend/src/main.tsx
+  s_97e667e10cf896::t_3e88eaac846ed8 8
+  s_97e667e10cf896::t_f4b42b044ceca1 25
+frontend/package-lock.json
+  s_97e667e10cf896::t_e95bc6e19a9145 18,20,1593-1601,1606-1638,1670-1681,1703-1712,1781-1840,1884-1905,1916-1928,2002-2029,2086-2197,2523-2532,2562-2570,2572-2575,2577-2581,2583-2585,2588-2591,2593-2609,2612-2615,2617-2624,2627-2628,2631-2634,2637-2641,2643-2645,2648-2651,2653-2662,2665-2668,2671-2673,2675-2677,2680-3545,3561-3587,3620-3685,3763-3804,3843-3862,3884-3970,4002-4029,4149-4157
+frontend/src/lib/api.ts
+  s_97e667e10cf896::t_9706c00b75e1cf 43-44,47-48
+app/strategy/strategies/ema_cross.md
+  s_97e667e10cf896::t_e42093ebc2a46f 1-61
+tests/test_donchian.py
+  s_97e667e10cf896::t_48023be5d3fdb7 1-14,17-62,65-70
+  s_97e667e10cf896::t_2e7923896af403 15-16
+  s_97e667e10cf896::t_da5a2040a95c16 63-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "d0376fd188c81ec21911b1568a1ee06aa9b64014",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
