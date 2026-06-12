@@ -1,0 +1,21 @@
+app/strategy/strategies/ict_po3.md
+  s_dd1d383719b312::t_ec27453ef837a4 172-179
+scripts/walkforward_ict_po3.py
+  s_dd1d383719b312::t_64f215b4ef1cda 1-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "0ea11f0b1dd8c7b695025790a834c1f387472d6d",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
