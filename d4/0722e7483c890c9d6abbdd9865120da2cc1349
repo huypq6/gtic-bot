@@ -1,0 +1,29 @@
+frontend/tsconfig.node.json
+  s_97e667e10cf896::t_a054aeec761fbe 12-13
+frontend/src/index.css
+  s_97e667e10cf896::t_801e6d1e9d0b31 2-51
+frontend/src/App.tsx
+  s_97e667e10cf896::t_aa4aba41b57482 4-5,14-20,23-24,26-34,36-45
+frontend/package-lock.json
+  s_97e667e10cf896::t_4ffb7c704bd3af 24,1598-1607,2538-2543
+frontend/index.html
+  s_97e667e10cf896::t_c8eea581300285 6-7
+frontend/package.json
+  s_97e667e10cf896::t_d4dc8df4df638c 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "d40722e7483c890c9d6abbdd9865120da2cc1349",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
