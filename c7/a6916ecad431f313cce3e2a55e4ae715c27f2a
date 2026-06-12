@@ -1,0 +1,87 @@
+docs/00-Plan.md
+  s_97e667e10cf896::t_86aa8909287841 1
+frontend/package.json
+  s_97e667e10cf896::t_53cf88a28b7277 1-33
+frontend/index.html
+  s_97e667e10cf896::t_d44e5fa5d3d4f3 1-12
+docker-compose.yml
+  s_97e667e10cf896::t_dc9e5f61e99852 1-36
+Dockerfile
+  s_97e667e10cf896::t_fc9e07c933e241 1-34
+docker-compose.dev.yml
+  s_97e667e10cf896::t_788b490b6ff4d8 1-58
+alembic.ini
+  s_97e667e10cf896::t_e6f7cb8af56248 1-39
+app/config.py
+  s_97e667e10cf896::t_695236fc6180f4 1-47
+app/main.py
+  s_97e667e10cf896::t_e1e051f67ef695 1-36
+frontend/vite.config.ts
+  s_97e667e10cf896::t_3b615831cc74bd 1-4,7,11-15,18-23
+  s_97e667e10cf896::t_9d05d11149fb5b 5-6,8-10,16-17
+frontend/tsconfig.node.json
+  s_97e667e10cf896::t_74220430d962c2 1-15
+frontend/tsconfig.app.json
+  s_97e667e10cf896::t_2e1fc366beea08 1-21
+alembic/env.py
+  s_97e667e10cf896::t_5c04f8e12f0e38 1-64
+frontend/src/vite-env.d.ts
+  s_97e667e10cf896::t_e1ffed713758b7 1
+.github/workflows/ci.yml
+  s_97e667e10cf896::t_2b9ac9002a854f 1-35
+tests/test_health.py
+  s_97e667e10cf896::t_045c91a8c84f74 1-12
+frontend/src/App.tsx
+  s_97e667e10cf896::t_83c5c840acde5b 1-39
+app/db.py
+  s_97e667e10cf896::t_ee668dc6f9827a 1-26
+env.example
+  s_97e667e10cf896::t_cccf1f7499df2e 3-5
+app/api/routes.py
+  s_97e667e10cf896::t_3ab40e052493d3 1-11
+.dockerignore
+  s_97e667e10cf896::t_422962fc482793 1-11
+uv.lock
+  s_97e667e10cf896::t_86aa8909287841 1-2690
+frontend/src/main.tsx
+  s_97e667e10cf896::t_1a354b5b127325 1-15
+alembic/script.py.mako
+  s_97e667e10cf896::t_a0a194b52f2f9c 1-25
+db/init/01-extensions.sql
+  s_97e667e10cf896::t_b51586bf02323f 1-3
+frontend/src/lib/api.ts
+  s_97e667e10cf896::t_bb1945a0b51798 1-13
+pyproject.toml
+  s_97e667e10cf896::t_423c01d0d00239 1-48
+docs/IMPLEMENTATION-PLAN.md
+  s_97e667e10cf896::t_d3b6bd06a04d60 29
+  s_97e667e10cf896::t_d929ee7d8aeac2 1-28,30-114,133-134,141-411,413-414
+  s_97e667e10cf896::t_3015bca21e1725 115-132,135-140
+  s_97e667e10cf896::t_970696abe8472f 412
+frontend/tsconfig.json
+  s_97e667e10cf896::t_4bf690c442b6f2 1-4
+frontend/package-lock.json
+  s_97e667e10cf896::t_86aa8909287841 1-2679
+frontend/src/index.css
+  s_97e667e10cf896::t_b752f31bc2feff 1
+.gitignore
+  s_97e667e10cf896::t_327ca259e37945 219-223
+  s_97e667e10cf896::t_86dcf489234522 224
+  s_97e667e10cf896::t_970f788cac1fb3 17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "c7a6916ecad431f313cce3e2a55e4ae715c27f2a",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
