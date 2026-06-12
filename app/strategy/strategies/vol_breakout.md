@@ -99,3 +99,21 @@ So với chuẩn ict_po3 v4 (sống cả năm, DD ≤6%): vol_breakout KHÔNG t�
 **Nếu quay lại**: cần cổng regime CÓ NGUYÊN TẮC (vd tắt khi vol ngày > ngưỡng lịch sử dài,
 hoặc drawdown-circuit-breaker tắt 2 tuần sau tháng âm > x%) — phải kiểm chứng trên dữ liệu
 CHƯA nhìn (2024 hoặc forward), không fit thêm trên 365d này. KHÔNG tinh chỉnh k/noise thêm.
+
+## Vòng 2: circuit breaker + phán quyết vùng chưa nhìn (2026-06-13) — DỪNG HẲN
+
+Đã thử đúng hướng trên: thêm **drawdown circuit-breaker** tự tham chiếu (`cb_thresh_pct`/
+`cb_window_d`/`cb_pause_d`: PnL lăn 30 ngày ≤ −10% → ngừng vào lệnh 14 ngày; mặc định TẮT).
+
+- **Chọn config trên dữ liệu đã nhìn** (`scripts/cb_select_vol_breakout.py`, 365d Jun25–Jun26):
+  CB 10%/30d/14d cải thiện CẢ 3 cặp — BTC −3.8%→+3.4%, ETH +41.4%→+63.3%, SOL −25.3%→−3.3%;
+  DD giảm (ETH 36→25%, SOL 56→35%) nhưng vẫn XA mục tiêu 10%.
+- **Phán quyết MỘT LẦN trên vùng CHƯA NHÌN** (`scripts/cb_validate_vol_breakout.py`,
+  Jun 2024–Jun 2025): edge KHÔNG tổng quát — baseline BTC −4.7%, ETH +11.7%, **SOL −53.9%
+  (DD 63%)**; lại có tháng thảm họa (Feb 2025: −24/−20/−29%). CB đỡ thiệt hại trên cả 3
+  (BTC +7.4%, SOL −12.7%) nhưng DD vẫn 25–37%, nhiều tháng −10..−15%.
+
+**VERDICT CUỐI: vol_breakout KHÔNG có edge bền xuyên regime — DỪNG, không dùng tiền thật,
+không tinh chỉnh thêm.** Cái còn lại có giá trị: (1) cơ chế circuit-breaker đã test kỹ
+(cải thiện 6/6 cặp-năm, dùng được cho strategy khác); (2) bài học walk-forward ≥365d + phán
+quyết trên dữ liệu chưa nhìn đã vào skill.

@@ -159,6 +159,46 @@ def test_noise_k_allows_breakout_after_trend_days():
     assert acts(sigs) == ["BUY", "CLOSE", "BUY"]
 
 
+def lose_long_day(day):
+    """Ngày thua chiều LONG: breakout lên rồi rơi — đóng đầu ngày sau thấp hơn entry ~3.7%.
+
+    Range ngày giữ [99,103] (=4) để ngày sau vẫn có mức breakout tương tự.
+    """
+    bars = [c(day, 0, 100, 100.5, 99.5, 100)]            # open ngày = 100, mức LONG = 102
+    bars += [c(day, 1, 100, 103, 100, 102.8)]            # BUY 102.8
+    bars += [c(day, h, 99, 99.2, 99.0, 99) for h in range(2, 24)]  # rơi về 99
+    return bars
+
+
+def test_circuit_breaker_pauses_after_losses():
+    # cb_thresh=5: 2 lệnh thua (~−3.8% mỗi lệnh) → kích → ngày 3 breakout nhưng KHÔNG vào.
+    bars = flat_day(0, hi=103, lo=99) + lose_long_day(1) + lose_long_day(2) + lose_long_day(3)
+    p = {**MECH, "cb_thresh_pct": 5.0, "cb_window_d": 30, "cb_pause_d": 14}
+    sigs = replay(VolBreakout(p), bars)
+    # ngày 1: BUY+CLOSE(đầu ngày 2); ngày 2: BUY+CLOSE(đầu ngày 3, kích CB); ngày 3: im lặng.
+    assert acts(sigs) == ["BUY", "CLOSE", "BUY", "CLOSE"]
+
+
+def test_circuit_breaker_resumes_after_pause():
+    bars = flat_day(0, hi=103, lo=99) + lose_long_day(1) + lose_long_day(2)
+    # 14 ngày nghỉ (flat, không breakout) rồi 1 ngày breakout — phải vào lại.
+    for d in range(3, 18):
+        bars += flat_day(d, hi=102, lo=98)
+    bars += [
+        c(18, 0, 100, 100.5, 99.5, 100),
+        c(18, 1, 100, 103, 100, 102.8),
+    ]
+    p = {**MECH, "cb_thresh_pct": 5.0, "cb_window_d": 30, "cb_pause_d": 14}
+    sigs = replay(VolBreakout(p), bars)
+    assert acts(sigs) == ["BUY", "CLOSE", "BUY", "CLOSE", "BUY"]
+
+
+def test_circuit_breaker_off_by_default():
+    bars = flat_day(0, hi=103, lo=99) + lose_long_day(1) + lose_long_day(2) + lose_long_day(3)
+    sigs = replay(VolBreakout(MECH), bars)  # cb tắt → ngày 3 vẫn vào (chưa có ngày 4 để đóng)
+    assert acts(sigs) == ["BUY", "CLOSE", "BUY", "CLOSE", "BUY"]
+
+
 def test_needs_prev_day_range():
     bars = [c(0, h, 100, 102, 98, 100) for h in range(3)]  # chưa có ngày hôm trước
     sigs = replay(VolBreakout(MECH), bars)

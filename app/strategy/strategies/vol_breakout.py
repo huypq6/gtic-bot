@@ -45,6 +45,10 @@ class VolBreakout(Strategy):
         "atr_len": 14,
         "atr_mult": 1.5,
         "entry_cutoff_h": 22,  # không vào lệnh MỚI sau giờ này (UTC) — lệnh muộn giữ quá ngắn
+        # --- circuit breaker (cổng regime tự tham chiếu, 0=tắt) ---
+        "cb_thresh_pct": 0.0,  # PnL lăn (tổng %/lệnh) trong cb_window_d ≤ −ngưỡng → ngừng vào lệnh
+        "cb_window_d": 30,
+        "cb_pause_d": 14,
         "size": 0.001,
     }
     param_schema = {
@@ -58,6 +62,9 @@ class VolBreakout(Strategy):
         "atr_len": {"type": "int", "min": 2, "max": 100, "default": 14},
         "atr_mult": {"type": "float", "min": 0.3, "max": 6.0, "default": 1.5},
         "entry_cutoff_h": {"type": "int", "min": 1, "max": 23, "default": 22},
+        "cb_thresh_pct": {"type": "float", "min": 0.0, "max": 50.0, "default": 0.0},
+        "cb_window_d": {"type": "int", "min": 5, "max": 90, "default": 30},
+        "cb_pause_d": {"type": "int", "min": 1, "max": 60, "default": 14},
         "size": {"type": "float", "min": 0.0, "default": 0.001},
     }
 
@@ -75,6 +82,9 @@ class VolBreakout(Strategy):
         self._sl: float | None = None
         self._done_long = False         # đã vào (hoặc bị SL) chiều này hôm nay
         self._done_short = False
+        self._entry_price: float | None = None
+        self._closed: list[tuple] = []  # (ts_ms, pnl%) lệnh đã đóng — cho circuit breaker
+        self._pause_until: int = 0      # ts_ms: ngừng vào lệnh đến lúc này
 
     def on_candle(self, ctx: Context) -> list[Signal]:
         p = self.params
@@ -98,7 +108,8 @@ class VolBreakout(Strategy):
             self._done_long = self._done_short = False
             if self._side is not None:
                 out.append(Signal("CLOSE", ctx.symbol))
-                self._side = self._sl = None
+                self._record_close(cur["ts"], cur["close"])
+                self._side = self._sl = self._entry_price = None
 
         self._cur_hi = cur["high"] if self._cur_hi is None else max(self._cur_hi, cur["high"])
         self._cur_lo = cur["low"] if self._cur_lo is None else min(self._cur_lo, cur["low"])
@@ -110,7 +121,8 @@ class VolBreakout(Strategy):
                 self._side == "SHORT" and cur["close"] >= self._sl
             ):
                 out.append(Signal("CLOSE", ctx.symbol))
-                self._side = self._sl = None
+                self._record_close(cur["ts"], cur["close"])
+                self._side = self._sl = self._entry_price = None
                 return out
 
         if self._side is not None:  # đang giữ lệnh — không vào thêm
@@ -118,6 +130,8 @@ class VolBreakout(Strategy):
         if self._prev_hi is None or self._prev_lo is None or self._day_open is None:
             return out
         if hour >= p["entry_cutoff_h"]:
+            return out
+        if cur["ts"] < self._pause_until:  # circuit breaker đang kích hoạt
             return out
 
         rng = self._prev_hi - self._prev_lo
@@ -139,15 +153,29 @@ class VolBreakout(Strategy):
 
         if not self._done_long and close > up and trend_ok_long:
             sl = self._make_sl("LONG", close, candles)
-            self._side, self._sl = "LONG", sl
+            self._side, self._sl, self._entry_price = "LONG", sl, close
             self._done_long = True
             out.append(Signal("BUY", ctx.symbol, p["size"], sl=sl))
         elif p["direction"] == 1 and not self._done_short and close < dn and trend_ok_short:
             sl = self._make_sl("SHORT", close, candles)
-            self._side, self._sl = "SHORT", sl
+            self._side, self._sl, self._entry_price = "SHORT", sl, close
             self._done_short = True
             out.append(Signal("SELL", ctx.symbol, p["size"], sl=sl))
         return out
+
+    def _record_close(self, ts_ms: int, exit_price: float) -> None:
+        """Ghi PnL lệnh vừa đóng (xấp xỉ fill close, trừ phí 2 chiều) → kích circuit breaker."""
+        p = self.params
+        if p["cb_thresh_pct"] <= 0 or self._entry_price is None or self._side is None:
+            return
+        sign = 1.0 if self._side == "LONG" else -1.0
+        pnl = sign * (exit_price / self._entry_price - 1.0) * 100 - 0.1
+        self._closed.append((ts_ms, pnl))
+        win_ms = p["cb_window_d"] * 86_400_000
+        self._closed = [(t, v) for t, v in self._closed if t > ts_ms - win_ms]
+        if sum(v for _, v in self._closed) <= -p["cb_thresh_pct"]:
+            self._pause_until = ts_ms + p["cb_pause_d"] * 86_400_000
+            self._closed = []  # reset sau khi kích — đếm lại từ đầu sau pause
 
     def _noise_k(self) -> float | None:
         """k = TB(1 − |open−close|/(high−low)) các ngày đã đóng (cần ≥5 ngày), kẹp [0.3, 0.9]."""
