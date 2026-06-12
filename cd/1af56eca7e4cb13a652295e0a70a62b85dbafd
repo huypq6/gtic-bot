@@ -1,0 +1,35 @@
+frontend/src/pages/Scanner.tsx
+  s_97e667e10cf896::t_cec5e4081bc381 49-63
+  s_97e667e10cf896::t_f03d582313cdba 8
+frontend/src/components/InfoTip.tsx
+  s_97e667e10cf896::t_33c53ac338e2dd 1-31
+frontend/src/lib/glossary.ts
+  s_97e667e10cf896::t_096dd1365eb8f4 1-24
+frontend/src/components/strategy/VersionCompare.tsx
+  s_97e667e10cf896::t_628c97a359857b 3
+  s_97e667e10cf896::t_5530f3c320c254 24-26,28-36
+frontend/src/pages/Backtest.tsx
+  s_97e667e10cf896::t_a3c66205ffbc04 129-132,135-137
+  s_97e667e10cf896::t_fa283574940e21 223,229,237-241
+  s_97e667e10cf896::t_6596698421e519 148-152
+  s_97e667e10cf896::t_6b0cb3f2d9f0a2 6
+frontend/src/components/orders/PositionsTable.tsx
+  s_97e667e10cf896::t_c04f9f8cb19045 78-80,83-91
+  s_97e667e10cf896::t_e2aab8dd613102 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "cd1af56eca7e4cb13a652295e0a70a62b85dbafd",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
