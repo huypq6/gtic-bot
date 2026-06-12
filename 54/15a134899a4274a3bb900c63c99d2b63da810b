@@ -1,0 +1,62 @@
+app/api/backtest.py
+  s_97e667e10cf896::t_fe9f8653bc2e8f 155-156
+  s_97e667e10cf896::t_42b6c5d6d1bbb0 75,79,89
+  s_97e667e10cf896::t_9f4a6a66b2f7a8 143-145
+app/orders/models.py
+  s_97e667e10cf896::t_278c90904789b3 136,151-152
+alembic/versions/3ca6a8351dba_backtest_viz_indicators_sltp.py
+  s_97e667e10cf896::t_0917b46b5777f3 1-10,13-34
+  s_97e667e10cf896::t_8aa6ac0a2d2858 11-12
+frontend/src/lib/api.ts
+  s_97e667e10cf896::t_eaf6e5b2926f7d 215-217
+  s_97e667e10cf896::t_2df8f65662aa23 196-197
+app/strategy/strategies/grid.py
+  s_97e667e10cf896::t_106f158169a538 46-56
+frontend/src/lib/datafeed.ts
+  s_97e667e10cf896::t_cc4e748797655c 35-47
+frontend/src/pages/Backtest.tsx
+  s_97e667e10cf896::t_f85e7979d3241f 5-6
+  s_97e667e10cf896::t_ec038ece0e417f 26
+  s_97e667e10cf896::t_a1f5acf8fc9244 158-173,175-177,182,184-187,195-200,204-211,231-240
+app/strategy/strategies/bollinger.py
+  s_97e667e10cf896::t_4ce45c2b585452 36-48
+app/strategy/strategies/ema_cross.py
+  s_97e667e10cf896::t_c5b938edb271e6 83-85
+  s_97e667e10cf896::t_1025ade66ce488 48-50
+  s_97e667e10cf896::t_1890de1459f71e 9-17
+app/strategy/ta.py
+  s_97e667e10cf896::t_8857ea1549e841 4-8
+app/strategy/base.py
+  s_97e667e10cf896::t_08a5f9b70939e7 56-62
+frontend/src/components/backtest/BacktestChart.tsx
+  s_97e667e10cf896::t_47ae9bd73fc8d1 1-115
+frontend/src/components/backtest/TradeDetail.tsx
+  s_97e667e10cf896::t_352c0e15b7840f 1-194
+app/backtest/engine.py
+  s_97e667e10cf896::t_e9a5c446a23942 150-151,155,162-163,175-177
+  s_97e667e10cf896::t_73bd0975e0ee44 27,37,42,47
+  s_97e667e10cf896::t_22b6bdd57fa4b6 86-98
+app/strategy/strategies/donchian.py
+  s_97e667e10cf896::t_dfd2721ae1877f 38-47
+app/strategy/strategies/vwap_cross.py
+  s_97e667e10cf896::t_8ef6f91c042e8d 45-46
+  s_97e667e10cf896::t_19679eb621b312 37-44,47
+tests/test_backtest_engine.py
+  s_97e667e10cf896::t_86eef84e9fece9 40-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "5415a134899a4274a3bb900c63c99d2b63da810b",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
