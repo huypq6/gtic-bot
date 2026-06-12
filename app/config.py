@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # --- App ---
     app_host: str = "0.0.0.0"
     app_port: int = 8000
+    # CORS: origin được phép gọi API (single-user self-hosted → mặc định mọi origin).
+    # Đặt CORS_ORIGINS="http://tsp32:8000,http://192.168.1.x" để giới hạn.
+    cors_origins: list[str] = ["*"]
 
     # --- Market feed (P1+): danh sách symbol/tf theo dõi mặc định ---
     default_symbols: list[str] = ["BTCUSDT", "ETHUSDT"]

@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -116,6 +117,16 @@ async def _restore_running_bots(bot_manager: BotManager) -> None:
 
 
 app = FastAPI(title="GTIC Trading Bot", version="0.1.0", lifespan=lifespan)
+
+# CORS — cho phép truy cập từ origin khác (mobile/LAN). allow_credentials=False
+# vì chưa có auth cookie → an toàn dùng "*".
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(api_router)
 app.include_router(trading_router)

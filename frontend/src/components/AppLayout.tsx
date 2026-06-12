@@ -17,23 +17,19 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen flex-col bg-bg text-text">
-      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-2">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="GTIC" className="h-8 w-8 rounded-lg object-contain" />
-            <span className="font-semibold">GTIC Trading Bot</span>
-          </div>
-          <nav className="flex items-center gap-1 text-sm">
-            <Tab to="/">Chart</Tab>
-            <Tab to="/library">Library</Tab>
-            <Tab to="/trade">Trading</Tab>
-            <Tab to="/orders">Orders</Tab>
-            <Tab to="/backtest">Backtest</Tab>
-            <Tab to="/scanner">Scanner</Tab>
-            <Tab to="/audit">Audit</Tab>
-          </nav>
-        </div>
-        <div className="flex items-center gap-3 text-xs">
+      <header className="flex items-center gap-2 border-b border-border bg-surface px-3 py-2">
+        <img src="/logo.png" alt="GTIC" className="h-8 w-8 shrink-0 rounded-lg object-contain" />
+        <span className="hidden shrink-0 font-semibold sm:inline">GTIC Trading Bot</span>
+        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap text-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <Tab to="/">Chart</Tab>
+          <Tab to="/library">Library</Tab>
+          <Tab to="/trade">Trading</Tab>
+          <Tab to="/orders">Orders</Tab>
+          <Tab to="/backtest">Backtest</Tab>
+          <Tab to="/scanner">Scanner</Tab>
+          <Tab to="/audit">Audit</Tab>
+        </nav>
+        <div className="flex shrink-0 items-center gap-2 text-xs">
           <button
             onClick={toggleTheme}
             title={theme === "dark" ? "Chuyển sáng" : "Chuyển tối"}

@@ -8,10 +8,17 @@ import tailwindcss from "@tailwindcss/vite";
 const target = process.env.VITE_PROXY_TARGET ?? "http://localhost:8000";
 const wsTarget = target.replace(/^http/, "ws");
 
+// Cho phép truy cập dev server từ host lạ (mobile qua LAN/Tailscale, vd "tsp32").
+// VITE_ALLOWED_HOSTS="tsp32,my-host" để giới hạn; mặc định true = mọi host.
+const allowedHosts =
+  process.env.VITE_ALLOWED_HOSTS?.split(",").map((h) => h.trim()) ?? true;
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    host: true, // lắng nghe 0.0.0.0 → truy cập được từ điện thoại cùng mạng
     port: 5173,
+    allowedHosts,
     proxy: {
       "/api": { target, changeOrigin: true },
       "/ws": { target: wsTarget, ws: true },
