@@ -113,6 +113,40 @@ class PositionModel(Base):
     )
 
 
+class BacktestRun(Base):
+    __tablename__ = "backtest_run"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    strategy_id: Mapped[int | None] = mapped_column(ForeignKey("strategy.id"))
+    params: Mapped[dict | None] = mapped_column(JSONB)
+    symbol: Mapped[str] = mapped_column(String, nullable=False)
+    tf: Mapped[str] = mapped_column(String, nullable=False)
+    from_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    to_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    capital: Mapped[float | None] = mapped_column(Numeric)
+    fee_rate: Mapped[float | None] = mapped_column(Numeric)
+    pnl_pct: Mapped[float | None] = mapped_column(Numeric)
+    winrate: Mapped[float | None] = mapped_column(Numeric)
+    max_dd: Mapped[float | None] = mapped_column(Numeric)
+    sharpe: Mapped[float | None] = mapped_column(Numeric)
+    n_trades: Mapped[int | None] = mapped_column(Integer)
+    equity_curve: Mapped[list | None] = mapped_column(JSONB)  # [[ts_ms, equity], ...]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BacktestTrade(Base):
+    __tablename__ = "backtest_trade"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[int] = mapped_column(ForeignKey("backtest_run.id", ondelete="CASCADE"))
+    side: Mapped[str | None] = mapped_column(String)
+    entry_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    entry: Mapped[float | None] = mapped_column(Numeric)
+    exit_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    exit: Mapped[float | None] = mapped_column(Numeric)
+    pnl_pct: Mapped[float | None] = mapped_column(Numeric)
+
+
 class AuditLog(Base):
     """Ghi MỌI hành động (bot + tay) TRƯỚC khi tác động (NFR truy vết)."""
 

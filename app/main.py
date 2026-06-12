@@ -17,6 +17,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api.backtest import router as backtest_router
 from app.api.routes import router as api_router
 from app.api.trading import router as trading_router
 from app.api.ws import WSGateway
@@ -99,6 +100,7 @@ app = FastAPI(title="GTIC Trading Bot", version="0.1.0", lifespan=lifespan)
 
 app.include_router(api_router)
 app.include_router(trading_router)
+app.include_router(backtest_router)
 
 
 @app.websocket("/ws")

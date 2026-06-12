@@ -8,7 +8,7 @@ hiện tại để UI không phải chờ tick kế tiếp.
 import asyncio
 import logging
 
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket
 
 from app.market.bus import EventBus
 
@@ -30,14 +30,14 @@ class WSGateway:
     async def handle(self, websocket: WebSocket) -> None:
         await websocket.accept()
         sub = self._bus.subscribe("*")
-        await websocket.send_json({"type": "feed", "status": self._last_feed_status})
         try:
+            await websocket.send_json({"type": "feed", "status": self._last_feed_status})
             while True:
                 msg = await sub.get()
                 await websocket.send_json(msg)
-        except (WebSocketDisconnect, asyncio.CancelledError):
+        except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001 — client đóng đột ngột
+        except Exception:  # noqa: BLE001 — client đóng/ngắt (disconnect, going away)
             logger.debug("WS client ngắt kết nối")
         finally:
             self._bus.unsubscribe("*", sub)

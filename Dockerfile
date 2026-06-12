@@ -19,7 +19,7 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 # Cài deps trước (tận dụng cache layer); không cài dev/backtest cho prod.
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project --extra backtest
 
 # Mã nguồn backend + migration
 COPY app ./app

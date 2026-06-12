@@ -130,3 +130,37 @@ export interface AuditRow {
 }
 
 export const fetchAudit = () => getJson<AuditRow[]>("/api/audit");
+
+// ---- backtest (P4) ----
+export interface BacktestTrade {
+  side: string;
+  entry_ts: number | null;
+  entry: number | null;
+  exit_ts: number | null;
+  exit: number | null;
+  pnl_pct: number | null;
+}
+
+export interface BacktestResult {
+  id: number;
+  strategy_id: number;
+  symbol: string;
+  tf: string;
+  capital: number | null;
+  pnl_pct: number | null;
+  winrate: number | null;
+  max_dd: number | null;
+  sharpe: number | null;
+  n_trades: number | null;
+  equity_curve: [number, number][];
+  trades: BacktestTrade[];
+}
+
+export const runBacktest = (body: {
+  strategy_id: number;
+  symbol: string;
+  tf: string;
+  start: string;
+  capital: number;
+  fee_rate: number;
+}) => postJson<BacktestResult>("/api/backtest", body);

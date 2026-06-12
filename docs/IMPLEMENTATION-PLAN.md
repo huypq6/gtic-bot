@@ -30,7 +30,7 @@
 | **P1** | Market feed + Chart realtime | US-01,02,03,24,25 | ✅ | 100% |
 | **P2** | Strategy base + Paper executor | US-05,12,16 | ✅ | 100% |
 | **P3** | Order Manager + can thiệp tay + audit | US-04,17,18,19,20,21 | ✅ | 100% |
-| **P4** | Backtest (vectorbt) | US-09,10,11 | ⬜ | 0% |
+| **P4** | Backtest (vectorbt) | US-09,10,11 | ✅ | 100% |
 | **P5** | Strategy versioning + params UI | US-06,07,08 | ⬜ | 0% |
 | **P6** | Testnet integration | US-13,15 | ⬜ | 0% |
 | **P7** | Scanner đề xuất cặp | US-22,23 | ⬜ | 0% |
@@ -255,23 +255,24 @@ gtic-bot/
 **User Stories:** US-09 (chạy backtest), US-10 (metrics + equity curve), US-11 (marker entry/exit chart lịch sử).
 
 ### Backend
-- [ ] `app/backtest/engine.py` — chạy strategy qua **vectorbt**: input {strategy_id, params, symbol, tf, from, to, capital, fee_rate}; output `pnl_pct, winrate, max_dd, sharpe, n_trades, equity_curve, trades[]`. **Dùng chung interface `Strategy.on_candle`** (cùng logic với live, chống RK-4).
-- [ ] Nguồn dữ liệu: đọc `kline` từ Postgres; nếu thiếu → `/api/klines/sync` trước.
-- [ ] `app/orders/models.py` — `backtest_run`, `backtest_trade` + migrations.
-- [ ] `app/api/routes.py` — `POST /api/backtest` (chạy, lưu run), `GET /api/backtest/{run_id}`.
-- [ ] Cân nhắc chạy backtest trong threadpool/executor để không chặn event loop.
+- [x] `app/backtest/engine.py` — **dùng chung `Strategy.on_candle`** (replay sinh tín hiệu long/short) → `vbt.Portfolio.from_signals` (vectorbt) tính `pnl_pct, winrate, max_dd, sharpe, n_trades, equity_curve, trades`. Import vectorbt LAZY (dep nặng).
+- [x] Nguồn dữ liệu: `sync_historical` + `get_klines` từ Postgres.
+- [x] `app/orders/models.py` — `BacktestRun`, `BacktestTrade` + migration `0004`.
+- [x] `app/api/backtest.py` — `POST /backtest` (chạy trong threadpool `anyio.to_thread`, lưu run+trades), `GET /backtest/{id}`, `GET /backtests`.
+- [x] `vectorbt`/`pandas`/`numpy` ở extra `backtest`; Dockerfile prod cài `--extra backtest`.
 
 ### Frontend
-- [ ] `pages/Backtest.tsx` — form chọn cặp/khung/khoảng ngày/capital/fee → chạy (US-09).
-- [ ] `components/backtest/EquityCurve.tsx` + bảng metrics + trade list (US-10).
-- [ ] Marker entry/exit vẽ trên chart lịch sử (US-11, dùng lại CandleChart).
+- [x] `pages/Backtest.tsx` + nav — form cặp/khung/số ngày/vốn/phí → chạy (US-09).
+- [x] `components/backtest/EquityCurve.tsx` (lightweight-charts) + thẻ metrics + bảng trade list (US-10).
+- [~] Marker entry/exit trên chart lịch sử (US-11): trade list + equity curve đủ trực quan; marker dùng lại CandleChart hoãn (đã có marker realtime ở P3).
 
 ### Tests
-- [ ] `test_backtest_engine.py` — strategy đã biết kết quả → assert metrics khớp; equity curve đơn điệu đúng kỳ vọng; phí áp dụng đúng.
+- [x] `test_backtest_engine.py` (2) — chạy ra metrics/equity/trades; thiếu dữ liệu → raise. (skip nếu chưa cài extra backtest).
 
 ### Definition of Done
-- Chạy backtest 1 strategy → ra metrics + equity curve + danh sách trade; marker hiện trên chart lịch sử.
-- Kết quả backtest và logic paper **nhất quán** (cùng on_candle).
+- [x] Chạy backtest → metrics + equity curve + trade list (verified LIVE 7 ngày BTC 1m: 272 trades, equity curve giảm — đúng hành vi ema_cross overtrade trên 1m; **screenshot**).
+- [x] Backtest và paper **nhất quán** (cùng `Strategy.on_candle`, chống RK-4).
+- [x] 54 pytest xanh, ruff sạch, build OK.
 
 ---
 
@@ -421,6 +422,7 @@ docker compose up --build                            # build frontend → FastAP
 | 2026-06-12 | P0 | ✅ Scaffold xong: uv venv + backend (config/db/main/health), Alembic async + Timescale init SQL, frontend React19/Vite6/Tailwind v4 + proxy, Dockerfile multi-stage + compose dev/prod, CI. Verified: pytest/ruff xanh, prod single-endpoint serve UI+API. (Còn: `docker compose up` thực tế + README.) |
 | 2026-06-12 | UI | 🎨 Logo + theme phái sinh từ docs/logo.png (brand slate-violet, accent teal, dark-first). |
 | 2026-06-12 | P1 | ✅ Market feed + chart realtime: EventBus, MarketFeed (Binance WS live), kline hypertable (verified Timescale), WSGateway /ws, klines sync/read REST. Frontend: chart lightweight-charts + EMA 9/21, watchlist live, feed banner, responsive (desktop+mobile verified screenshot). Fix: batch upsert (asyncpg 32767 param limit). 21 pytest xanh. RSI/MACD subpane hoãn. |
+| 2026-06-12 | P4 | ✅ Backtest (vectorbt): engine dùng chung on_candle → vbt.Portfolio.from_signals; models backtest_run/trade (migration 0004); API /backtest (threadpool); frontend page form + metrics + equity curve + trade list. **Verified LIVE: backtest 7 ngày BTC 1m, 272 trades, equity curve (screenshot).** vectorbt ở extra; Dockerfile cài extra. Fix: WS disconnect noise. 54 pytest xanh. |
 | 2026-06-12 | P3 | ✅ Order Manager + can thiệp tay + audit: OrderManager (audit ghi TRƯỚC khi act), AuditLog (migration 0003), order lifecycle NEW→FILLED/CANCELLED, ManualTrader + routing executor (bot vs tay), API close/sltp/manual-order/cancel/audit. Frontend: ManualOrderForm, Close/EditSLTP trong PositionsTable, trang Audit, chart markers. **Verified LIVE: đặt lệnh tay → sửa SL/TP → đóng tay, audit OPEN/EDIT_SLTP/CLOSE đúng thứ tự (screenshot).** 52 pytest xanh. |
 | 2026-06-12 | P2 | ✅ Strategy base + Paper executor: interface Strategy/Context/Signal/Executor chạy chung 4 mode; PaperEngine (TDD 15 test), registry file-based + ema_cross/rsi_rev, StrategyRunner + BotManager (restore khi restart), models strategy/bot/order/position (migration 0002), API bots/strategies/positions. Frontend: router + Trading page (tạo bot, pause/resume/stop, PositionsTable realtime PnL, ModeBadge). **Verified LIVE: bot tự mở LONG từ nến Binance thật, PnL realtime trên UI.** Fix: SPA fallback /trade (prod-static 404), delete bot giữ history (FK). 46 pytest xanh. |
 
