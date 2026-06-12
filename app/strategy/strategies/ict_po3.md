@@ -211,6 +211,13 @@ do không có lệnh. Đề xuất: **paper-trade BTC 15m bằng v4** để xác
 −2.0% — v4 **sống qua cả regime nghịch Nov–Dec 2025** (nơi vol_breakout danh mục −26.8%/tháng).
 Củng cố verdict "ổn định + DD thấp"; cái giá là lợi nhuận mỏng ~3–4%/năm chưa đòn bẩy.
 
+**Đòn bẩy (2026-06-13, `scripts/leverage_ict_po3_v4.py`, 365d)**: DD scale ~tuyến tính,
+không cú cháy. **BTC ×3: +13.77%/năm, maxDD 9.67% (vẫn <10%), tháng tệ nhất −6.87%**;
+×2: +9.17%, DD 6.53% (an toàn hơn). SUI chỉ chịu ×1 (×2 → DD 12.16% vượt mục tiêu).
+⇒ Cách "tăng lợi nhuận" đúng kỷ luật nhất hiện có: **paper BTC 15m ×2–3 + SUI 15m ×1**.
+Lưu ý: engine scale phí theo notional nhưng CHƯA mô phỏng funding perp (giữ lệnh intraday
+vài giờ, ~22 lệnh/năm → ảnh hưởng nhỏ); liquidation ×3 cách rất xa với DD này.
+
 ## Giới hạn đã biết (tóm tắt cho người đọc code)
 
 1. MSS = phá **swing fractal** (CHoCH) hình thành sau sweep; cần `swing` nến xác nhận → vào trễ `swing` nến. Đơn giản hơn CHoCH đa-khung của ICT thủ công.
