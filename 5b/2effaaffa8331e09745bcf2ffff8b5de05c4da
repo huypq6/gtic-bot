@@ -1,0 +1,33 @@
+scripts/sweep_ict_po3.py
+  s_dd1d383719b312::t_9b88f1d9940093 27-28,31,34-40
+  s_dd1d383719b312::t_af9f6e4a558e3c 85,87
+app/strategy/strategies/ict_po3.py
+  s_dd1d383719b312::t_1421683b50b08c 20
+  s_dd1d383719b312::t_778cf58d0d37cd 46-47,49
+  s_dd1d383719b312::t_48c74cbc2b2c91 65-67
+  s_dd1d383719b312::t_991b72fb32b876 240-245,247-250,253-255,257,262
+  s_dd1d383719b312::t_1e5e32f582a6bf 35-37,40,44-45,48
+tests/test_ict_po3.py
+  s_dd1d383719b312::t_48bad730fe45b1 232-242
+  s_dd1d383719b312::t_7ffe3cd493d4fd 46-47
+app/strategy/strategies/ict_po3.md
+  s_dd1d383719b312::t_cd85ed8367669e 153-160
+  s_dd1d383719b312::t_ccbe17d1b25246 100-104
+  s_dd1d383719b312::t_c9b0288db207c9 78-80,82-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "5b2effaaffa8331e09745bcf2ffff8b5de05c4da",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
