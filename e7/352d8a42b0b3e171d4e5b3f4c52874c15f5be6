@@ -1,0 +1,48 @@
+app/strategy/strategies/ema_cross.py
+  s_97e667e10cf896::t_0ba25120368800 38-69
+tests/test_params.py
+  s_97e667e10cf896::t_03efe9189aa419 1-62
+frontend/src/components/strategy/ParamsForm.tsx
+  s_97e667e10cf896::t_e20c8bd1c5f221 1-52
+frontend/src/pages/Backtest.tsx
+  s_97e667e10cf896::t_c0d7517c493d58 8
+  s_97e667e10cf896::t_d8daa2861a71ac 39,42
+  s_97e667e10cf896::t_cbfbe3a710e67e 2,5
+  s_97e667e10cf896::t_eab9f00cdcb858 88-94
+docs/IMPLEMENTATION-PLAN.md
+  s_97e667e10cf896::t_8bf41b2e481cea 34
+  s_97e667e10cf896::t_defb4e55ad5d62 285-288,291-293,296,299-302
+  s_97e667e10cf896::t_97114ac80856d3 427
+frontend/src/lib/api.ts
+  s_97e667e10cf896::t_ff21cbab61aec2 69-81
+app/api/trading.py
+  s_97e667e10cf896::t_df1e4008661b19 51-85
+  s_97e667e10cf896::t_757f804121bf4e 153-157
+  s_97e667e10cf896::t_e804c7231b6792 125-128,131
+  s_97e667e10cf896::t_64f279c6fe97ad 11,13-22
+frontend/src/components/strategy/VersionCompare.tsx
+  s_97e667e10cf896::t_7c60c0c20b6c8a 1-52
+app/strategy/params.py
+  s_97e667e10cf896::t_05e27b1d0ad1ff 1-32
+frontend/src/pages/Trading.tsx
+  s_97e667e10cf896::t_ad3a9199903b96 26-28,33-36
+  s_97e667e10cf896::t_65af3d6686300e 50-52,56-57
+  s_97e667e10cf896::t_1524b67fec81d2 15
+  s_97e667e10cf896::t_79d60c6aab2fd4 116-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "e7352d8a42b0b3e171d4e5b3f4c52874c15f5be6",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
