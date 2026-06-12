@@ -1,0 +1,36 @@
+scripts/cb_validate_vol_breakout.py
+  s_0cd7f0ddef5937::t_e941c76a8337b6 1-59
+tests/test_vol_breakout.py
+  s_0cd7f0ddef5937::t_a79ee66d89bdd4 162-197,200-201
+  s_0cd7f0ddef5937::t_05b4a22c042126 198-199
+app/strategy/strategies/vol_breakout.py
+  s_0cd7f0ddef5937::t_79819caebae7c6 65-67
+  s_0cd7f0ddef5937::t_a077ebc8661b61 48-51
+  s_0cd7f0ddef5937::t_43e544180ada2f 124-125
+  s_0cd7f0ddef5937::t_9f965fc064831a 85-87
+  s_0cd7f0ddef5937::t_a6a1c24ff6ea64 134-135
+  s_0cd7f0ddef5937::t_8665e7abf7a30f 111-112
+  s_0cd7f0ddef5937::t_e1750ad9780ff1 156,161,166-178
+scripts/cb_select_vol_breakout.py
+  s_0cd7f0ddef5937::t_a50d0f82a38dc7 1-55
+scripts/leverage_ict_po3_v4.py
+  s_0cd7f0ddef5937::t_76dc9200d289e1 1-54
+app/strategy/strategies/vol_breakout.md
+  s_0cd7f0ddef5937::t_6f60dc33ce04e8 102-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "0ea2224ec1dfbe0ecf3897d968989891271b5a74",
+  "prompts": {},
+  "sessions": {
+    "s_0cd7f0ddef5937": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2510a30-5d6c-4ec2-8d35-094b34c18a84",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
