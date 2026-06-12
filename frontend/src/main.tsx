@@ -6,6 +6,7 @@ import AppLayout from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Trading from "./pages/Trading";
 import Backtest from "./pages/Backtest";
+import Scanner from "./pages/Scanner";
 import Audit from "./pages/Audit";
 import "./index.css";
 
@@ -20,6 +21,7 @@ createRoot(document.getElementById("root")!).render(
             <Route index element={<Dashboard />} />
             <Route path="trade" element={<Trading />} />
             <Route path="backtest" element={<Backtest />} />
+            <Route path="scanner" element={<Scanner />} />
             <Route path="audit" element={<Audit />} />
           </Route>
         </Routes>

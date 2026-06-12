@@ -23,6 +23,7 @@ export default function AppLayout() {
             <Tab to="/">Chart</Tab>
             <Tab to="/trade">Trading</Tab>
             <Tab to="/backtest">Backtest</Tab>
+            <Tab to="/scanner">Scanner</Tab>
             <Tab to="/audit">Audit</Tab>
           </nav>
         </div>

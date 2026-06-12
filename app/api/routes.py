@@ -4,11 +4,13 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.db import get_session
 from app.market.store import get_klines, sync_historical
+from app.orders.models import ScanResult
 
 router = APIRouter(prefix="/api")
 
@@ -52,6 +54,33 @@ class SyncRequest(BaseModel):
     tf: str = "1m"
     start: str = "1 day ago UTC"  # python-binance hiểu chuỗi này
     end: str | None = None
+
+
+@router.get("/scan")
+async def scan(session: AsyncSession = Depends(get_session)) -> list[dict]:
+    """Kết quả scan mới nhất (1 dòng/symbol, ts gần nhất)."""
+    from sqlalchemy import func
+
+    sub = (
+        select(ScanResult.symbol, func.max(ScanResult.id).label("mid"))
+        .group_by(ScanResult.symbol)
+        .subquery()
+    )
+    rows = (
+        await session.execute(select(ScanResult).join(sub, ScanResult.id == sub.c.mid))
+    ).scalars().all()
+    out = [
+        {
+            "symbol": r.symbol,
+            "score": float(r.score) if r.score is not None else None,
+            "signal": r.signal,
+            "reason": r.reason,
+            "ts": r.ts.isoformat() if r.ts else None,
+        }
+        for r in rows
+    ]
+    out.sort(key=lambda x: x["score"] or 0, reverse=True)
+    return out
 
 
 @router.post("/klines/sync")

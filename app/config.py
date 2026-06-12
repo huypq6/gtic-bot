@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     # Tắt để không kết nối Binance WS khi chạy test/CI.
     feed_autostart: bool = True
 
+    # --- Scanner (P7) ---
+    scan_symbols: list[str] = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
+    scan_tf: str = "15m"
+    scan_interval_sec: int = 60
+
 
 @lru_cache
 def get_settings() -> Settings:

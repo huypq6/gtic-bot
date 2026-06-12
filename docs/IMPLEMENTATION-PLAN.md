@@ -33,7 +33,7 @@
 | **P4** | Backtest (vectorbt) | US-09,10,11 | ✅ | 100% |
 | **P5** | Strategy versioning + params UI | US-06,07,08 | ✅ | 100% |
 | **P6** | Testnet integration | US-13,15 | ✅ | 100% |
-| **P7** | Scanner đề xuất cặp | US-22,23 | ⬜ | 0% |
+| **P7** | Scanner đề xuất cặp | US-22,23 | ✅ | 100% |
 | **P8** | Live + rào chắn an toàn | US-14,26,27 | ⬜ | 0% |
 
 > Thứ tự cố ý: **an toàn (paper/backtest) trước, tiền thật (live) sau cùng.** Không nhảy phase nếu DoD phase trước chưa đạt.
@@ -336,20 +336,23 @@ gtic-bot/
 **User Stories:** US-22 (scanner định kỳ), US-23 (từ đề xuất → chart/prefill lệnh).
 
 ### Backend
-- [ ] `app/scanner/research.py` — task định kỳ (asyncio, chu kỳ config) quét danh sách cặp, tính score/signal/reason, ghi `scan_result`, publish topic `scan` lên bus → WS.
-- [ ] `app/orders/models.py` — `scan_result` + migration.
-- [ ] `app/api/routes.py` — `GET /api/scan`.
-- [ ] WSGateway broadcast `{type:"scan", results}`.
+- [x] `app/scanner/research.py` — `score_symbol` thuần (RSI + momentum10 → score/signal/reason) + task `run_scanner` định kỳ (`scan_interval_sec`): sync → chấm → ghi `scan_result` → publish `scan`.
+- [x] `app/orders/models.py` — `ScanResult` + migration `0005`.
+- [x] `app/api/routes.py` — `GET /api/scan` (1 dòng mới nhất/symbol, sắp theo score).
+- [x] WSGateway broadcast `{type:"scan", results}` (firehose); task spawn trong lifespan.
+- [x] Config `scan_symbols` (BTC/ETH/BNB/SOL/XRP), `scan_tf`, `scan_interval_sec`.
 
 ### Frontend
-- [ ] `pages/Scanner.tsx` — list cặp + score + tín hiệu realtime (US-22).
-- [ ] Click đề xuất → mở chart cặp đó / prefill ManualOrderForm hoặc gán cho bot (US-23).
+- [x] `pages/Scanner.tsx` + nav — list cặp + score + tín hiệu + lý do (RSI/mom), realtime từ WS store (US-22).
+- [x] Click đề xuất → mở chart cặp đó (`/?symbol=`, Dashboard đọc URL + thêm vào watchlist) (US-23).
 
 ### Tests
-- [ ] `test_scanner.py` — logic score/signal trên dữ liệu mẫu cho kết quả đúng; ghi scan_result đúng.
+- [x] `test_scanner.py` (4) — oversold→BUY, overbought→SELL, thiếu dữ liệu→NEUTRAL, score cap 100.
 
 ### Definition of Done
-- Scanner chạy nền, bảng đề xuất cập nhật; click đề xuất mở chart/prefill lệnh.
+- [x] Scanner chạy nền, bảng đề xuất cập nhật (verified live: 5 symbol chấm điểm RSI/mom thật, BNB RSI 28.9→BUY; **screenshot**).
+- [x] Click đề xuất → mở chart cặp đó (verified XRPUSDT). _Prefill lệnh: hoãn (mở chart là luồng chính US-23)._
+- [x] 72 pytest xanh, ruff sạch, build OK.
 
 ---
 
@@ -426,6 +429,7 @@ docker compose up --build                            # build frontend → FastAP
 | 2026-06-12 | P0 | ✅ Scaffold xong: uv venv + backend (config/db/main/health), Alembic async + Timescale init SQL, frontend React19/Vite6/Tailwind v4 + proxy, Dockerfile multi-stage + compose dev/prod, CI. Verified: pytest/ruff xanh, prod single-endpoint serve UI+API. (Còn: `docker compose up` thực tế + README.) |
 | 2026-06-12 | UI | 🎨 Logo + theme phái sinh từ docs/logo.png (brand slate-violet, accent teal, dark-first). |
 | 2026-06-12 | P1 | ✅ Market feed + chart realtime: EventBus, MarketFeed (Binance WS live), kline hypertable (verified Timescale), WSGateway /ws, klines sync/read REST. Frontend: chart lightweight-charts + EMA 9/21, watchlist live, feed banner, responsive (desktop+mobile verified screenshot). Fix: batch upsert (asyncpg 32767 param limit). 21 pytest xanh. RSI/MACD subpane hoãn. |
+| 2026-06-12 | P7 | ✅ Scanner: score_symbol (RSI+momentum) + task định kỳ, ScanResult (migration 0005), GET /scan + publish WS, config scan_symbols. Frontend: Scanner page realtime + click→chart (?symbol). **Verified live: 5 symbol chấm điểm thật, BNB→BUY; click→XRP chart (screenshot).** 72 pytest xanh. |
 | 2026-06-12 | P6 | ✅ Testnet integration: BinanceClient adapter, TestnetExecutor (tái dùng engine state, lệnh thật + ext_id, SL/TP client-side), auto-cancel limit theo timeout (US-26). BotManager wire TESTNET (graceful no-key). Frontend: mode selector + TESTNET badge + ext_id. **Verified: 6 mock tests + no-key → 400 rollback (live).** ⚠️ Lệnh thật testnet cần key user (hoãn). 68 pytest xanh. |
 | 2026-06-12 | P5 | ✅ Versioning + params UI: validate_params vs param_schema (422 khi sai), ema_cross v2 (gap filter), compare API gộp backtest theo version. Frontend: ParamsForm (render từ schema), version compare table. **Verified LIVE: v1 -20%/91 trades vs v2 +3.6%/1 trade (screenshot); validation 422.** 62 pytest xanh. |
 | 2026-06-12 | P4 | ✅ Backtest (vectorbt): engine dùng chung on_candle → vbt.Portfolio.from_signals; models backtest_run/trade (migration 0004); API /backtest (threadpool); frontend page form + metrics + equity curve + trade list. **Verified LIVE: backtest 7 ngày BTC 1m, 272 trades, equity curve (screenshot).** vectorbt ở extra; Dockerfile cài extra. Fix: WS disconnect noise. 54 pytest xanh. |

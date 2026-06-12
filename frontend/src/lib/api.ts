@@ -169,6 +169,17 @@ export interface BacktestResult {
   trades: BacktestTrade[];
 }
 
+// ---- scanner (P7) ----
+export interface ScanResultRow {
+  symbol: string;
+  score: number | null;
+  signal: string;
+  reason: string;
+  ts: string | null;
+}
+
+export const fetchScan = () => getJson<ScanResultRow[]>("/api/scan");
+
 export const runBacktest = (body: {
   strategy_id: number;
   symbol: string;

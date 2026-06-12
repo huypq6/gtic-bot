@@ -51,12 +51,20 @@ export interface OrderMsg {
   status: string;
 }
 
+export interface ScanRow {
+  symbol: string;
+  score: number;
+  signal: string;
+  reason: string;
+}
+
 interface WsState {
   feed: FeedStatus;
   tickers: Record<string, Ticker>;
   lastKline: Record<string, KlineMsg>; // key = symbol.tf
   positions: Record<string, PositionMsg>; // key = pos_key (bot:<id> | manual:<symbol>)
   orders: OrderMsg[]; // gần nhất trước
+  scans: ScanRow[];
   connected: boolean;
   connect: () => void;
 }
@@ -70,6 +78,7 @@ export const useWsStore = create<WsState>((set) => ({
   lastKline: {},
   positions: {},
   orders: [],
+  scans: [],
   connected: false,
 
   connect: () => {
@@ -100,6 +109,8 @@ export const useWsStore = create<WsState>((set) => ({
         });
       } else if (m.type === "order") {
         set((s) => ({ orders: [m as OrderMsg, ...s.orders].slice(0, 100) }));
+      } else if (m.type === "scan") {
+        set({ scans: m.results as ScanRow[] });
       } else if (m.type === "feed") {
         set({ feed: m.status as FeedStatus });
       }

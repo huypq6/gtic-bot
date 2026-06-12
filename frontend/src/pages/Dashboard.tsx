@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router";
 import { TrendingUp } from "lucide-react";
 import { fetchConfig, syncKlines } from "../lib/api";
 import CandleChart from "../components/chart/CandleChart";
@@ -8,6 +9,8 @@ import Watchlist from "../components/watchlist/Watchlist";
 
 export default function Dashboard() {
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: fetchConfig });
+  const [searchParams] = useSearchParams();
+  const urlSymbol = searchParams.get("symbol");
   const [symbol, setSymbol] = useState<string>("");
   const [tf, setTf] = useState<string>("");
   const [showEma, setShowEma] = useState(true);
@@ -15,10 +18,20 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (config && !symbol) {
-      setSymbol(config.symbols[0]);
+      setSymbol(urlSymbol || config.symbols[0]);
       setTf(config.default_tf);
     }
-  }, [config, symbol]);
+  }, [config, symbol, urlSymbol]);
+  // đổi symbol khi đến từ scanner (?symbol=).
+  useEffect(() => {
+    if (urlSymbol) setSymbol(urlSymbol);
+  }, [urlSymbol]);
+
+  // watchlist gồm config + symbol từ scanner (nếu khác).
+  const watchSymbols =
+    config && urlSymbol && !config.symbols.includes(urlSymbol)
+      ? [urlSymbol, ...config.symbols]
+      : config?.symbols;
 
   useEffect(() => {
     if (!symbol || !tf) return;
@@ -39,7 +52,7 @@ export default function Dashboard() {
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">
           Watchlist
         </h2>
-        {config && <Watchlist symbols={config.symbols} active={symbol} onSelect={setSymbol} />}
+        {watchSymbols && <Watchlist symbols={watchSymbols} active={symbol} onSelect={setSymbol} />}
       </aside>
 
       <main className="flex min-h-0 flex-1 flex-col p-3">

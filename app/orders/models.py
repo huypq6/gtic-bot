@@ -147,6 +147,17 @@ class BacktestTrade(Base):
     pnl_pct: Mapped[float | None] = mapped_column(Numeric)
 
 
+class ScanResult(Base):
+    __tablename__ = "scan_result"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    symbol: Mapped[str | None] = mapped_column(String)
+    score: Mapped[float | None] = mapped_column(Numeric)
+    signal: Mapped[str | None] = mapped_column(String)
+    reason: Mapped[str | None] = mapped_column(String)
+
+
 class AuditLog(Base):
     """Ghi MỌI hành động (bot + tay) TRƯỚC khi tác động (NFR truy vết)."""
 

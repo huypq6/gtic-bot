@@ -27,6 +27,7 @@ from app.market.bus import EventBus
 from app.market.feed import MarketFeed
 from app.market.store import persist_closed_klines
 from app.orders.manager import OrderManager
+from app.scanner.research import run_scanner
 from app.strategy.runner import BotManager, ManualTrader
 
 logging.basicConfig(level=logging.INFO)
@@ -60,6 +61,7 @@ async def lifespan(app: FastAPI):
                 persist_closed_klines(bus, async_session), name="kline-persister"
             )
         )
+        tasks.append(asyncio.create_task(run_scanner(bus, async_session), name="scanner"))
         await _restore_running_bots(bot_manager)
     try:
         yield
