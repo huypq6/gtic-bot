@@ -1,0 +1,56 @@
+app/main.py
+  s_97e667e10cf896::t_8baef616310efb 65-67
+  s_97e667e10cf896::t_7d0713e88b7724 80-90
+tests/test_exchange_executor.py
+  s_97e667e10cf896::t_4be4421236ac14 8,78
+docs/IMPLEMENTATION-PLAN.md
+  s_97e667e10cf896::t_60ad3855284396 37
+  s_97e667e10cf896::t_17f899d1ea6b56 365-366,368-372,375-377,380-382,385-387
+  s_97e667e10cf896::t_aff5c2028cbc72 435
+frontend/src/components/FeedBanner.tsx
+  s_97e667e10cf896::t_30b55fec9edf01 19-20
+app/execution/exchange.py
+  s_97e667e10cf896::t_ca971fd5a71ac8 1-3
+  s_97e667e10cf896::t_ac8c1b4da48be8 29
+tests/test_live_guard.py
+  s_97e667e10cf896::t_c69b0d7a586b55 1-66
+frontend/src/lib/api.ts
+  s_97e667e10cf896::t_04e9877a28d403 91
+app/execution/live.py
+  s_97e667e10cf896::t_043cae9a37ff38 1-24,28-29
+  s_97e667e10cf896::t_9a3484d5708cf0 25-27
+app/execution/testnet.py
+  s_97e667e10cf896::t_c4d98087b3825f 1,3,6-19
+  s_97e667e10cf896::t_dd51f9092d3f12 20-22
+app/strategy/runner.py
+  s_97e667e10cf896::t_464f6f48abfb79 154-172
+  s_97e667e10cf896::t_7e678e67f0b260 130,132,134-135,137-141,143
+frontend/src/pages/Trading.tsx
+  s_97e667e10cf896::t_ae4154325e013d 16
+  s_97e667e10cf896::t_a5a630b771c8ab 29
+  s_97e667e10cf896::t_516df87e4da97f 53,60,62-65,68-71
+  s_97e667e10cf896::t_bebd22871adf4d 128,132,134-138,140
+  s_97e667e10cf896::t_a9e1b6500a197c 200-207
+app/api/trading.py
+  s_97e667e10cf896::t_f34e93eeb55e55 125-132
+  s_97e667e10cf896::t_03f8a396b19a79 10
+  s_97e667e10cf896::t_ba2c52faf33272 94
+frontend/src/components/live/EnableLiveModal.tsx
+  s_97e667e10cf896::t_10e314ab27b599 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "87f5bb2e21130de1b27c150e4a76bc12bfa62f16",
+  "prompts": {},
+  "sessions": {
+    "s_97e667e10cf896": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2574ca21-1a3c-430f-a935-75b05ed299d4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
