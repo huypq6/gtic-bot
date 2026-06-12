@@ -88,6 +88,49 @@ def supertrend(candles: list[dict], period: int = 10, mult: float = 3.0) -> list
     return directions
 
 
+def vwap(candles: list[dict], period: int) -> float | None:
+    """Rolling VWAP (typical price (h+l+c)/3, trọng số volume) của `period` nến cuối."""
+    if len(candles) < period:
+        return None
+    w = candles[-period:]
+    tot_v = sum(c["volume"] for c in w)
+    if tot_v == 0:
+        return None
+    return sum(((c["high"] + c["low"] + c["close"]) / 3) * c["volume"] for c in w) / tot_v
+
+
+def _hl_mid(candles: list[dict], end: int, period: int) -> float:
+    """(HH + LL) / 2 của `period` nến kết thúc tại index `end`."""
+    w = candles[end - period + 1 : end + 1]
+    return (max(c["high"] for c in w) + min(c["low"] for c in w)) / 2
+
+
+def ichimoku(
+    candles: list[dict], conv: int = 9, base: int = 26, span_b: int = 52, shift: int = 26
+) -> dict | None:
+    """Ichimoku — trả tenkan/kijun (2 điểm cuối) + đỉnh/đáy mây hiện tại. None nếu thiếu."""
+    n = len(candles)
+    if n < span_b + shift + 1:
+        return None
+    i = n - 1
+    tenkan_prev = _hl_mid(candles, i - 1, conv)
+    tenkan_now = _hl_mid(candles, i, conv)
+    kijun_prev = _hl_mid(candles, i - 1, base)
+    kijun_now = _hl_mid(candles, i, base)
+    # Mây tại nến hiện tại = các span tính từ `shift` nến trước.
+    j = i - shift
+    span_a = (_hl_mid(candles, j, conv) + _hl_mid(candles, j, base)) / 2
+    span_b_val = _hl_mid(candles, j, span_b)
+    return {
+        "tenkan_prev": tenkan_prev,
+        "tenkan_now": tenkan_now,
+        "kijun_prev": kijun_prev,
+        "kijun_now": kijun_now,
+        "cloud_top": max(span_a, span_b_val),
+        "cloud_bottom": min(span_a, span_b_val),
+    }
+
+
 def atr(candles: list[dict], period: int = 14) -> float | None:
     """Average True Range (Wilder) — biến động giá. candles có high/low/close."""
     if len(candles) < period + 1:

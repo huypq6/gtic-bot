@@ -16,28 +16,31 @@ _TF_FREQ = {"1m": "1min", "5m": "5min", "15m": "15min", "1h": "1h", "4h": "4h", 
 
 def _build_signals(strategy, candles: list[dict]):
     """Replay on_candle → 4 mảng bool (long/short entries/exits)."""
+    from app.strategy.base import Position
+
     n = len(candles)
     long_e = [False] * n
     long_x = [False] * n
     short_e = [False] * n
     short_x = [False] * n
+    pos: Position | None = None  # theo dõi vị thế để bơm vào ctx.position (như live)
     for i in range(n):
-        ctx = Context(
-            symbol=candles[i].get("symbol", ""),
-            price=candles[i]["close"],
-            candles=candles[: i + 1],
-            position=None,
-        )
+        price = candles[i]["close"]
+        symbol = candles[i].get("symbol", "")
+        ctx = Context(symbol=symbol, price=price, candles=candles[: i + 1], position=pos)
         for sig in strategy.on_candle(ctx):
             if sig.action == "BUY":
                 long_e[i] = True
                 short_x[i] = True
+                pos = Position(symbol, "LONG", sig.size, price)
             elif sig.action == "SELL":
                 short_e[i] = True
                 long_x[i] = True
+                pos = Position(symbol, "SHORT", sig.size, price)
             elif sig.action == "CLOSE":
                 long_x[i] = True
                 short_x[i] = True
+                pos = None
     return long_e, long_x, short_e, short_x
 
 
