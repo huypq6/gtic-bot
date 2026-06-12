@@ -100,7 +100,12 @@ return [Signal("BUY", ctx.symbol, self.params["size"],
                sl=ctx.price * 0.98, tp=ctx.price * 1.04)]
 ```
 
-**Indicator có sẵn** (`app/strategy/ta.py`, thuần, test kỹ): `ema(values, period)`, `rsi(values, period)`, `atr(candles, period)`. Tham khảo mẫu `ema_cross.py`, `rsi_rev.py`. Thêm chỉ báo mới thì bổ sung vào `ta.py` (giữ hàm thuần để test).
+**Indicator có sẵn** (`app/strategy/ta.py`, thuần, test kỹ): `ema(values, period)`, `rsi(values, period)`, `atr(candles, period)`. Tham khảo mẫu `ema_cross.py`, `rsi_rev.py`, `donchian.py`. Thêm chỉ báo mới thì bổ sung vào `ta.py` (giữ hàm thuần để test).
+
+### Tài liệu phương pháp luận (hiển thị ở Library)
+
+- Đặt `description` (1 dòng tagline) trên class → hiện ở thẻ trong trang **Library**.
+- Viết file **`app/strategy/strategies/<name>.md`** (cạnh file code) mô tả chi tiết: ý tưởng, công thức, quy tắc vào/ra, params, ưu/nhược, khi nào dùng, lưu ý backtest. File này được render dạng tài liệu đọc khi bấm **"Phương pháp luận"** ở Library (`GET /api/strategies/{name}/doc`). Xem mẫu `donchian.md`, `ema_cross.md`, `rsi_rev.md`.
 
 ---
 

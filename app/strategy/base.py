@@ -44,6 +44,7 @@ class Strategy(ABC):
     name: str = "base"
     version: str = "0"
     default_params: dict = {}
+    description: str = ""  # phương pháp luận — hiển thị ở Strategy Library
 
     def __init__(self, params: dict | None = None) -> None:
         self.params = {**self.default_params, **(params or {})}

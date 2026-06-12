@@ -12,6 +12,7 @@ from app.strategy.ta import rsi
 class RsiReversal(Strategy):
     name = "rsi_rev"
     version = "1"
+    description = "Đảo chiều theo RSI — mean-reversion: quá bán (BUY), quá mua (SELL)."
     default_params = {"period": 14, "oversold": 30, "overbought": 70, "size": 0.001}
     param_schema = {
         "period": {"type": "int", "min": 2, "max": 100, "default": 14},

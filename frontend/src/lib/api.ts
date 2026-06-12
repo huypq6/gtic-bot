@@ -40,7 +40,12 @@ export interface StrategyInfo {
   version: string;
   default_params: Record<string, unknown>;
   param_schema: Record<string, unknown>;
+  description?: string;
+  source_file?: string | null;
 }
+
+export const fetchStrategyDoc = (name: string) =>
+  getJson<{ name: string; markdown: string }>(`/api/strategies/${name}/doc`);
 
 export interface BotInfo {
   id: number;

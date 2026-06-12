@@ -13,6 +13,7 @@ from app.strategy.ta import ema
 class EmaCross(Strategy):
     name = "ema_cross"
     version = "1"
+    description = "Giao cắt EMA nhanh/chậm — trend-following: golden cross LONG, death cross SHORT."
     default_params = {"fast": 9, "slow": 21, "size": 0.001}
     # Schema cho UI render form params (P5).
     param_schema = {
@@ -43,6 +44,7 @@ class EmaCrossV2(Strategy):
 
     name = "ema_cross"
     version = "2"
+    description = "EMA cross + bộ lọc gap% — giảm lệnh nhiễu (giao cắt yếu) trên khung nhỏ."
     default_params = {"fast": 9, "slow": 21, "size": 0.001, "gap_pct": 0.1}
     param_schema = {
         "fast": {"type": "int", "min": 2, "max": 100, "default": 9},

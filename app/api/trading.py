@@ -32,9 +32,7 @@ async def list_strategies(session: AsyncSession = Depends(get_session)) -> list[
     """Quét file registry → sync DB → trả về (kèm id DB + param_schema cho UI)."""
     discover()
     await sync_to_db(session)
-    schema_by_key = {
-        (c.name, c.version): getattr(c, "param_schema", {}) for c in all_strategies()
-    }
+    by_key = {(c.name, c.version): c for c in all_strategies()}
     q = select(StrategyModel).where(StrategyModel.is_active)
     rows = (await session.execute(q)).scalars().all()
     return [
@@ -43,10 +41,28 @@ async def list_strategies(session: AsyncSession = Depends(get_session)) -> list[
             "name": r.name,
             "version": r.version,
             "default_params": r.default_params,
-            "param_schema": schema_by_key.get((r.name, r.version), {}),
+            "param_schema": getattr(by_key.get((r.name, r.version)), "param_schema", {}),
+            "description": getattr(by_key.get((r.name, r.version)), "description", ""),
+            "source_file": r.source_file,
         }
         for r in rows
     ]
+
+
+@router.get("/strategies/{name}/doc")
+async def strategy_doc(name: str) -> dict:
+    """Tài liệu phương pháp luận (markdown) của strategy — đọc app/strategy/strategies/<name>.md."""
+    import re
+    from pathlib import Path
+
+    from app.strategy import strategies as strat_pkg
+
+    if not re.fullmatch(r"[a-z0-9_]+", name):
+        raise HTTPException(404, "tên không hợp lệ")
+    f = Path(strat_pkg.__path__[0]) / f"{name}.md"
+    if not f.is_file():
+        return {"name": name, "markdown": "_Chưa có tài liệu phương pháp luận cho strategy này._"}
+    return {"name": name, "markdown": f.read_text(encoding="utf-8")}
 
 
 @router.get("/strategies/{name}/compare")
