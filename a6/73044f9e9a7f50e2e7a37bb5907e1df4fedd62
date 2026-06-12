@@ -1,0 +1,22 @@
+scripts/sweep_ichimoku_v2.py
+  s_dd1d383719b312::t_2480b51703d93e 13,16
+  s_dd1d383719b312::t_5dda60db1265e0 1-12,14-15,17-94
+app/strategy/strategies/ichimoku.md
+  s_dd1d383719b312::t_9264659366a3de 12-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "a673044f9e9a7f50e2e7a37bb5907e1df4fedd62",
+  "prompts": {},
+  "sessions": {
+    "s_dd1d383719b312": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7aedfea8-fccd-4538-a004-4f82036c9a76",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
