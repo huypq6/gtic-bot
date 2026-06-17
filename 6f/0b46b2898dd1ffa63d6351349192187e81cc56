@@ -1,0 +1,19 @@
+docs/06-Paper-Trading-Runbook.md
+  s_0cd7f0ddef5937::t_6dabc8d677ff97 1-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "6f0b46b2898dd1ffa63d6351349192187e81cc56",
+  "prompts": {},
+  "sessions": {
+    "s_0cd7f0ddef5937": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2510a30-5d6c-4ec2-8d35-094b34c18a84",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
