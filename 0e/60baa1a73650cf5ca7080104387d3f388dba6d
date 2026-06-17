@@ -1,0 +1,21 @@
+docs/06-Paper-Trading-Runbook.md
+  s_0cd7f0ddef5937::t_aaf4c1ef399d8b 33,35
+docker-compose.yml
+  s_0cd7f0ddef5937::t_e517a1cf2a5507 19,21-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "0e60baa1a73650cf5ca7080104387d3f388dba6d",
+  "prompts": {},
+  "sessions": {
+    "s_0cd7f0ddef5937": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2510a30-5d6c-4ec2-8d35-094b34c18a84",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
