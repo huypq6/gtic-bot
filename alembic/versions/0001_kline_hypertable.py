@@ -18,6 +18,9 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # Bật TimescaleDB ngay trong migration (không phụ thuộc db/init — bind mount đó không
+    # tồn tại khi docker chạy ở host từ xa). Idempotent, an toàn khi init script cũng đã chạy.
+    op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
     op.create_table(
         "kline",
         sa.Column("symbol", sa.String(), nullable=False),
