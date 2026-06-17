@@ -16,7 +16,10 @@ services:
       timeout: 3s
       retries: 10
     ports:
-      - "5432:5432"
+      # Host 5433 → container 5432 (tránh đụng Postgres chạy sẵn ở host trên 5432).
+      # App nối DB qua mạng nội bộ docker (db:5432) nên KHÔNG bị ảnh hưởng; cổng host này
+      # chỉ để truy cập DB từ máy host (psql -h localhost -p 5433).
+      - "5433:5432"
 
   app:
     build:

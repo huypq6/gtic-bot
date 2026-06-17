@@ -30,6 +30,11 @@ docker compose up --build -d     # tự chạy `alembic upgrade head` + serve UI
 
 Tắt: `docker compose down` (giữ data) — volume `pgdata` lưu lịch sử nến + bot + lệnh.
 
+> **Cổng DB:** host map `5433:5432` (không phải 5432) để tránh đụng Postgres chạy sẵn ở host.
+> App nối DB qua mạng nội bộ docker (`db:5432`) nên không ảnh hưởng. Truy cập DB từ host:
+> `psql -h localhost -p 5433 -U botuser tradingbot`. Nếu vẫn báo `port is already allocated`
+> ở 8000 → đổi `8000:8000` tương tự, hoặc `docker compose down --remove-orphans` rồi up lại.
+
 ## 2. Thêm cặp vào watchlist (BẮT BUỘC trước khi tạo bot)
 
 Feed mặc định chỉ stream `BTCUSDT` + `ETHUSDT` (`settings.default_symbols`). Bot subscribe kênh
