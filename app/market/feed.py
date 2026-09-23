@@ -79,16 +79,39 @@ class MarketFeed:
         self._running = False
         self._ws = None  # WS đang mở (để SUBSCRIBE/UNSUBSCRIBE runtime)
         self._msg_id = 0
+        # Stream kline bot cần (symbol, tf) — độc lập watchlist/tf mặc định của chart.
+        # Không có cái này, bot 15m chỉ nghe được khi tf mặc định = 15m → im lặng mãi.
+        self._bot_klines: set[tuple[str, str]] = set()
 
     def _streams_for(self, symbol: str) -> list[str]:
         s = symbol.lower()
         return [f"{s}@kline_{self._tf}", f"{s}@ticker"]
 
-    def stream_url(self) -> str:
-        streams = []
+    def _all_streams(self) -> list[str]:
+        streams: list[str] = []
         for sym in self._symbols:
             streams += self._streams_for(sym)
-        return self._base_url + "/".join(streams)
+        for sym, tf in sorted(self._bot_klines):
+            streams.append(f"{sym.lower()}@kline_{tf}")
+        return list(dict.fromkeys(streams))  # bỏ trùng, giữ thứ tự
+
+    def stream_url(self) -> str:
+        return self._base_url + "/".join(self._all_streams())
+
+    async def ensure_kline(self, symbol: str, tf: str) -> None:
+        """Đảm bảo feed stream `kline.{symbol}.{tf}` cho bot (SUBSCRIBE runtime nếu đang nối)."""
+        key = (symbol.upper(), tf)
+        if key in self._bot_klines:
+            return
+        already = key[0] in self._symbols and tf == self._tf
+        self._bot_klines.add(key)
+        if not already and self._ws:
+            self._msg_id += 1
+            await self._ws.send(json.dumps({
+                "method": "SUBSCRIBE",
+                "params": [f"{key[0].lower()}@kline_{tf}"],
+                "id": self._msg_id,
+            }))
 
     def stop(self) -> None:
         self._running = False
@@ -96,10 +119,12 @@ class MarketFeed:
     async def _control(self, method: str, symbol: str) -> None:
         if not self._ws:
             return
+        params = self._streams_for(symbol)
+        if method == "UNSUBSCRIBE":  # giữ stream bot đang cần
+            bot = {f"{s.lower()}@kline_{tf}" for s, tf in self._bot_klines}
+            params = [p for p in params if p not in bot]
         self._msg_id += 1
-        await self._ws.send(
-            json.dumps({"method": method, "params": self._streams_for(symbol), "id": self._msg_id})
-        )
+        await self._ws.send(json.dumps({"method": method, "params": params, "id": self._msg_id}))
 
     async def add_symbol(self, symbol: str) -> None:
         """Thêm cặp + SUBSCRIBE realtime (không cần reconnect)."""
@@ -133,9 +158,17 @@ class MarketFeed:
         backoff = self._backoff_base
         while self._running:
             try:
-                async with self._connect(self.stream_url()) as ws:
+                url_streams = self._all_streams()
+                async with self._connect(self._base_url + "/".join(url_streams)) as ws:
                     self._ws = ws
                     backoff = self._backoff_base
+                    # Stream thêm trong lúc đang bắt tay (URL đã dựng, _ws còn None) → bù.
+                    missing = [x for x in self._all_streams() if x not in url_streams]
+                    if missing:
+                        self._msg_id += 1
+                        await ws.send(json.dumps(
+                            {"method": "SUBSCRIBE", "params": missing, "id": self._msg_id}
+                        ))
                     await self._bus.publish("feed", {"status": "OK"})
                     async for raw in ws:
                         await self.handle_raw(raw)

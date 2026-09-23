@@ -45,7 +45,9 @@ async def lifespan(app: FastAPI):
     watch = await ensure_seeded(async_session, settings.default_symbols)
     feed = MarketFeed(bus, symbols=watch, tf=settings.default_tf)
     order_manager = OrderManager(async_session)
-    bot_manager = BotManager(bus, async_session, order_manager)
+    bot_manager = BotManager(
+        bus, async_session, order_manager, feed=feed, backfill=settings.feed_autostart
+    )
     manual_trader = ManualTrader(bus, async_session)
 
     app.state.bus = bus

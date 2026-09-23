@@ -65,6 +65,8 @@ export interface BotInfo {
   mode: string;
   params: Record<string, unknown>;
   status: string;
+  /** open-time (ms) nến đóng cuối bot nhận live; null = chưa nhận nến nào. */
+  last_candle?: number | null;
 }
 
 export interface PositionRow {

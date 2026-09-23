@@ -126,9 +126,18 @@ async def _bot_dict(session: AsyncSession, bot: Bot) -> dict:
 
 
 @router.get("/bots")
-async def list_bots(session: AsyncSession = Depends(get_session)) -> list[dict]:
+async def list_bots(
+    request: Request, session: AsyncSession = Depends(get_session)
+) -> list[dict]:
     bots = (await session.execute(select(Bot).order_by(Bot.id))).scalars().all()
-    return [await _bot_dict(session, b) for b in bots]
+    mgr = getattr(request.app.state, "bot_manager", None)
+    out = []
+    for b in bots:
+        d = await _bot_dict(session, b)
+        # open-time nến đóng cuối runner nhận — None = chưa nhận nến live nào (feed chưa stream).
+        d["last_candle"] = mgr.last_candle_ts(b.id) if mgr else None
+        out.append(d)
+    return out
 
 
 @router.post("/bots")

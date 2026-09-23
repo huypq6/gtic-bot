@@ -176,13 +176,21 @@ export default function Trading() {
                 key={b.id}
                 className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <ModeBadge mode={b.mode} />
                   <span className="font-medium">{b.strategy}</span>
                   <span className="text-muted">
                     {b.symbol} · {b.tf}
                   </span>
                   <StatusDot status={b.status} />
+                  <span
+                    className="text-xs text-faint"
+                    title="Nến đóng cuối cùng bot nhận được (UTC)"
+                  >
+                    {b.last_candle
+                      ? `nến cuối ${new Date(b.last_candle).toISOString().slice(5, 16).replace("T", " ")}`
+                      : "chưa nhận nến"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   {b.status !== "RUNNING" && (

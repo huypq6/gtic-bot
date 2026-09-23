@@ -158,3 +158,72 @@ async def test_add_duplicate_noop():
     await feed.add_symbol("BTCUSDT")  # đã có
     assert feed._symbols == ["BTCUSDT"]
     assert feed._ws.sent == []
+
+
+# --- stream kline theo bot (symbol, tf) — bug: bot 15m không nhận nến khi feed tf=1m ---
+
+
+async def test_ensure_kline_adds_bot_tf_to_url():
+    feed = MarketFeed(EventBus(), symbols=["BTCUSDT"], tf="1m")
+    await feed.ensure_kline("dogeusdt", "15m")  # chưa nối WS → chỉ vào URL
+    url = feed.stream_url()
+    assert "dogeusdt@kline_15m" in url
+    assert "btcusdt@kline_1m" in url
+
+
+async def test_ensure_kline_subscribes_runtime_once():
+    feed = MarketFeed(EventBus(), symbols=["BTCUSDT"], tf="1m")
+    feed._ws = _CtrlWS()
+    await feed.ensure_kline("BTCUSDT", "15m")
+    await feed.ensure_kline("BTCUSDT", "15m")
+    assert len(feed._ws.sent) == 1
+    assert feed._ws.sent[0] == {"method": "SUBSCRIBE", "params": ["btcusdt@kline_15m"], "id": 1}
+
+
+async def test_ensure_kline_default_tf_no_duplicate_stream():
+    feed = MarketFeed(EventBus(), symbols=["BTCUSDT"], tf="1m")
+    feed._ws = _CtrlWS()
+    await feed.ensure_kline("BTCUSDT", "1m")  # đã có trong stream mặc định
+    assert feed._ws.sent == []
+    assert feed.stream_url().count("btcusdt@kline_1m") == 1
+
+
+async def test_remove_symbol_keeps_bot_stream():
+    feed = MarketFeed(EventBus(), symbols=["BTCUSDT", "ETHUSDT"], tf="15m")
+    feed._ws = _CtrlWS()
+    await feed.ensure_kline("ETHUSDT", "15m")
+    await feed.remove_symbol("ETHUSDT")
+    assert feed._ws.sent[-1]["params"] == ["ethusdt@ticker"]
+    assert "ethusdt@kline_15m" in feed.stream_url()
+
+
+async def test_run_subscribes_streams_added_during_handshake():
+    """ensure_kline gọi khi đang connect (URL đã dựng, _ws None) → phải SUBSCRIBE bù."""
+    bus = EventBus()
+    sent = []
+
+    class FakeWS:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def send(self, data):
+            sent.append(json.loads(data))
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            feed.stop()
+            raise StopAsyncIteration
+
+    def fake_connect(url, **kw):
+        # mô phỏng bot đăng ký stream trong lúc bắt tay
+        feed._bot_klines.add(("DOGEUSDT", "15m"))
+        return FakeWS()
+
+    feed = MarketFeed(bus, symbols=["BTCUSDT"], tf="1m", connect=fake_connect)
+    await asyncio.wait_for(feed.run(), timeout=2)
+    assert sent and sent[0]["params"] == ["dogeusdt@kline_15m"]
