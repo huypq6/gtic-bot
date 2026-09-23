@@ -223,3 +223,6 @@ frontend/dist/
 *.local
 *.tsbuildinfo
 .gstack/
+
+# sinh lúc docker build (app/version.py)
+VERSION.json

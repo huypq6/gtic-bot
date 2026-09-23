@@ -12,6 +12,7 @@ from app.db import get_session
 from app.market.store import get_klines, sync_historical
 from app.market.watchlist import add_symbol, get_watchlist, remove_symbol
 from app.orders.models import ScanResult
+from app.version import get_version
 
 router = APIRouter(prefix="/api")
 
@@ -23,6 +24,12 @@ TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"]
 async def health() -> dict:
     """Liveness probe — dùng cho compose healthcheck + smoke test frontend."""
     return {"status": "ok"}
+
+
+@router.get("/version")
+async def version() -> dict:
+    """Phiên bản đang chạy (commit/build/ngày) — web hiện ở header, báo khi có bản mới."""
+    return get_version()
 
 
 @router.get("/config")

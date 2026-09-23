@@ -12,6 +12,19 @@ export interface Health {
 
 export const fetchHealth = () => getJson<Health>("/api/health");
 
+export interface VersionInfo {
+  version: string;
+  commit: string | null;
+  build: string | null;
+  commit_date: string | null;
+  subject: string | null;
+  built_at?: string | null;
+  dirty?: boolean;
+  started_at: string;
+}
+
+export const fetchVersion = () => getJson<VersionInfo>("/api/version");
+
 export interface AppConfig {
   symbols: string[];
   timeframes: string[];

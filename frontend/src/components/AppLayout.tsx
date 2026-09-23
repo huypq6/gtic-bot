@@ -4,6 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { useWsStore } from "../lib/ws";
 import { useTheme } from "../lib/theme";
 import FeedBanner from "./FeedBanner";
+import VersionBadge from "./VersionBadge";
 
 export default function AppLayout() {
   const connect = useWsStore((s) => s.connect);
@@ -30,6 +31,7 @@ export default function AppLayout() {
           <Tab to="/audit">Audit</Tab>
         </nav>
         <div className="flex shrink-0 items-center gap-2 text-xs">
+          <VersionBadge />
           <button
             onClick={toggleTheme}
             title={theme === "dark" ? "Chuyển sáng" : "Chuyển tối"}
