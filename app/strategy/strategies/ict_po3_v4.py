@@ -85,7 +85,7 @@ class IctPo3V4(Strategy):
         self._asia_low = None
         self._sweep = None            # "HIGH" (→SHORT) | "LOW" (→LONG)
         self._sweep_extreme = None
-        self._sweep_i = None
+        self._sweep_ts = None
         self._since = 0
         self._armed = False
         self._armed_dir = None
@@ -102,7 +102,7 @@ class IctPo3V4(Strategy):
         self._reset_setup()
 
     def _reset_setup(self) -> None:
-        self._sweep = self._sweep_extreme = self._sweep_i = None
+        self._sweep = self._sweep_extreme = self._sweep_ts = None
         self._since = 0
         self._armed = False
         self._armed_dir = self._fvg_prox = None
@@ -191,19 +191,25 @@ class IctPo3V4(Strategy):
             elif cur["low"] < self._asia_low and (not rj or close > self._asia_low):
                 self._sweep, self._sweep_extreme = "LOW", cur["low"]
             if self._sweep is not None:
-                self._sweep_i, self._since = cur_i, 1
+                self._sweep_ts, self._since = cur["ts"], 1
             return out
 
         # 6. MSS = CHoCH (phá swing sau sweep) + v4: DISPLACEMENT (thân nến ≥ disp_mult×ATR).
         direction = None
         w = int(p["swing"])
+        # Neo sweep theo ts (không theo index): runner live đưa cửa sổ trượt (deque 300),
+        # index tuyệt đối lệch mỗi nến → trước đây live không bao giờ thấy swing/MSS.
+        sweep_i = self._index_of(candles, self._sweep_ts)
+        if sweep_i is None:  # nến sweep đã trôi khỏi cửa sổ
+            self._reset_setup()
+            return out
         if self._since >= int(p["mss_lookback"]):
             if self._sweep == "LOW":
-                ref = self._recent_swing(candles, self._sweep_i, cur_i, w, "high")
+                ref = self._recent_swing(candles, sweep_i, cur_i, w, "high")
                 if ref is not None and close > ref:
                     direction = "LONG"
             else:
-                ref = self._recent_swing(candles, self._sweep_i, cur_i, w, "low")
+                ref = self._recent_swing(candles, sweep_i, cur_i, w, "low")
                 if ref is not None and close < ref:
                     direction = "SHORT"
         if direction is not None and float(p.get("disp_mult", 0)) > 0:
@@ -276,6 +282,16 @@ class IctPo3V4(Strategy):
         self._armed = False
         self._n_today += 1
         return sig
+
+    @staticmethod
+    def _index_of(candles: list[dict], ts) -> int | None:
+        for j in range(len(candles) - 1, -1, -1):
+            t = candles[j]["ts"]
+            if t == ts:
+                return j
+            if t < ts:
+                break
+        return None
 
     @staticmethod
     def _recent_swing(candles: list[dict], start_i: int, end_i: int, w: int, kind: str):

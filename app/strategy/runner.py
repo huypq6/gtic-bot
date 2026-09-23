@@ -38,7 +38,7 @@ class StrategyRunner:
         session_factory: async_sessionmaker,
         order_manager=None,
         mode: str = "PAPER",
-        lookback: int = 300,
+        lookback: int = 1000,  # đủ dài để EMA/ATR đệ quy hội tụ = backtest
         backfill: bool = False,
     ) -> None:
         self.bot_id = bot_id
@@ -60,7 +60,7 @@ class StrategyRunner:
     async def start(self) -> None:
         # seed nến lịch sử để indicator có đủ dữ liệu ngay. Backfill từ Binance trước để
         # lịch sử liền mạch tới hiện tại (DB có thể cũ/đứt đoạn nếu feed chưa từng stream tf này).
-        n = self._candles.maxlen or 300
+        n = self._candles.maxlen or 1000
         tf_ms = _TF_MS.get(self.tf, 60_000)
         if self._backfill:
             try:

@@ -76,3 +76,42 @@ def test_v4_registered():
     discover()
     vs = {(s.name, s.version) for s in all_strategies()}
     assert ("ict_po3", "4") in vs
+
+
+# ---- Parity live ↔ backtest: runner live đưa cửa sổ trượt (deque), backtest đưa list tăng dần.
+# Bug cũ: neo sweep theo index tuyệt đối → với cửa sổ trượt không bao giờ thấy MSS → 0 lệnh live.
+def _random_walk(seed: int, days: int = 60) -> list[dict]:
+    import random
+
+    r = random.Random(seed)
+    t0 = 1_699_920_000_000  # 00:00 UTC
+    p, out = 100.0, []
+    for i in range(days * 96):
+        o = p
+        p *= 1 + r.gauss(0, 0.004)
+        out.append({"ts": t0 + i * 900_000, "open": o, "close": p, "volume": 1.0,
+                    "high": max(o, p) * (1 + abs(r.gauss(0, 0.002))),
+                    "low": min(o, p) * (1 - abs(r.gauss(0, 0.002)))})
+    return out
+
+
+def _signals(strat, cs: list[dict], window: int | None) -> list[tuple]:
+    out = []
+    for i in range(len(cs)):
+        win = cs[max(0, i - window + 1): i + 1] if window else cs[: i + 1]
+        ctx = Context(symbol="X", price=cs[i]["close"], candles=win, position=None)
+        # SL/TP làm tròn: ATR đệ quy trên cửa sổ khác nhau lệch ~1e-10
+        out += [(cs[i]["ts"], s.action, round(s.sl or 0, 6), round(s.tp or 0, 6))
+                for s in strat.on_candle(ctx)]
+    return out
+
+
+def test_sliding_window_matches_growing_list():
+    from app.strategy.strategies.ict_po3 import IctPo3
+
+    for cls in (IctPo3V4, IctPo3):
+        cs = _random_walk(0)
+        live = _signals(cls({"bias_mode": 0}), cs, window=300)
+        bt = _signals(cls({"bias_mode": 0}), cs, window=None)
+        assert any(a != "CLOSE" for _, a, _, _ in bt), cls
+        assert live == bt, cls

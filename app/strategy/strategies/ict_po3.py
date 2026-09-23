@@ -83,7 +83,7 @@ class IctPo3(Strategy):
         self._asia_low = None
         self._sweep = None            # "HIGH" (→SHORT) | "LOW" (→LONG) | None
         self._sweep_extreme = None    # điểm cực trị của cú quét (đặt SL ngoài đây)
-        self._sweep_i = None          # index nến quét (để dò swing-structure SAU sweep)
+        self._sweep_ts = None          # index nến quét (để dò swing-structure SAU sweep)
         self._since = 0               # số nến đã qua kể từ sweep
         self._armed = False           # đã MSS, đang chờ giá retest FVG để vào (conf≥2)
         self._armed_dir = None        # hướng đã vũ trang
@@ -101,7 +101,7 @@ class IctPo3(Strategy):
 
     def _reset_setup(self) -> None:
         """Xoá trạng thái sweep/MSS/vũ trang để dò setup mới (cùng ngày)."""
-        self._sweep = self._sweep_extreme = self._sweep_i = None
+        self._sweep = self._sweep_extreme = self._sweep_ts = None
         self._since = 0
         self._armed = False
         self._armed_dir = self._fvg_prox = None
@@ -190,20 +190,26 @@ class IctPo3(Strategy):
             elif cur["low"] < self._asia_low:
                 self._sweep, self._sweep_extreme = "LOW", cur["low"]
             if self._sweep is not None:  # đánh dấu nến quét để dò swing-structure sau đó
-                self._sweep_i, self._since = cur_i, 1
+                self._sweep_ts, self._since = cur["ts"], 1
             return out  # cần nến sau để xác nhận MSS
 
         # 6. MSS = CHoCH: phá SWING gần nhất hình thành SAU cú quét (đảo cấu trúc thật).
         #    LONG: close vượt swing-high gần nhất (lower-high của nhịp hồi). SHORT: ngược lại.
         direction = None
         w = int(p["swing"])
+        # Neo sweep theo ts (không theo index): runner live đưa cửa sổ trượt (deque 300),
+        # index tuyệt đối lệch mỗi nến → trước đây live không bao giờ thấy swing/MSS.
+        sweep_i = self._index_of(candles, self._sweep_ts)
+        if sweep_i is None:  # nến sweep đã trôi khỏi cửa sổ
+            self._reset_setup()
+            return out
         if self._since >= int(p["mss_lookback"]):
             if self._sweep == "LOW":
-                ref = self._recent_swing(candles, self._sweep_i, cur_i, w, "high")
+                ref = self._recent_swing(candles, sweep_i, cur_i, w, "high")
                 if ref is not None and close > ref:
                     direction = "LONG"
             else:
-                ref = self._recent_swing(candles, self._sweep_i, cur_i, w, "low")
+                ref = self._recent_swing(candles, sweep_i, cur_i, w, "low")
                 if ref is not None and close < ref:
                     direction = "SHORT"
 
@@ -274,6 +280,16 @@ class IctPo3(Strategy):
         self._armed = False
         self._n_today += 1
         return sig
+
+    @staticmethod
+    def _index_of(candles: list[dict], ts) -> int | None:
+        for j in range(len(candles) - 1, -1, -1):
+            t = candles[j]["ts"]
+            if t == ts:
+                return j
+            if t < ts:
+                break
+        return None
 
     @staticmethod
     def _recent_swing(candles: list[dict], start_i: int, end_i: int, w: int, kind: str):

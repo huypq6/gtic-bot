@@ -235,3 +235,14 @@ DD 5.04%; ×5 vẫn DD 8.30% nhưng KHUYẾN NGHỊ TRẦN ×3 — DOGE được
 2. `conf≥2`: vào tại **retest FVG** nhưng fill ở **close** của nến chạm vùng (engine không mô phỏng LIMIT/intrabar) → giá vào xấp xỉ, không chính xác mép FVG.
 3. SL/TP kiểm theo `close` (không peek intrabar high/low) để khớp fill close của vectorbt.
 4. Phiên cố định theo UTC; chưa xử lý DST của London/NY (crypto dùng UTC nên chấp nhận được).
+5. **Khởi động giữa ngày**: range Asia chỉ gom từ nến live đầu tiên của ngày → bot start/restart sau 08:00 UTC bỏ lỡ setup hôm đó (từ hôm sau mới đủ range).
+
+### Sửa lỗi live 2026-09-23 — trước đó live KHÔNG BAO GIỜ vào lệnh
+
+- v3/v4 neo nến sweep theo **index tuyệt đối** (`_sweep_i`). Backtest đưa list tăng dần nên đúng;
+  runner live đưa **cửa sổ trượt** (deque) → index lệch mỗi nến → không bao giờ thấy swing/MSS.
+  Đo trên 92 ngày thật (BTC/DOGE/SUI/INJ 15m): backtest 17 lệnh, live cũ **0 lệnh**.
+- Sửa: neo theo `ts` nến sweep (`_sweep_ts` + `_index_of`). Backtest **không đổi** (kiểm bằng so khớp
+  tín hiệu cũ/mới), live ≡ backtest khi runner lookback = 1000 (EMA100/ATR đệ quy hội tụ).
+  Regression: `tests/test_ict_po3_v4.py::test_sliding_window_matches_growing_list`.
+- Kèm lỗi hạ tầng cùng lúc: feed chỉ stream `default_tf` (1m) nên bot 15m không nhận nến nào (xem commit `b9c0e77`).
