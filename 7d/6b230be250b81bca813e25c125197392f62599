@@ -1,0 +1,36 @@
+app/version.py
+  s_aff5869f1812cb::t_d13952f31cc3da 1-51,53-54
+  s_aff5869f1812cb::t_98e7cead874111 52
+frontend/src/lib/api.ts
+  s_aff5869f1812cb::t_fa94506bc1cfbb 15-27
+frontend/src/components/AppLayout.tsx
+  s_aff5869f1812cb::t_fa94506bc1cfbb 7,34
+frontend/src/components/VersionBadge.tsx
+  s_aff5869f1812cb::t_fa94506bc1cfbb 1-57
+.gitignore
+  s_aff5869f1812cb::t_222d0c1c821529 226-228
+app/api/routes.py
+  s_aff5869f1812cb::t_d13952f31cc3da 15,29-32
+  s_aff5869f1812cb::t_7f948f4aac75e8 33-34
+Dockerfile
+  s_aff5869f1812cb::t_200a33fa8f6f37 14,16,19-24
+  s_aff5869f1812cb::t_98e7cead874111 11-13,15,17-18,25-26,47
+tests/test_version.py
+  s_aff5869f1812cb::t_bdf5b857364d62 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7d6b230be250b81bca813e25c125197392f62599",
+  "prompts": {},
+  "sessions": {
+    "s_aff5869f1812cb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "936a3ddb-7276-4290-99ec-9e0385d7a856",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
