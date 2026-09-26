@@ -83,9 +83,11 @@ async def get_klines(
 
 
 async def sync_historical(
-    session: AsyncSession, symbol: str, tf: str, start_str: str, end_str: str | None = None
+    session: AsyncSession, symbol: str, tf: str, start_str: str | int,
+    end_str: str | None = None,
 ) -> int:
-    """Tải lịch sử từ Binance REST (public, không cần key) → upsert."""
+    """Tải lịch sử từ Binance REST (public, không cần key) → upsert. start: chuỗi
+    python-binance hiểu ("7 days ago UTC") hoặc ms (int)."""
     client = await AsyncClient.create()
     try:
         raw = await client.get_historical_klines(symbol, tf, start_str, end_str)
@@ -105,6 +107,35 @@ async def sync_historical(
         for r in raw
     ]
     return await upsert_klines(session, rows)
+
+
+_TF_MS = {"1m": 60_000, "3m": 180_000, "5m": 300_000, "15m": 900_000, "30m": 1_800_000,
+          "1h": 3_600_000, "2h": 7_200_000, "4h": 14_400_000, "1d": 86_400_000}
+
+
+async def ensure_history(
+    session: AsyncSession, symbol: str, tf: str, start: datetime
+) -> int:
+    """Đảm bảo DB có nến liền mạch từ `start` tới hiện tại — chỉ tải PHẦN THIẾU.
+
+    DB đã phủ từ `start` và không thủng (đếm ≥ 99% số nến kỳ vọng) → chỉ tải từ nến
+    cuối; ngược lại tải lại cả khoảng (vá lỗ). Tránh mỗi lần backtest 1 năm lại gọi
+    Binance ~35 request.
+    """
+    from sqlalchemy import func
+
+    tf_ms = _TF_MS.get(tf)
+    q = select(func.min(Kline.ts), func.max(Kline.ts), func.count()).where(
+        Kline.symbol == symbol, Kline.tf == tf, Kline.ts >= start
+    )
+    first, last, n = (await session.execute(q)).one()
+    start_ms = int(start.timestamp() * 1000)
+    if tf_ms and first is not None:
+        f_ms, l_ms = int(first.timestamp() * 1000), int(last.timestamp() * 1000)
+        expected = (l_ms - f_ms) // tf_ms + 1
+        if f_ms - start_ms <= 2 * tf_ms and n >= 0.99 * expected:
+            return await sync_historical(session, symbol, tf, l_ms)
+    return await sync_historical(session, symbol, tf, start_ms)
 
 
 async def persist_closed_klines(bus: EventBus, session_factory: async_sessionmaker) -> None:

@@ -286,9 +286,64 @@ export interface BacktestTrade {
   entry: number | null;
   exit_ts: number | null;
   exit: number | null;
-  pnl_pct: number | null;
+  pnl_pct: number | null; // engine ACCOUNT: % equity lúc vào
   sl: number | null;
   tp: number | null;
+  // engine ACCOUNT
+  qty?: number | null;
+  pnl?: number | null;
+  fee?: number | null;
+  r?: number | null;
+  reason?: string | null;
+  mfe_r?: number | null;
+  mae_r?: number | null;
+}
+
+export interface SimCompareRow {
+  sizing: Sizing;
+  leverage: number;
+  final_equity: number;
+  pnl_pct: number;
+  cagr_pct: number | null;
+  max_dd: number;
+  calmar: number | null;
+  sharpe: number | null;
+  winrate: number;
+  n_trades: number;
+  profit_factor: number | null;
+  avg_r: number | null;
+  total_fees: number;
+  day_halts: number;
+  dd_halt_ts: number | null;
+  liquidated: boolean;
+  avg_notional_pct: number | null;
+  capped: Record<string, number>;
+  rejects: Record<string, number>;
+  positive_months: number;
+  n_months: number;
+  equity_curve: [number, number][];
+}
+
+export interface SimStats {
+  cagr_pct: number | null;
+  longest_dd_days: number;
+  calmar: number | null;
+  profit_factor: number | null;
+  avg_r: number | null;
+  best_r: number | null;
+  worst_r: number | null;
+  max_loss_streak: number;
+  total_fees: number;
+  fees_pct_of_capital: number;
+  day_halts: number;
+  dd_halt_ts: number | null;
+  liquidated: boolean;
+  rejects: Record<string, number>;
+  capped: Record<string, number>;
+  avg_notional_pct: number | null;
+  monthly: [string, number][];
+  positive_months: number;
+  compare: SimCompareRow[];
 }
 
 export interface BacktestResult {
@@ -311,6 +366,11 @@ export interface BacktestResult {
   indicators: Record<string, IndicatorSeries>;
   equity_curve: [number, number][];
   trades: BacktestTrade[];
+  engine?: "VBT" | "ACCOUNT";
+  sizing?: Sizing | null;
+  final_equity?: number | null;
+  settings?: Record<string, number | null> | null;
+  stats?: SimStats | null;
 }
 
 // ---- scanner (P7) ----
@@ -338,7 +398,14 @@ export const runBacktest = (body: {
   leverage: number;
   fee_rate?: number | null;
   params?: Record<string, unknown> | null;
-}) => postJson<BacktestResult>("/api/backtest", body);
+  engine?: "VBT" | "ACCOUNT";
+  sizing?: Sizing & { leverage?: number | null };
+  slippage_bps?: number;
+  max_risk_pct?: number | null;
+  daily_loss_pct?: number | null;
+  max_dd_pct?: number | null;
+  compare?: (Sizing & { leverage?: number | null })[];
+}) => sendJson<BacktestResult>("POST", "/api/backtest", body);
 
 // ---- tài khoản & quản lý vốn (P9) ----
 export interface AccountSettings {

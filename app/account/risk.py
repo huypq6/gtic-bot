@@ -130,8 +130,10 @@ def size_order(
     if avail <= 0:
         raise RiskReject("không còn số dư khả dụng")
     if qty * per_unit_cost > avail:
-        qty = avail / per_unit_cost
-        notes.append("co theo số dư khả dụng")
+        cap = avail / per_unit_cost
+        if cap < qty * 0.99:  # co ≤ 1% (vd 100% vốn + phí vào) không đáng báo
+            notes.append("co theo số dư khả dụng")
+        qty = cap
     if qty * price < MIN_NOTIONAL:
         raise RiskReject(
             f"giá trị lệnh {qty * price:.2f} USDT < tối thiểu {MIN_NOTIONAL:g} USDT"

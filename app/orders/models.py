@@ -209,6 +209,12 @@ class BacktestRun(Base):
     n_trades: Mapped[int | None] = mapped_column(Integer)
     equity_curve: Mapped[list | None] = mapped_column(JSONB)  # [[ts_ms, equity], ...]
     indicators: Mapped[dict | None] = mapped_column(JSONB)  # {name: [[ts, value], ...]}
+    # P9c: VBT (vectorbt, 100% vốn, vào/ra giá đóng) | ACCOUNT (mô phỏng tài khoản)
+    engine: Mapped[str | None] = mapped_column(String)
+    sizing: Mapped[dict | None] = mapped_column(JSONB)
+    settings: Mapped[dict | None] = mapped_column(JSONB)  # phí/trượt/rào chắn đã dùng
+    stats: Mapped[dict | None] = mapped_column(JSONB)  # CAGR, PF, avgR, tháng, so sánh…
+    final_equity: Mapped[float | None] = mapped_column(Numeric)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -225,6 +231,14 @@ class BacktestTrade(Base):
     pnl_pct: Mapped[float | None] = mapped_column(Numeric)
     sl: Mapped[float | None] = mapped_column(Numeric)
     tp: Mapped[float | None] = mapped_column(Numeric)
+    # P9c (engine ACCOUNT)
+    qty: Mapped[float | None] = mapped_column(Numeric)
+    pnl: Mapped[float | None] = mapped_column(Numeric)  # USDT ròng
+    fee: Mapped[float | None] = mapped_column(Numeric)
+    r: Mapped[float | None] = mapped_column(Numeric)
+    reason: Mapped[str | None] = mapped_column(String)
+    mfe_r: Mapped[float | None] = mapped_column(Numeric)
+    mae_r: Mapped[float | None] = mapped_column(Numeric)
 
 
 class ScanResult(Base):
