@@ -1,0 +1,70 @@
+frontend/src/pages/Account.tsx
+  s_6e92d23091f1a9::t_758a9cbc3d18d8 1-509
+frontend/src/main.tsx
+  s_6e92d23091f1a9::t_01bc6c57375e3a 13,28
+app/main.py
+  s_6e92d23091f1a9::t_c3513521433a37 21-22,50,52-53,55,61,119-120,142
+tests/test_paper_engine.py
+  s_6e92d23091f1a9::t_217c96b7087a75 200-250
+  s_6e92d23091f1a9::t_9ed37169b67be5 7-8
+tests/test_account_risk.py
+  s_6e92d23091f1a9::t_14920dcfbe98d9 1-88
+app/account/risk.py
+  s_6e92d23091f1a9::t_2b357736f54fff 1-114,117-124,127-132,135-139
+  s_6e92d23091f1a9::t_80ce26242a6ea5 115-116,125-126,133-134
+app/api/accounts.py
+  s_6e92d23091f1a9::t_0d85dee4ea0d22 1-245,252,257-281
+  s_6e92d23091f1a9::t_c2c2e020ffcfdf 246-251,253-256
+frontend/src/components/orders/TradesTable.tsx
+  s_6e92d23091f1a9::t_61f6828166ecff 21,325-326
+tests/test_account_service.py
+  s_6e92d23091f1a9::t_da987b092557ec 91-92,136-137
+  s_6e92d23091f1a9::t_ee59a65e104aa2 1-90,93-135,138-140
+app/api/trading.py
+  s_6e92d23091f1a9::t_2631e6e686ae21 107-111,119-120,126-161,171,209-212,216,224-225,249-274,284-285,445,488,545-558,606-608,617-622,626-630
+app/account/service.py
+  s_6e92d23091f1a9::t_49540f403082eb 16-17
+  s_6e92d23091f1a9::t_e7a62b13eefcaf 1-15,18-234
+app/strategy/runner.py
+  s_6e92d23091f1a9::t_14920dcfbe98d9 16
+  s_6e92d23091f1a9::t_c3513521433a37 12,22,45-47,64-66,93-164,189,203,205,216,221-226,235,268-273,316-318,321,325,328-332
+app/execution/paper_engine.py
+  s_6e92d23091f1a9::t_9e7d8df8203689 10-15,29,38-42,67-76,79-85,114-117,125-161,197,199-200,210-212,214-216,226-230,232-233,265,268,270,273,275
+alembic/versions/c5e1a2b3d4f6_account_ledger.py
+  s_6e92d23091f1a9::t_28d7447730d2ed 1-94
+frontend/src/lib/api.ts
+  s_6e92d23091f1a9::t_472b2b14071aad 55-75,104-110,149-151,153-156,342-411
+  s_6e92d23091f1a9::t_61f6828166ecff 242-245
+  s_6e92d23091f1a9::t_4ab98005f45431 187
+frontend/src/pages/Trading.tsx
+  s_6e92d23091f1a9::t_01bc6c57375e3a 8,11,14-15,37-44,84,155-172,195,217,274-381
+  s_6e92d23091f1a9::t_cd3d2f1df4dae2 382
+app/execution/paper.py
+  s_6e92d23091f1a9::t_49540f403082eb 10,17,42-77,87-88,166-167,172-174,183-187,203,213,217-222,231
+frontend/src/components/orders/ManualOrderForm.tsx
+  s_6e92d23091f1a9::t_4ab98005f45431 41,66-68
+frontend/src/components/AppLayout.tsx
+  s_6e92d23091f1a9::t_01bc6c57375e3a 29
+app/orders/models.py
+  s_6e92d23091f1a9::t_28d7447730d2ed 40-99,110-112,178-181
+CLAUDE.md
+  s_6e92d23091f1a9::t_f85219ad3a9e34 56
+docs/IMPLEMENTATION-PLAN.md
+  s_6e92d23091f1a9::t_f22f9074188827 437
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9088117e30fef83d7f5f2a8e24238f5319a61492",
+  "prompts": {},
+  "sessions": {
+    "s_6e92d23091f1a9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a1865dd1-0606-4277-979b-803256623f08",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
