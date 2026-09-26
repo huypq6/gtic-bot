@@ -1,0 +1,64 @@
+app/execution/clients.py
+  s_6e92d23091f1a9::t_9bc3162f0779ec 1-60
+frontend/src/pages/Account.tsx
+  s_6e92d23091f1a9::t_c439d1ffcd8371 3,12,20,74-77,85,184,260-296,382-383,389,408-410,412-415,418,499,502-503,505-512,515,519,535-544,546-567,580,588-590
+frontend/src/pages/Trading.tsx
+  s_6e92d23091f1a9::t_c439d1ffcd8371 42,44-47,87,110,158,166
+tests/test_exchange_executor.py
+  s_6e92d23091f1a9::t_b754b027ee61d3 8-9,137-234
+app/api/accounts.py
+  s_6e92d23091f1a9::t_4c27af6a8187b3 12,65-68,109-111,128-144,146,148,154,157-160,220-234
+  s_6e92d23091f1a9::t_4611c66255275a 235-236
+tests/test_exchange_account_sync.py
+  s_6e92d23091f1a9::t_85557e77b0a527 1-117
+alembic/versions/e9a3c5d7f1b2_exchange_accounts.py
+  s_6e92d23091f1a9::t_125352e0e91ae4 1-52
+app/strategy/runner.py
+  s_6e92d23091f1a9::t_c73f829c898621 221-226,271
+app/main.py
+  s_6e92d23091f1a9::t_c73f829c898621 21,67-68,87-89
+app/execution/exchange.py
+  s_6e92d23091f1a9::t_9725ac73a542c4 11-17,22,25,32,61-76,90-97,110-111,113,117-124,126,130-168,170,172-173,178-189,205-207,213,234-236,241-254,260-266,309-310,315-317,344,347-353
+  s_6e92d23091f1a9::t_89309d84a08394 10
+  s_6e92d23091f1a9::t_e6d8ea217d4be3 169,171,174-177
+app/api/trading.py
+  s_6e92d23091f1a9::t_4c27af6a8187b3 147,150
+app/execution/testnet.py
+  s_6e92d23091f1a9::t_4116a50c492d0c 1,3-4,8,16
+tests/test_binance_futures.py
+  s_6e92d23091f1a9::t_2b39d33b46c299 1-4,6-133
+  s_6e92d23091f1a9::t_b754b027ee61d3 5
+app/execution/binance_futures.py
+  s_6e92d23091f1a9::t_ca0fd91a5c4607 1-171,174-218
+  s_6e92d23091f1a9::t_e6d8ea217d4be3 172-173
+app/execution/live.py
+  s_6e92d23091f1a9::t_4116a50c492d0c 1,3-5,11,21
+frontend/src/lib/api.ts
+  s_6e92d23091f1a9::t_c439d1ffcd8371 449-452,470-478
+app/orders/models.py
+  s_6e92d23091f1a9::t_125352e0e91ae4 69-77,101,105-106,108,194
+app/account/service.py
+  s_6e92d23091f1a9::t_7efd8b2881ff34 35-42,119,125-130,137-138,153-154,160-167,171,180,217-280,325-342
+CLAUDE.md
+  s_6e92d23091f1a9::t_e025cadf298d99 11,56,65
+docs/07-Exchange-Smoke-Test.md
+  s_6e92d23091f1a9::t_50d2ab47dffcfd 1-54
+docs/IMPLEMENTATION-PLAN.md
+  s_6e92d23091f1a9::t_3eb7d759fd6d8b 437
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2c19a58047220a716223f8a9e4521f5af8c36b1e",
+  "prompts": {},
+  "sessions": {
+    "s_6e92d23091f1a9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a1865dd1-0606-4277-979b-803256623f08",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
