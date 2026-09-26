@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDownToLine, ArrowUpFromLine, Plus, ShieldAlert, X } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Plus, RefreshCw, ShieldAlert, X } from "lucide-react";
 import {
   createAccount,
   depositAccount,
@@ -9,6 +9,7 @@ import {
   fetchLedger,
   patchAccount,
   resumeAccount,
+  syncAccount,
   withdrawAccount,
   type AccountInfo,
   type AccountSettings,
@@ -16,6 +17,7 @@ import {
 } from "../lib/api";
 import EquityCurve from "../components/backtest/EquityCurve";
 import InfoTip from "../components/InfoTip";
+import ModeBadge from "../components/ModeBadge";
 
 const usd = (n: number | null | undefined, sign = false) =>
   n == null
@@ -69,7 +71,10 @@ export default function Account() {
                 : "border-border text-muted hover:bg-surface-2"
             }`}
           >
-            {a.name}
+            <span className="inline-flex items-center gap-2">
+              {a.mode !== "PAPER" && <ModeBadge mode={a.mode} />}
+              {a.name}
+            </span>
             <span className="ml-2 text-xs tabular-nums text-faint">{usd(a.equity)} {a.currency}</span>
           </button>
         ))}
@@ -77,7 +82,7 @@ export default function Account() {
           onClick={() => setCreating(true)}
           className="flex items-center gap-1 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-2"
         >
-          <Plus className="h-4 w-4" /> Tài khoản paper mới
+          <Plus className="h-4 w-4" /> Tài khoản mới
         </button>
       </div>
 
@@ -176,7 +181,7 @@ function AccountView({ acc, onChange }: { acc: AccountInfo; onChange: () => void
           <Equity id={acc.id} />
         </section>
         <section className="rounded-xl border border-border bg-surface p-4">
-          <MoneyForm acc={acc} onChange={onChange} />
+          {acc.is_exchange ? <ExchangePanel acc={acc} onChange={onChange} /> : <MoneyForm acc={acc} onChange={onChange} />}
         </section>
       </div>
 
@@ -248,6 +253,43 @@ function Equity({ id }: { id: number }) {
       ) : (
         <p className="py-10 text-center text-sm text-faint">Chưa đủ dữ liệu để vẽ.</p>
       )}
+    </>
+  );
+}
+
+function ExchangePanel({ acc, onChange }: { acc: AccountInfo; onChange: () => void }) {
+  const sync = useMutation({ mutationFn: () => syncAccount(acc.id), onSuccess: onChange });
+  return (
+    <>
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+        Đồng bộ Binance Futures <ModeBadge mode={acc.mode} />
+      </h2>
+      <div className="space-y-2 text-sm">
+        <p className="text-muted">
+          Số dư, ký quỹ, lãi tạm lấy từ sàn; lãi/lỗ, phí, funding, chuyển tiền nhập từ lịch sử income của sàn
+          (tự động mỗi 15 giây).
+        </p>
+        <p className="text-xs text-faint">
+          Lần cuối: {acc.last_sync_at ? new Date(acc.last_sync_at).toLocaleString() : "chưa đồng bộ"}
+        </p>
+        {acc.sync_error && (
+          <p className="rounded-md border border-down/40 bg-down/10 px-2 py-1.5 text-xs text-down">
+            Lỗi kết nối sàn: {acc.sync_error}
+          </p>
+        )}
+        <button
+          onClick={() => sync.mutate()}
+          disabled={sync.isPending}
+          className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface-2 disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} /> Đồng bộ ngay
+        </button>
+        {sync.isError && <p className="text-xs text-down">{(sync.error as Error).message}</p>}
+        <p className="text-xs text-faint">
+          Nạp/rút: chuyển USDT Spot ↔ USDⓈ-M Futures trên Binance — sổ cái ghi nhận tự động.
+          {acc.mode === "LIVE" && " ⚠️ Tài khoản TIỀN THẬT."}
+        </p>
+      </div>
     </>
   );
 }
@@ -337,12 +379,14 @@ const toForm = (s: AccountSettings): FormVals =>
   ) as FormVals;
 
 function SettingsForm({ acc, onChange }: { acc: AccountInfo; onChange: () => void }) {
+  // tài khoản sàn: trượt giá là thật (không mô phỏng); phí chỉ để ước tính lãi tạm
+  const fields = acc.is_exchange ? FIELDS.filter((f) => f.k !== "slippage_bps") : FIELDS;
   const [vals, setVals] = useState<FormVals>(() => toForm(acc.settings));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const save = useMutation({
     mutationFn: () => {
       const body: Record<string, number | null> = {};
-      for (const f of FIELDS) {
+      for (const f of fields) {
         const raw = vals[f.k].trim();
         if (raw === "") {
           if (f.optional) body[f.k] = null; // bỏ trống = tắt rào chắn
@@ -361,12 +405,17 @@ function SettingsForm({ acc, onChange }: { acc: AccountInfo; onChange: () => voi
   });
   return (
     <>
-      <h2 className="mb-1 text-sm font-semibold">Mô phỏng sàn & rào chắn rủi ro</h2>
+      <h2 className="mb-1 text-sm font-semibold">
+        {acc.is_exchange ? "Đòn bẩy & rào chắn rủi ro" : "Mô phỏng sàn & rào chắn rủi ro"}
+      </h2>
       <p className="mb-3 text-xs text-faint">
-        Mô phỏng Binance USDT-M Futures. Bỏ trống ô rào chắn = tắt. Lệnh đang mở giữ nguyên cấu hình lúc vào.
+        {acc.is_exchange
+          ? "Đòn bẩy được đặt lên sàn trước mỗi lệnh. Phí chỉ dùng ước tính lãi tạm — phí thật lấy từ sàn."
+          : "Mô phỏng Binance USDT-M Futures. Lệnh đang mở giữ nguyên cấu hình lúc vào."}{" "}
+        Bỏ trống ô rào chắn = tắt.
       </p>
       <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3 xl:grid-cols-5">
-        {FIELDS.map((f) => (
+        {fields.map((f) => (
           <label key={f.k} className="flex flex-col gap-1">
             <span className="text-xs text-faint">
               <InfoTip text={f.tip} align="left">{f.label}</InfoTip>
@@ -447,16 +496,27 @@ function Ledger({ id, currency }: { id: number; currency: string }) {
 
 function CreateAccount({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
+  const [mode, setMode] = useState("PAPER");
   const [bal, setBal] = useState("1000");
   const [lev, setLev] = useState("1");
+  const [confirm, setConfirm] = useState("");
+  const paper = mode === "PAPER";
   const create = useMutation({
-    mutationFn: () => createAccount({ name, initial_balance: Number(bal), leverage: Number(lev) }),
+    mutationFn: () =>
+      createAccount({
+        name,
+        mode,
+        initial_balance: paper ? Number(bal) : null,
+        leverage: Number(lev),
+        ...(mode === "LIVE" ? { confirm } : {}),
+      }),
     onSuccess: onDone,
   });
+  const ok = name.trim() && (!paper || Number(bal) > 0) && (mode !== "LIVE" || confirm === "LIVE");
   return (
     <section className="rounded-xl border border-accent/40 bg-surface p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Tạo tài khoản paper</h2>
+        <h2 className="text-sm font-semibold">Tạo tài khoản</h2>
         <button onClick={onDone} className="rounded p-1 text-muted hover:bg-surface-2">
           <X className="h-4 w-4" />
         </button>
@@ -472,15 +532,39 @@ function CreateAccount({ onDone }: { onDone: () => void }) {
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-faint">Vốn ban đầu (USDT)</span>
-          <input
-            type="number"
-            min={0}
-            value={bal}
-            onChange={(e) => setBal(e.target.value)}
-            className="w-32 rounded-md border border-border bg-surface-2 px-2 py-1.5"
-          />
+          <span className="text-xs text-faint">Loại</span>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+            className="rounded-md border border-border bg-surface-2 px-2 py-1.5"
+          >
+            <option value="PAPER">PAPER (giả lập)</option>
+            <option value="TESTNET">TESTNET (Binance Futures testnet)</option>
+            <option value="LIVE">LIVE (tiền thật)</option>
+          </select>
         </label>
+        {paper && (
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-faint">Vốn ban đầu (USDT)</span>
+            <input
+              type="number"
+              min={0}
+              value={bal}
+              onChange={(e) => setBal(e.target.value)}
+              className="w-32 rounded-md border border-border bg-surface-2 px-2 py-1.5"
+            />
+          </label>
+        )}
+        {mode === "LIVE" && (
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-down">Gõ LIVE để xác nhận</span>
+            <input
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              className="w-28 rounded-md border border-down/60 bg-surface-2 px-2 py-1.5"
+            />
+          </label>
+        )}
         <label className="flex flex-col gap-1">
           <span className="text-xs text-faint">Đòn bẩy</span>
           <input
@@ -493,7 +577,7 @@ function CreateAccount({ onDone }: { onDone: () => void }) {
           />
         </label>
         <button
-          disabled={!name.trim() || !(Number(bal) > 0) || create.isPending}
+          disabled={!ok || create.isPending}
           onClick={() => create.mutate()}
           className="rounded-md bg-accent px-3 py-1.5 font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
         >
@@ -501,7 +585,9 @@ function CreateAccount({ onDone }: { onDone: () => void }) {
         </button>
       </div>
       <p className="mt-2 text-xs text-faint">
-        Mặc định: phí 0.05%/0.02%, trượt 2 bps, rủi ro tối đa 2%/lệnh, tổng rủi ro mở 6%, lỗ ngày 3%, sụt vốn 15%. Chỉnh sau trong phần cấu hình.
+        {paper
+          ? "Mặc định: phí 0.05%/0.02%, trượt 2 bps, rủi ro tối đa 2%/lệnh, tổng rủi ro mở 6%, lỗ ngày 3%, sụt vốn 15%. Chỉnh sau trong phần cấu hình."
+          : `Số dư lấy từ ví USDⓈ-M Futures trên Binance ${mode === "TESTNET" ? "testnet" : "(TIỀN THẬT)"} bằng key trong .env (${mode === "TESTNET" ? "BINANCE_TESTNET_KEY/SECRET" : "BINANCE_KEY/SECRET + ENABLE_LIVE=1"}). Mỗi loại chỉ 1 tài khoản. Rào chắn mặc định như paper.`}
       </p>
       {create.isError && <p className="mt-2 text-xs text-down">{(create.error as Error).message}</p>}
     </section>

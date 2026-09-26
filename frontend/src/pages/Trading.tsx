@@ -39,10 +39,12 @@ export default function Trading() {
   const { data: methods } = useQuery({ queryKey: ["sizing-methods"], queryFn: fetchSizingMethods });
   const [accountId, setAccountId] = useState<number | "">("");
   const [sizing, setSizing] = useState<Sizing>({ method: "risk_pct", value: 1 });
-  const paperAccounts = (accounts ?? []).filter((a) => a.mode === mode);
+  const modeAccounts = (accounts ?? []).filter((a) => a.mode === mode);
   useEffect(() => {
-    if (accountId === "" && paperAccounts.length) setAccountId(paperAccounts[0].id);
-  }, [paperAccounts, accountId]);
+    // đổi mode → chọn tài khoản đầu tiên cùng mode (hoặc bỏ trống nếu chưa có)
+    if (!modeAccounts.some((a) => a.id === accountId))
+      setAccountId(modeAccounts.length ? modeAccounts[0].id : "");
+  }, [modeAccounts, accountId]);
 
   const selectedStrat = strategies?.find((s) => s.id === stratId);
   // symbol từ scanner (?symbol=) có thể ngoài watchlist → thêm vào options.
@@ -82,7 +84,7 @@ export default function Trading() {
         mode,
         params,
         confirm,
-        ...(mode === "PAPER" && accountId !== "" ? { account_id: accountId, sizing } : {}),
+        ...(accountId !== "" ? { account_id: accountId, sizing } : {}),
       }),
     onSuccess: () => {
       setShowLiveModal(false);
@@ -105,7 +107,7 @@ export default function Trading() {
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
       {/* Tạo bot */}
       <section className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Tạo bot (PAPER)</h2>
+        <h2 className="mb-3 text-sm font-semibold">Tạo bot</h2>
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Strategy">
             <select
@@ -153,7 +155,7 @@ export default function Trading() {
               <option>LIVE</option>
             </select>
           </Field>
-          {mode === "PAPER" && (
+          {modeAccounts.length > 0 && (
             <>
               <Field label="Tài khoản">
                 <select
@@ -161,7 +163,7 @@ export default function Trading() {
                   onChange={(e) => setAccountId(Number(e.target.value))}
                   className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
                 >
-                  {paperAccounts.map((a) => (
+                  {modeAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} ({Math.round(a.equity).toLocaleString("en-US")} {a.currency})
                     </option>

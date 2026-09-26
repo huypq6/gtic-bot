@@ -32,6 +32,14 @@ def limits_of(a: Account) -> Limits:
     )
 
 
+def is_exchange(a: Account) -> bool:
+    return a.mode in ("TESTNET", "LIVE")
+
+
+# income type của Binance Futures → loại sổ cái
+_INCOME = {"REALIZED_PNL": "REALIZED_PNL", "COMMISSION": "FEE", "FUNDING_FEE": "FUNDING"}
+
+
 def day_start(now: datetime) -> datetime:
     return now.replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -108,19 +116,26 @@ class AccountService:
                 await s.execute(
                     select(func.coalesce(func.sum(AccountTxn.amount), 0)).where(
                         AccountTxn.account_id == account_id, AccountTxn.ts >= d0,
-                        AccountTxn.type.in_(("REALIZED_PNL", "FEE")),
+                        AccountTxn.type.in_(("REALIZED_PNL", "FEE", "FUNDING")),
                     )
                 )
             ).scalar_one()
             balance = float(a.balance)
             equity = balance + upnl
+            avail = None
+            if is_exchange(a):  # số liệu của SÀN (lần đồng bộ cuối) là chuẩn
+                upnl = float(a.exch_unrealized or 0)
+                equity = float(a.exch_equity) if a.exch_equity is not None else balance + upnl
+                margin = float(a.exch_margin or 0)
+                avail = float(a.exch_available) if a.exch_available is not None else None
             peak = max(float(a.peak_equity), equity)
             if peak > float(a.peak_equity):
                 a.peak_equity = peak
                 await s.commit()
         return AccountState(
             balance=balance, equity=equity, used_margin=margin,
-            available=equity - margin, open_risk=risk, n_open=len(pos),
+            available=avail if avail is not None else equity - margin,
+            open_risk=risk, n_open=len(pos),
             daily_pnl=float(realized_today) + upnl,
             day_start_balance=float(day_bal) if day_bal is not None else balance,
             peak_equity=peak,
@@ -135,15 +150,25 @@ class AccountService:
         ).scalar_one()
         new_bal = float(a.balance) + amount
         a.balance = new_bal
-        if type_ in ("DEPOSIT", "WITHDRAW"):  # nạp/rút không phải lãi/lỗ → dời đỉnh theo
+        # nạp/rút (và số dư ban đầu của sàn) không phải lãi/lỗ → dời đỉnh theo
+        if type_ in ("DEPOSIT", "WITHDRAW") or kw.get("note") == "Số dư ban đầu trên sàn":
             a.peak_equity = max(0.0, float(a.peak_equity) + amount)
         s.add(AccountTxn(account_id=account_id, type=type_, amount=amount,
                          balance_after=new_bal, **kw))
         return new_bal
 
+    async def _paper_only(self, account_id: int) -> None:
+        a = await self.get(account_id)
+        if a is not None and is_exchange(a):
+            raise ValueError(
+                "tài khoản sàn: nạp/rút thực hiện trên Binance (chuyển Spot ↔ Futures); "
+                "số dư tự đồng bộ về đây"
+            )
+
     async def deposit(self, account_id: int, amount: float, note: str | None = None) -> float:
         if amount <= 0:
             raise ValueError("số tiền nạp phải > 0")
+        await self._paper_only(account_id)
         async with self._sf() as s:
             bal = await self._post(s, account_id, "DEPOSIT", amount, note=note)
             await s.commit()
@@ -152,6 +177,7 @@ class AccountService:
     async def withdraw(self, account_id: int, amount: float, note: str | None = None) -> float:
         if amount <= 0:
             raise ValueError("số tiền rút phải > 0")
+        await self._paper_only(account_id)
         async with self.lock(account_id):
             st = await self.snapshot(account_id)
             if amount > st.available + 1e-9:
@@ -187,6 +213,70 @@ class AccountService:
                                  bot_id=bot_id, symbol=symbol, note="phí đóng lệnh")
             await s.commit()
         await self.enforce(account_id)
+
+    # ---------- tài khoản sàn (P9b) ----------
+    async def sync_exchange(self, account_id: int, client=None) -> None:
+        """Đọc số dư/ký quỹ/lãi tạm từ sàn + nhập income history vào sổ cái.
+
+        Lần đầu: 1 dòng "số dư ban đầu trên sàn" (không kéo lịch sử cũ). Sau đó nhập từng
+        dòng income (REALIZED_PNL, COMMISSION, FUNDING_FEE, TRANSFER…) theo `income_cursor`,
+        chống trùng bằng ext_id. Cuối cùng đối chiếu: số dư sổ ≠ ví sàn → dòng ADJUST.
+        Lỗi mạng/key → lưu `sync_error`, không raise (vòng đồng bộ chạy tiếp).
+        """
+        a = await self.get(account_id)
+        if a is None or not is_exchange(a):
+            return
+        try:
+            if client is None:
+                from app.execution.clients import exchange_client
+
+                client = await exchange_client(a.mode)
+            snap = await client.account()
+            rows = await client.income(int(a.income_cursor) + 1) if a.income_cursor else []
+        except Exception as e:  # noqa: BLE001
+            async with self._sf() as s:
+                row = await s.get(Account, account_id)
+                row.sync_error = str(e)[:500]
+                row.last_sync_at = datetime.now(UTC)
+                await s.commit()
+            logger.warning("đồng bộ tài khoản sàn %s lỗi: %s", account_id, e)
+            return
+
+        now = datetime.now(UTC)
+        async with self._sf() as s:
+            if a.income_cursor is None:  # lần đầu
+                await self._post(s, account_id, "ADJUST", snap["wallet"] - float(a.balance),
+                                 note="Số dư ban đầu trên sàn", ts=now)
+                cursor = int(now.timestamp() * 1000)
+            else:
+                cursor = int(a.income_cursor)
+                seen = set((await s.execute(
+                    select(AccountTxn.ext_id).where(
+                        AccountTxn.account_id == account_id,
+                        AccountTxn.ext_id.in_([r["ext_id"] for r in rows] or [""]),
+                    )
+                )).scalars())
+                for r in sorted(rows, key=lambda x: x["ts"]):
+                    cursor = max(cursor, r["ts"])
+                    if r["ext_id"] in seen or (r.get("asset") and r["asset"] != a.currency):
+                        continue
+                    typ = _INCOME.get(r["type"])
+                    if r["type"] == "TRANSFER":
+                        typ = "DEPOSIT" if r["amount"] > 0 else "WITHDRAW"
+                    await self._post(
+                        s, account_id, typ or "ADJUST", r["amount"], symbol=r.get("symbol"),
+                        note=None if typ else r["type"], ext_id=r["ext_id"],
+                        ts=datetime.fromtimestamp(r["ts"] / 1000, tz=UTC),
+                    )
+            row = await s.get(Account, account_id)
+            diff = snap["wallet"] - float(row.balance)
+            if abs(diff) > 1e-6:  # income chưa về/bị giới hạn → khớp theo ví sàn
+                await self._post(s, account_id, "ADJUST", diff, note="Đối chiếu số dư sàn", ts=now)
+            row.income_cursor = cursor
+            row.exch_equity, row.exch_unrealized = snap["equity"], snap["unrealized"]
+            row.exch_margin, row.exch_available = snap["margin"], snap["available"]
+            row.last_sync_at, row.sync_error = now, None
+            await s.commit()
 
     # ---------- rào chắn ----------
     async def enforce(self, account_id: int) -> str | None:
@@ -232,3 +322,21 @@ class AccountService:
             a = await s.get(Account, account_id)
             a.peak_equity = st.equity
             await s.commit()
+
+
+async def run_exchange_sync(service: AccountService, interval: float = 15.0) -> None:
+    """Vòng nền: đồng bộ mọi tài khoản TESTNET/LIVE mỗi `interval` giây + kiểm rào chắn."""
+    while True:
+        try:
+            async with service._sf() as s:
+                ids = list((await s.execute(
+                    select(Account.id).where(Account.mode.in_(("TESTNET", "LIVE")))
+                )).scalars())
+            for aid in ids:
+                await service.sync_exchange(aid)
+                await service.enforce(aid)
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001
+            logger.exception("vòng đồng bộ tài khoản sàn lỗi")
+        await asyncio.sleep(interval)

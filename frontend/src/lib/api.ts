@@ -446,6 +446,10 @@ export interface AccountInfo {
   total_pnl_pct: number | null;
   total_fees: number;
   n_bots: number;
+  market: string;
+  is_exchange: boolean; // TESTNET/LIVE: số liệu đồng bộ từ Binance Futures
+  last_sync_at: string | null;
+  sync_error: string | null;
 }
 
 export interface LedgerRow {
@@ -463,8 +467,15 @@ export interface LedgerRow {
 export const fetchAccounts = () => getJson<AccountInfo[]>("/api/accounts");
 export const fetchSizingMethods = () =>
   getJson<Record<string, string>>("/api/accounts/sizing-methods");
-export const createAccount = (body: Partial<AccountSettings> & { name: string; initial_balance: number }) =>
-  sendJson<AccountInfo>("POST", "/api/accounts", body);
+export const createAccount = (
+  body: Partial<AccountSettings> & {
+    name: string;
+    mode?: string;
+    initial_balance?: number | null;
+    confirm?: string;
+  },
+) => sendJson<AccountInfo>("POST", "/api/accounts", body);
+export const syncAccount = (id: number) => sendJson<AccountInfo>("POST", `/api/accounts/${id}/sync`);
 export const patchAccount = (id: number, body: Partial<AccountSettings> & { name?: string }) =>
   sendJson<AccountInfo>("PATCH", `/api/accounts/${id}`, body);
 export const depositAccount = (id: number, amount: number, note?: string) =>

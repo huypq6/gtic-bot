@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.account.risk import SIZING_METHODS
+from app.account.service import is_exchange
 from app.db import get_session
 from app.orders.models import Account, AccountTxn, Bot, PositionModel
 
@@ -61,6 +62,10 @@ async def _account_dict(request: Request, session: AsyncSession, a: Account) -> 
         "total_pnl_pct": (st.equity - net_in) / net_in * 100 if net_in > 0 else None,
         "total_fees": -float(fees),
         "n_bots": n_bots,
+        "market": a.market,
+        "is_exchange": is_exchange(a),
+        "last_sync_at": a.last_sync_at.isoformat() if a.last_sync_at else None,
+        "sync_error": a.sync_error,
     }
 
 
@@ -101,7 +106,9 @@ class Settings(BaseModel):
 
 class CreateAccount(Settings):
     name: str = Field(min_length=1, max_length=60)
-    initial_balance: float = Field(gt=0)
+    mode: str = "PAPER"  # PAPER | TESTNET | LIVE
+    initial_balance: float | None = Field(None, gt=0)  # PAPER: bắt buộc; sàn: lấy từ Binance
+    confirm: str | None = None  # LIVE: phải gõ "LIVE"
 
 
 class PatchAccount(Settings):
@@ -118,19 +125,39 @@ _DEFAULT_LIMITS = {"max_risk_pct": 2, "max_open_risk_pct": 6, "daily_loss_pct": 
 async def create_account(
     body: CreateAccount, request: Request, session: AsyncSession = Depends(get_session)
 ) -> dict:
+    mode = body.mode.upper()
+    if mode not in ("PAPER", "TESTNET", "LIVE"):
+        raise HTTPException(400, f"mode {mode} không hợp lệ")
+    if mode == "PAPER" and not body.initial_balance:
+        raise HTTPException(422, "tài khoản paper cần vốn ban đầu")
+    if mode != "PAPER":
+        from app.execution.clients import check_mode
+
+        try:
+            check_mode(mode)  # LIVE: ENABLE_LIVE; cả 2: có key trong .env
+        except ValueError as e:
+            raise HTTPException(403 if mode == "LIVE" else 400, str(e)) from e
+        if mode == "LIVE" and body.confirm != "LIVE":
+            raise HTTPException(400, "tài khoản LIVE (tiền thật) cần xác nhận gõ 'LIVE'")
+        exists = (await session.execute(select(Account.id).where(Account.mode == mode))).first()
+        if exists:
+            raise HTTPException(409, f"đã có tài khoản {mode} (1 cặp key/mode)")
     vals = {k: v for k, v in body.model_dump().items()
-            if k not in ("name", "initial_balance") and v is not None}
+            if k not in ("name", "initial_balance", "mode", "confirm") and v is not None}
     a = Account(
-        name=body.name, mode="PAPER", balance=0, peak_equity=0,
+        name=body.name, mode=mode, balance=0, peak_equity=0,
         **{**_DEFAULT_LIMITS, **vals},
     )
     session.add(a)
     await session.commit()
-    await request.app.state.accounts.deposit(a.id, body.initial_balance, "Vốn ban đầu")
     await request.app.state.order_manager.write_audit(
-        source="MANUAL", action="ACCOUNT_CREATE", mode="PAPER",
+        source="MANUAL", action="ACCOUNT_CREATE", mode=mode,
         detail={"account_id": a.id, "name": a.name, "initial_balance": body.initial_balance},
     )
+    if mode == "PAPER":
+        await request.app.state.accounts.deposit(a.id, body.initial_balance, "Vốn ban đầu")
+    else:  # đọc số dư thật ngay (lỗi kết nối → sync_error, vẫn tạo tài khoản)
+        await request.app.state.accounts.sync_exchange(a.id)
     await session.refresh(a)
     return await _account_dict(request, session, a)
 
@@ -188,6 +215,23 @@ async def deposit(account_id: int, body: Money, request: Request) -> dict:
 @router.post("/accounts/{account_id}/withdraw")
 async def withdraw(account_id: int, body: Money, request: Request) -> dict:
     return await _move(request, account_id, body, "WITHDRAW")
+
+
+@router.post("/accounts/{account_id}/sync")
+async def sync_now(
+    account_id: int, request: Request, session: AsyncSession = Depends(get_session)
+) -> dict:
+    """Đồng bộ ngay số dư/sổ cái từ Binance (tài khoản TESTNET/LIVE)."""
+    accounts = request.app.state.accounts
+    a = await accounts.get(account_id)
+    if not a:
+        raise HTTPException(404, "tài khoản không tồn tại")
+    if not is_exchange(a):
+        raise HTTPException(400, "tài khoản paper không cần đồng bộ")
+    await accounts.sync_exchange(account_id)
+    a = await session.get(Account, account_id)
+    await session.refresh(a)
+    return await _account_dict(request, session, a)
 
 
 @router.post("/accounts/{account_id}/resume")

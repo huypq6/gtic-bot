@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.account.service import AccountService
+from app.account.service import AccountService, run_exchange_sync
 from app.api.accounts import router as accounts_router
 from app.api.backtest import router as backtest_router
 from app.api.routes import router as api_router
@@ -64,6 +64,8 @@ async def lifespan(app: FastAPI):
 
     tasks = [
         asyncio.create_task(gateway.track_feed_status(), name="feed-status-tracker"),
+        # P9b: số dư/sổ cái tài khoản TESTNET/LIVE từ sàn (không có tài khoản sàn → no-op)
+        asyncio.create_task(run_exchange_sync(accounts), name="exchange-account-sync"),
     ]
     if settings.feed_autostart:
         tasks.append(asyncio.create_task(feed.run(), name="market-feed"))
@@ -82,6 +84,9 @@ async def lifespan(app: FastAPI):
     finally:
         await bot_manager.stop_all()
         await manual_trader.stop_all()
+        from app.execution.clients import close_all
+
+        await close_all()
         feed.stop()
         for t in tasks:
             t.cancel()

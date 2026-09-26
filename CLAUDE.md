@@ -8,7 +8,7 @@ Web app trading bot cho sàn **Binance**, **single-user**, self-hosted. Mục ti
 
 ## Quyết định đã chốt (KHÔNG đổi nếu không có lý do)
 1. **Python thuần**, single process, FastAPI + asyncio. Không Go, không microservice, không NATS/Kafka.
-2. **Một sàn: Binance** → dùng `python-binance` (không ccxt).
+2. **Một sàn: Binance** → dùng `python-binance` (không ccxt). Testnet/Live = **USDⓈ-M Futures** (P9b; strategy có SHORT, paper/backtest mô phỏng Futures).
 3. **Postgres + TimescaleDB** (hypertable cho klines).
 4. **Chart: lightweight-charts trước**, swap TradingView Charting Library sau (khi có public URL + được duyệt repo). Cô lập qua datafeed adapter.
 5. **Strategy file-based**, sửa ngoài app (trong repo/IDE). App chỉ load & chạy. UI chỉ chỉnh params + chọn version, KHÔNG có code editor trong app.
@@ -53,7 +53,7 @@ docker-compose.yml        # app + postgres(timescale)
 - P6 Testnet integration
 - P7 Scanner đề xuất cặp
 - P8 Live + rào chắn an toàn
-- P9 Tài khoản + quản lý vốn (P9a Paper ✅ · P9b Testnet/Live số dư thật · P9c Backtest mô phỏng tài khoản ✅)
+- P9 Tài khoản + quản lý vốn (P9a Paper ✅ · P9b Testnet/Live Futures — code xong, chờ smoke test key thật, xem docs/07 · P9c Backtest mô phỏng tài khoản ✅)
 
 ## NFR bắt buộc
 - Realtime < 1s: Binance WS (không poll) → EventBus → WS gateway.
@@ -62,7 +62,7 @@ docker-compose.yml        # app + postgres(timescale)
 - Responsive: desktop + mobile.
 
 ## An toàn (quan trọng)
-- `.env` KHÔNG commit (đưa vào .gitignore). API key chỉ trong env.
+- `.env` KHÔNG commit (đưa vào .gitignore). API key chỉ trong env. Key live: chỉ Futures + Reading, tắt rút tiền.
 - Live key: tắt quyền rút tiền, whitelist IP VPS.
 - Mọi lệnh (bot + tay) ghi `audit_log` TRƯỚC khi gọi sàn.
 - Mode LIVE chỉ chạy khi `ENABLE_LIVE=1` + modal confirm gõ "LIVE".

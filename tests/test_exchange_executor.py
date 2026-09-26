@@ -5,6 +5,8 @@ Không cần key thật: dùng FakeClient + FakeBus + fake session_factory (no-o
 
 import asyncio
 
+import pytest
+
 from app.execution.exchange import ExchangeExecutor
 from app.strategy.base import Signal
 
@@ -132,3 +134,101 @@ async def test_manual_cancel_calls_exchange():
     ex, _, _ = make_exec(client)
     await ex.cancel("ext123")
     assert ("cancel", "BTCUSDT", "ext123") in client.calls
+
+
+# ---- P9b: client Futures (SL/TP trên sàn, reduceOnly, đối chiếu vị thế sàn) ----
+class FakeFutures(FakeClient):
+    def __init__(self, price=100.0):
+        super().__init__(price)
+        self.amt = 0.0  # vị thế trên "sàn"
+        self.fail_protect = False
+        self.close_fill = None
+
+    async def market_order(self, symbol, side, qty, reduce_only=False):
+        self.calls.append(("market", symbol, side, qty, reduce_only))
+        self.amt += qty if side == "BUY" else -qty
+        return {"orderId": self._id(), "price": self.price, "status": "FILLED", "qty": qty}
+
+    async def ensure_leverage(self, symbol, lev):
+        self.calls.append(("lev", symbol, lev))
+
+    async def protect(self, symbol, side, sl, tp):
+        self.calls.append(("protect", side, sl, tp))
+        if self.fail_protect:
+            raise RuntimeError("algo order rejected")
+        return {"sl": "a1" if sl else None, "tp": "a2" if tp else None}
+
+    async def cancel_protection(self, symbol, ids):
+        self.calls.append(("unprotect", dict(ids or {})))
+
+    async def position(self, symbol):
+        return {"amt": self.amt, "entry": 100.0}
+
+    async def last_close_fill(self, symbol, since):
+        return self.close_fill
+
+
+def fx(price=100.0):
+    c = FakeFutures(price)
+    ex, bus, store = make_exec(c)
+    ex.reconcile_every = 0  # đối chiếu mỗi tick trong test
+    return c, ex, bus
+
+
+async def test_futures_open_sets_leverage_and_exchange_sltp():
+    c, ex, _ = fx()
+    ex.engine.leverage = 5
+    await ex.submit(Signal("BUY", "BTCUSDT", size=1, sl=95, tp=110))
+    assert ("lev", "BTCUSDT", 5) in c.calls
+    assert ("protect", "LONG", 95, 110) in c.calls
+    assert ex._protect == {"sl": "a1", "tp": "a2"}
+
+
+async def test_futures_no_client_close_when_exchange_protects():
+    c, ex, _ = fx()
+    await ex.submit(Signal("BUY", "BTCUSDT", size=1, sl=95, tp=110))
+    n = len(c.calls)
+    await ex.on_price(94)  # sàn có STOP_MARKET → app KHÔNG tự bắn lệnh đóng (tránh đóng 2 lần)
+    assert not any(x[0] == "market" for x in c.calls[n:])
+
+
+async def test_futures_reconcile_detects_exchange_sl_fill():
+    c, ex, bus = fx()
+    await ex.submit(Signal("BUY", "BTCUSDT", size=1, sl=95, tp=110))
+    c.amt = 0.0  # SL đã khớp trên sàn
+    c.close_fill = {"orderId": "x9", "price": 94.9, "qty": 1, "fee": 0.05,
+                    "realized": -5.1, "ts": 1}
+    await ex.on_price(94.8)
+    assert ex.engine.position is None
+    closed = [m for _, m in bus.msgs if m.get("status") == "CLOSED"][-1]
+    assert closed["reason"] == "SL" and closed["price"] == 94.9
+    assert closed["pnl"] == pytest.approx(-5.1 - 0.05)  # số liệu thật của sàn
+    assert ("unprotect", {"sl": "a1", "tp": "a2"}) in c.calls  # hủy chân TP còn lại
+
+
+async def test_futures_flip_closes_reduce_only_then_opens():
+    c, ex, _ = fx()
+    await ex.submit(Signal("BUY", "BTCUSDT", size=1, sl=95))
+    await ex.submit(Signal("SELL", "BTCUSDT", size=2, sl=105))
+    markets = [x for x in c.calls if x[0] == "market"]
+    assert markets[1] == ("market", "BTCUSDT", "SELL", 1, True)  # đóng LONG, reduceOnly
+    assert markets[2] == ("market", "BTCUSDT", "SELL", 2, False)  # mở SHORT
+    assert ex.engine.position.side == "SHORT" and c.amt == -2
+
+
+async def test_futures_modify_sltp_replaces_exchange_orders():
+    c, ex, _ = fx()
+    await ex.submit(Signal("BUY", "BTCUSDT", size=1, sl=95, tp=110))
+    await ex.modify_sltp(98, 112)
+    assert ("unprotect", {"sl": "a1", "tp": "a2"}) in c.calls
+    assert ("protect", "LONG", 98, 112) in c.calls
+
+
+async def test_futures_protect_failure_falls_back_to_client_side():
+    c, ex, bus = fx()
+    c.fail_protect = True
+    await ex.submit(Signal("BUY", "BTCUSDT", size=1, sl=95))
+    assert any(t == "risk" for t, _ in bus.msgs)  # cảnh báo người dùng
+    await ex.on_price(94)  # không có SL trên sàn → app tự cắt
+    assert ("market", "BTCUSDT", "SELL", 1, True) in c.calls
+    assert ex.engine.position is None

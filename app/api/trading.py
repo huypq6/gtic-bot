@@ -144,12 +144,10 @@ def _check_sizing(sz: Sizing | None) -> dict | None:
 async def _check_account(session: AsyncSession, account_id: int | None, mode: str) -> int | None:
     from app.orders.models import Account
 
-    if account_id is None:
-        if mode != "PAPER":
-            return None  # TESTNET/LIVE: P9b
+    if account_id is None:  # mặc định: tài khoản đầu tiên cùng mode (sàn: duy nhất)
         acc = (
             await session.execute(
-                select(Account).where(Account.mode == "PAPER").order_by(Account.id).limit(1)
+                select(Account).where(Account.mode == mode).order_by(Account.id).limit(1)
             )
         ).scalar_one_or_none()
         return acc.id if acc else None

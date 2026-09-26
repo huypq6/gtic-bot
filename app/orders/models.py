@@ -66,6 +66,15 @@ class Account(Base):
     status: Mapped[str] = mapped_column(String, nullable=False, default="ACTIVE")
     halted_reason: Mapped[str | None] = mapped_column(String)
     halted_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # P9b — tài khoản sàn (TESTNET/LIVE): số liệu đọc từ Binance Futures (cache lần đồng bộ cuối)
+    market: Mapped[str] = mapped_column(String, nullable=False, default="FUTURES")
+    exch_equity: Mapped[float | None] = mapped_column(Numeric)
+    exch_unrealized: Mapped[float | None] = mapped_column(Numeric)
+    exch_margin: Mapped[float | None] = mapped_column(Numeric)
+    exch_available: Mapped[float | None] = mapped_column(Numeric)
+    income_cursor: Mapped[int | None] = mapped_column(BigInteger)  # ms, đã nhập sổ tới đây
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sync_error: Mapped[str | None] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
@@ -89,11 +98,14 @@ class AccountTxn(Base):
     bot_id: Mapped[int | None] = mapped_column(Integer)
     symbol: Mapped[str | None] = mapped_column(String)
     note: Mapped[str | None] = mapped_column(String)
+    ext_id: Mapped[str | None] = mapped_column(String)  # id income của sàn (chống nhập trùng)
 
     __table_args__ = (
         CheckConstraint(
-            "type IN ('DEPOSIT','WITHDRAW','REALIZED_PNL','FEE','ADJUST')", name="ck_txn_type"
+            "type IN ('DEPOSIT','WITHDRAW','REALIZED_PNL','FEE','FUNDING','ADJUST')",
+            name="ck_txn_type",
         ),
+        UniqueConstraint("account_id", "ext_id", name="uq_txn_ext"),
     )
 
 
@@ -179,6 +191,7 @@ class PositionModel(Base):
     fee: Mapped[float | None] = mapped_column(Numeric)  # tổng phí vào + ra (USDT)
     margin: Mapped[float | None] = mapped_column(Numeric)  # ký quỹ khóa khi mở
     risk_amount: Mapped[float | None] = mapped_column(Numeric)  # USDT mất nếu chạm SL ban đầu
+    ext_protect: Mapped[dict | None] = mapped_column(JSONB)  # {"sl": algoId, "tp": algoId} trên sàn
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

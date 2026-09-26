@@ -218,12 +218,12 @@ class BotManager:
         discover()
         strat = get(strategy_name, strategy_version)(params)
         executor = await self._make_executor(bot_id, symbol, mode, params)
-        if isinstance(executor, PaperExecutor):
-            if self._accounts and account_id is not None:
-                acc = await self._accounts.get(account_id)
-                if acc is not None:
-                    executor.attach_account(acc, self._accounts)
-            await executor.restore_open()  # vị thế còn mở từ trước restart
+        if self._accounts and account_id is not None and hasattr(executor, "attach_account"):
+            acc = await self._accounts.get(account_id)
+            if acc is not None:
+                executor.attach_account(acc, self._accounts)
+        if hasattr(executor, "restore_open"):
+            await executor.restore_open()  # vị thế còn mở từ trước restart (paper + sàn)
         executor.trade_meta = {
             "strategy": f"{strategy_name} v{strategy_version}", "tf": tf, "params": dict(params),
         }
@@ -268,7 +268,7 @@ class BotManager:
     def refresh_account(self, account) -> None:
         """Đổi cấu hình tài khoản → áp ngay cho engine các bot đang chạy (lệnh mới)."""
         for r in self._runners.values():
-            if r.account_id == account.id and isinstance(r.executor, PaperExecutor):
+            if r.account_id == account.id and hasattr(r.executor, "attach_account"):
                 r.executor.attach_account(account, self._accounts)
 
     def set_status(self, bot_id: int, status: str) -> None:
