@@ -185,7 +185,8 @@ class ExchangeExecutor(Executor):
         async with self._sf() as s:
             pos = PositionModel(
                 bot_id=self.bot_id, mode=self.mode, symbol=self.symbol, side=p.side,
-                qty=p.qty, entry_price=p.entry_price, sl=p.sl, tp=p.tp, status="OPEN",
+                qty=p.qty, entry_price=p.entry_price, sl=p.sl, tp=p.tp, init_sl=p.sl, status="OPEN",
+                source=self.source, bot_ref=self.bot_id, **self.trade_meta,
             )
             s.add(pos)
             s.add(
@@ -208,7 +209,7 @@ class ExchangeExecutor(Executor):
                     .where(PositionModel.id == self._pos_db_id)
                     .values(
                         status="CLOSED", exit_price=closed.exit_price, pnl=closed.pnl,
-                        closed_at=datetime.now(UTC),
+                        exit_reason=closed.reason, closed_at=datetime.now(UTC),
                     )
                 )
             await s.commit()

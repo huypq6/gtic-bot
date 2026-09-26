@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
-import { fetchOrders, type OrderRow } from "../lib/api";
+import { fetchBots, fetchOrders, type OrderRow } from "../lib/api";
 import ModeBadge from "../components/ModeBadge";
 import PositionsTable from "../components/orders/PositionsTable";
+import TradesTable from "../components/orders/TradesTable";
 
 const STATUS_CLS: Record<string, string> = {
   FILLED: "text-up",
@@ -38,6 +39,12 @@ export default function Orders() {
     queryFn: () => fetchOrders({ mode, source, status, symbol }),
     refetchInterval: 4000,
   });
+  const { data: bots } = useQuery({ queryKey: ["bots"], queryFn: fetchBots });
+  const botName = (id: number | null) => {
+    if (id == null) return "—";
+    const b = bots?.find((x) => x.id === id);
+    return b ? `#${id} ${b.strategy ?? ""} · ${b.tf}` : `#${id}`;
+  };
 
   const exportCsv = () => {
     const blob = new Blob([toCsv(orders ?? [])], { type: "text/csv" });
@@ -57,10 +64,16 @@ export default function Orders() {
         <PositionsTable />
       </section>
 
-      {/* Lịch sử lệnh — phân tích */}
+      {/* Kết quả từng lệnh (1 vị thế = 1 lệnh) — bấm dòng để xem biểu đồ review */}
+      <section className="rounded-xl border border-border bg-surface p-4">
+        <h2 className="mb-3 text-sm font-semibold">Kết quả giao dịch (bấm 1 lệnh để review biểu đồ)</h2>
+        <TradesTable />
+      </section>
+
+      {/* Lịch sử lệnh khớp (từng order) */}
       <section className="rounded-xl border border-border bg-surface p-4">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-          <h2 className="text-sm font-semibold">Lịch sử lệnh</h2>
+          <h2 className="text-sm font-semibold">Lịch sử khớp lệnh (từng order)</h2>
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <Sel label="Mode" value={mode} onChange={setMode} opts={["PAPER", "TESTNET", "LIVE"]} />
             <Sel label="Source" value={source} onChange={setSource} opts={["BOT", "MANUAL", "SYSTEM"]} />
@@ -95,6 +108,7 @@ export default function Orders() {
                 <th className="px-2 py-1.5 font-medium">Thời gian</th>
                 <th className="px-2 py-1.5 font-medium">Mode</th>
                 <th className="px-2 py-1.5 font-medium">Nguồn</th>
+                <th className="px-2 py-1.5 font-medium">Bot / chiến lược</th>
                 <th className="px-2 py-1.5 font-medium">Symbol</th>
                 <th className="px-2 py-1.5 font-medium">Side</th>
                 <th className="px-2 py-1.5 font-medium">Type</th>
@@ -115,6 +129,7 @@ export default function Orders() {
                     <ModeBadge mode={o.mode} />
                   </td>
                   <td className="px-2 py-1.5 text-muted">{o.source}</td>
+                  <td className="px-2 py-1.5 text-xs text-muted">{botName(o.bot_id)}</td>
                   <td className="px-2 py-1.5 font-medium">{o.symbol}</td>
                   <td className={`px-2 py-1.5 font-medium ${o.side === "BUY" ? "text-up" : "text-down"}`}>
                     {o.side}
@@ -133,7 +148,7 @@ export default function Orders() {
               ))}
               {!orders?.length && (
                 <tr>
-                  <td colSpan={11} className="px-2 py-4 text-sm text-faint">
+                  <td colSpan={12} className="px-2 py-4 text-sm text-faint">
                     Chưa có lệnh nào (theo bộ lọc).
                   </td>
                 </tr>

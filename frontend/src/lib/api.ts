@@ -200,6 +200,53 @@ export function fetchOrders(filters: Record<string, string> = {}) {
   return getJson<OrderRow[]>(`/api/orders${q ? `?${q}` : ""}`);
 }
 
+// ---- review lệnh: 1 vị thế = 1 trade (kết quả, R, MFE/MAE) ----
+export interface TradeRow {
+  id: number;
+  bot_id: number | null;
+  mode: string;
+  symbol: string;
+  side: "LONG" | "SHORT";
+  qty: number;
+  entry_price: number;
+  exit_price: number | null;
+  sl: number | null;
+  tp: number | null;
+  init_sl: number | null;
+  status: "OPEN" | "CLOSED";
+  exit_reason: string | null; // SL | TP | SIGNAL | MANUAL
+  strategy: string | null;
+  tf: string | null;
+  params: Record<string, unknown> | null; // snapshot lúc mở lệnh
+  source: string;
+  bot_ref: number | null; // id bot gốc (vẫn còn khi bot đã bị xóa)
+  bot_deleted: boolean;
+  opened_at: number; // ms
+  closed_at: number | null;
+  result: "WIN" | "LOSS" | "BE" | "OPEN";
+  notional: number;
+  pnl: number | null;
+  pnl_pct: number | null;
+  risk_amount: number | null;
+  r: number | null;
+  mfe_pct: number | null;
+  mae_pct: number | null;
+  mfe_r: number | null;
+  mae_r: number | null;
+  mfe_pnl: number | null;
+  mae_pnl: number | null;
+  mfe_price: number | null;
+  mae_price: number | null;
+  mfe_ts: number | null;
+  mae_ts: number | null;
+}
+
+export function fetchTrades(filters: Record<string, string> = {}) {
+  const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v));
+  const q = qs.toString();
+  return getJson<TradeRow[]>(`/api/trades${q ? `?${q}` : ""}`);
+}
+
 // ---- backtest (P4) ----
 // Series indicator: dạng mới {pane, data} (pane 0 = overlay giá, 1 = oscillator),
 // hoặc dạng cũ (run đã lưu trước đây) là mảng [[ts, value]] — xem là pane 0.

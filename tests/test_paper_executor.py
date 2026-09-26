@@ -74,3 +74,20 @@ async def test_buy_then_tp_persists_and_broadcasts(session_factory):
     assert len(rows) == 1
     assert rows[0].status == "CLOSED"
     assert float(rows[0].pnl) == 20.0
+    # review: lưu lý do thoát + SL ban đầu (mốc 1R)
+    assert rows[0].exit_reason == "TP"
+    assert float(rows[0].init_sl) == 90.0
+
+
+async def test_position_snapshot_survives_bot_meta(session_factory):
+    """Snapshot strategy/tf/params ghi vào position lúc mở (còn khi bot bị xóa)."""
+    ex = PaperExecutor(None, TEST_SYMBOL, "PAPER", FakeBus(), session_factory)
+    ex.trade_meta = {"strategy": "demo v1", "tf": "15m", "params": {"size": 1}}
+    await ex.on_price(100)
+    await ex.submit(Signal("SELL", TEST_SYMBOL, size=1, sl=105))
+    async with session_factory() as s:
+        row = (
+            await s.execute(select(PositionModel).where(PositionModel.symbol == TEST_SYMBOL))
+        ).scalar_one()
+    assert (row.strategy, row.tf, row.params) == ("demo v1", "15m", {"size": 1})
+    assert row.source == "MANUAL" and row.bot_ref is None

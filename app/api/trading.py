@@ -1,15 +1,18 @@
 """REST: strategies, bots (CRUD + pause/resume/stop), positions. (SRS §5)"""
 
 import logging
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.db import get_session
+from app.market.store import get_klines
 from app.orders.models import BacktestRun, Bot, OrderModel, PositionModel, StrategyModel
+from app.orders.trades import excursion, infer_reason, summarize
 from app.strategy.base import Signal
 from app.strategy.params import ParamError, validate_params
 from app.strategy.registry import all_strategies, discover, get, sync_to_db
@@ -218,6 +221,14 @@ async def delete_bot(
     bot = await session.get(Bot, bot_id)
     if not bot:
         raise HTTPException(404, "bot không tồn tại")
+    strat = await session.get(StrategyModel, bot.strategy_id)
+    await request.app.state.order_manager.write_audit(
+        source="MANUAL", action="DELETE_BOT", mode=bot.mode, bot_id=bot_id, symbol=bot.symbol,
+        detail={
+            "strategy": f"{strat.name} v{strat.version}" if strat else None,
+            "tf": bot.tf, "params": bot.params,
+        },
+    )
     await request.app.state.bot_manager.stop_bot(bot_id)
     # Giữ lịch sử order/position (orphan bot_id NULL) → tránh vi phạm FK khi xóa bot.
     await session.execute(
@@ -284,6 +295,88 @@ async def list_orders(
         }
         for o in rows
     ]
+
+
+# ---------------- review lệnh ----------------
+_TF_MS = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000, "4h": 14_400_000}
+
+
+async def _hold_bars(
+    session: AsyncSession, symbol: str, tf: str | None, start: datetime, end: datetime
+) -> list[dict]:
+    """Nến trong thời gian giữ lệnh: ưu tiên 1m (MFE/MAE sát nhất), đủ ≤ 5000 nến."""
+    span = (end - start).total_seconds() * 1000
+    tfs = [t for t in ("1m", "5m", "15m", "1h", "4h") if span / _TF_MS[t] <= 5000]
+    if tf and tf in _TF_MS and tf not in tfs:
+        tfs.append(tf)
+    s0 = datetime.fromtimestamp(start.timestamp() // 60 * 60, tz=UTC)  # nến chứa lúc vào
+    for t in tfs:
+        bars = await get_klines(session, symbol, t, s0, end, limit=5000)
+        if bars:
+            return bars
+    return []
+
+
+@router.get("/trades")
+async def list_trades(
+    limit: int = 100,
+    mode: str | None = None,
+    symbol: str | None = None,
+    bot_id: int | None = None,
+    session: AsyncSession = Depends(get_session),
+) -> list[dict]:
+    """Mỗi vị thế = 1 lệnh để review: chiến lược, kết quả, PnL, R, MFE/MAE."""
+    q = (
+        select(PositionModel, Bot, StrategyModel)
+        .outerjoin(Bot, Bot.id == PositionModel.bot_id)
+        .outerjoin(StrategyModel, StrategyModel.id == Bot.strategy_id)
+        .order_by(PositionModel.opened_at.desc(), PositionModel.id.desc())
+    )
+    if mode:
+        q = q.where(PositionModel.mode == mode)
+    if symbol:
+        q = q.where(PositionModel.symbol == symbol)
+    if bot_id is not None:
+        q = q.where(func.coalesce(PositionModel.bot_ref, PositionModel.bot_id) == bot_id)
+    rows = (await session.execute(q.limit(limit))).all()
+
+    def f(v):
+        return float(v) if v is not None else None
+
+    out = []
+    now = datetime.now(UTC)
+    for p, bot, strat in rows:
+        entry, qty = float(p.entry_price), float(p.qty)
+        end = p.closed_at or now
+        bars = await _hold_bars(
+            session, p.symbol, p.tf or (bot.tf if bot else None), p.opened_at, end
+        )
+        reason = p.exit_reason or (
+            infer_reason(f(p.exit_price), f(p.sl), f(p.tp)) if p.status == "CLOSED" else None
+        )
+        exc = excursion(p.side, entry, bars, reason, f(p.exit_price))
+        stats = summarize(
+            side=p.side, qty=qty, entry=entry, exit_price=f(p.exit_price), pnl=f(p.pnl),
+            risk_sl=f(p.init_sl) if p.init_sl is not None else f(p.sl), exc=exc,
+            mark=bars[-1]["close"] if bars else None,
+        )
+        out.append({
+            "id": p.id, "bot_id": p.bot_id, "mode": p.mode, "symbol": p.symbol,
+            "side": p.side, "qty": qty, "entry_price": entry, "exit_price": f(p.exit_price),
+            "sl": f(p.sl), "tp": f(p.tp), "init_sl": f(p.init_sl), "status": p.status,
+            "exit_reason": reason,
+            # snapshot lúc mở (còn nguyên khi bot bị xóa); vị thế cũ chưa có → bot hiện tại.
+            "strategy": p.strategy or (f"{strat.name} v{strat.version}" if strat else None),
+            "tf": p.tf or (bot.tf if bot else None),
+            "params": p.params if p.params is not None else (bot.params if bot else None),
+            "source": p.source or ("BOT" if p.bot_id is not None else "MANUAL"),
+            "bot_ref": p.bot_ref if p.bot_ref is not None else p.bot_id,
+            "bot_deleted": bot is None and (p.bot_ref is not None),
+            "opened_at": int(p.opened_at.timestamp() * 1000),
+            "closed_at": int(p.closed_at.timestamp() * 1000) if p.closed_at else None,
+            **stats,
+        })
+    return out
 
 
 # ---------------- can thiệp tay (P3) ----------------
@@ -426,10 +519,9 @@ async def _db_close(session: AsyncSession, pos: PositionModel, ref_price: float 
     entry = float(pos.entry_price)
     qty = float(pos.qty)
     pnl = (ref_price - entry) * qty if pos.side == "LONG" else (entry - ref_price) * qty
-    from datetime import UTC, datetime
-
     pos.status = "CLOSED"
     pos.exit_price = ref_price
     pos.pnl = pnl
+    pos.exit_reason = "MANUAL"
     pos.closed_at = datetime.now(UTC)
     await session.commit()

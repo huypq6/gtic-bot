@@ -104,6 +104,14 @@ class PositionModel(Base):
     status: Mapped[str] = mapped_column(String, nullable=False, default="OPEN")
     exit_price: Mapped[float | None] = mapped_column(Numeric)
     pnl: Mapped[float | None] = mapped_column(Numeric)
+    exit_reason: Mapped[str | None] = mapped_column(String)  # SL|TP|SIGNAL|MANUAL
+    init_sl: Mapped[float | None] = mapped_column(Numeric)  # SL lúc mở → mốc 1R
+    # Snapshot lúc mở — bot_id bị NULL khi xóa bot, các cột này thì giữ nguyên.
+    source: Mapped[str | None] = mapped_column(String)  # BOT|MANUAL
+    bot_ref: Mapped[int | None] = mapped_column(Integer)  # id bot gốc (không FK)
+    strategy: Mapped[str | None] = mapped_column(String)  # "ict_po3 v4"
+    tf: Mapped[str | None] = mapped_column(String)
+    params: Mapped[dict | None] = mapped_column(JSONB)
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

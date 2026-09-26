@@ -9,6 +9,10 @@ from app.strategy.base import Position, Signal
 
 
 class Executor(ABC):
+    # Snapshot bot lúc chạy (strategy/tf/params) — ghi vào position khi mở lệnh để
+    # review vẫn đúng sau khi bot bị sửa params hoặc bị xóa. BotManager gán.
+    trade_meta: dict = {}
+
     def current_position(self) -> Position | None:
         """Vị thế hiện tại để strategy đọc qua Context. Mặc định None."""
         return None

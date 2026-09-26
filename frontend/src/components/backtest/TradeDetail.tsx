@@ -1,12 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   CandlestickSeries,
   ColorType,
   createChart,
+  createSeriesMarkers,
   type CandlestickData,
   type IChartApi,
   type IPriceLine,
   type ISeriesApi,
+  type ISeriesMarkersPluginApi,
+  type SeriesMarker,
+  type Time,
 } from "lightweight-charts";
 import { Pause, Play, X } from "lucide-react";
 import { loadRange } from "../../lib/datafeed";
@@ -23,25 +27,53 @@ const TF_MS: Record<string, number> = {
   "1d": 86_400_000,
 };
 
+// Giá: đủ chữ số có nghĩa cho cả BTC (84559.32) lẫn DOGE (0.09428).
+export const fmtPrice = (n: number | null | undefined) =>
+  n == null ? "—" : n.toLocaleString("en-US", { maximumSignificantDigits: 7 });
+
+export interface ExtraLine {
+  price: number;
+  title: string;
+  tone: "up" | "down" | "muted";
+}
+
 interface Props {
   symbol: string;
   tf: string;
   index: number;
   trade: BacktestTrade;
   onClose: () => void;
+  title?: ReactNode; // thay tiêu đề mặc định "Lệnh #n"
+  info?: ReactNode; // thay lưới thông tin mặc định
+  extraLines?: ExtraLine[]; // vd MFE/MAE
+  tfChoices?: string[]; // cho đổi khung nến khi review
 }
 
 // Chi tiết 1 lệnh + MÔ PHỎNG THỜI GIAN: kéo thanh / play để xem nến lớn dần từ vào → ra.
-export default function TradeDetail({ symbol, tf, index, trade, onClose }: Props) {
+export default function TradeDetail({
+  symbol,
+  tf: tf0,
+  index,
+  trade,
+  onClose,
+  title,
+  info,
+  extraLines,
+  tfChoices,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const markersApiRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+  const markersRef = useRef<SeriesMarker<Time>[]>([]);
   const linesRef = useRef<IPriceLine[]>([]);
   const barsRef = useRef<CandlestickData[]>([]);
   const theme = useTheme((s) => s.theme);
+  const [tf, setTf] = useState(tf0);
   const [n, setN] = useState(0); // số nến đang hiển thị
   const [pos, setPos] = useState(0); // vị trí thanh (index nến)
   const [playing, setPlaying] = useState(false);
+  const win = (trade.pnl_pct ?? 0) >= 0;
 
   // tạo chart + nạp nến quanh lệnh.
   useEffect(() => {
@@ -57,6 +89,7 @@ export default function TradeDetail({ symbol, tf, index, trade, onClose }: Props
       grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
       rightPriceScale: { borderColor: c.grid },
       timeScale: { borderColor: c.grid, timeVisible: true },
+      localization: { priceFormatter: (p: number) => fmtPrice(p) },
       autoSize: true,
     });
     chartRef.current = chart;
@@ -68,10 +101,12 @@ export default function TradeDetail({ symbol, tf, index, trade, onClose }: Props
       wickDownColor: c.down,
     });
     candleRef.current = candle;
+    linesRef.current = [];
 
     const ms = TF_MS[tf] ?? 60_000;
+    const bar = (ts: number) => (Math.floor(ts / ms) * ms) / 1000; // ms → time nến chứa ts
     const from = (trade.entry_ts ?? 0) - 40 * ms;
-    const to = (trade.exit_ts ?? trade.entry_ts ?? 0) + 15 * ms;
+    const to = (trade.exit_ts ?? Date.now()) + 15 * ms;
     let cancelled = false;
     loadRange(symbol, tf, from, to).then((bars) => {
       if (cancelled) return;
@@ -80,7 +115,7 @@ export default function TradeDetail({ symbol, tf, index, trade, onClose }: Props
       setN(bars.length);
       setPos(bars.length - 1);
       chart.timeScale().fitContent();
-      // đường giá vào/ra/SL/TP
+      // đường giá vào/ra/SL/TP (+ MFE/MAE nếu có)
       const mk = (price: number | null, color: string, title: string, dashed = false) =>
         price != null &&
         linesRef.current.push(
@@ -94,23 +129,53 @@ export default function TradeDetail({ symbol, tf, index, trade, onClose }: Props
           }),
         );
       mk(trade.entry, c.text, "vào");
-      mk(trade.exit, (trade.pnl_pct ?? 0) >= 0 ? c.up : c.down, "ra", true);
+      mk(trade.exit, win ? c.up : c.down, "ra", true);
       mk(trade.sl, c.down, "SL", true);
       mk(trade.tp, c.up, "TP", true);
+      for (const l of extraLines ?? [])
+        mk(l.price, l.tone === "up" ? c.up : l.tone === "down" ? c.down : c.text, l.title, true);
+
+      // marker vào/ra tại nến tương ứng
+      const long = trade.side.toLowerCase() === "long";
+      const m: SeriesMarker<Time>[] = [];
+      if (trade.entry_ts)
+        m.push({
+          time: bar(trade.entry_ts) as Time,
+          position: long ? "belowBar" : "aboveBar",
+          color: long ? c.up : c.down,
+          shape: long ? "arrowUp" : "arrowDown",
+          text: "vào",
+        });
+      if (trade.exit_ts)
+        m.push({
+          time: bar(trade.exit_ts) as Time,
+          position: long ? "aboveBar" : "belowBar",
+          color: win ? c.up : c.down,
+          shape: "circle",
+          text: "ra",
+        });
+      markersRef.current = m;
+      markersApiRef.current = createSeriesMarkers(candle, m);
     });
 
     return () => {
       cancelled = true;
       chart.remove();
       chartRef.current = null;
+      markersApiRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, tf, index, theme]);
 
   // kéo thanh / play → hiển thị nến tới vị trí pos (mô phỏng thời gian).
   useEffect(() => {
-    if (candleRef.current && barsRef.current.length)
-      candleRef.current.setData(barsRef.current.slice(0, pos + 1));
+    if (!candleRef.current || !barsRef.current.length) return;
+    const shown = barsRef.current.slice(0, pos + 1);
+    candleRef.current.setData(shown);
+    const last = shown[shown.length - 1]?.time as number | undefined;
+    markersApiRef.current?.setMarkers(
+      markersRef.current.filter((m) => last == null || (m.time as number) <= last),
+    );
   }, [pos]);
 
   useEffect(() => {
@@ -131,31 +196,55 @@ export default function TradeDetail({ symbol, tf, index, trade, onClose }: Props
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex w-full max-w-3xl flex-col rounded-2xl border border-border bg-surface p-5 shadow-2xl">
-        <div className="mb-3 flex items-center justify-between">
+      <div className="flex max-h-full w-full max-w-4xl flex-col overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-2xl">
+        <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">
-            Lệnh #{index + 1} · {symbol} ·{" "}
-            <span className={trade.side === "Long" ? "text-up" : "text-down"}>{trade.side}</span>{" "}
-            <span className={`${(trade.pnl_pct ?? 0) >= 0 ? "text-up" : "text-down"}`}>
-              {(trade.pnl_pct ?? 0) >= 0 ? "+" : ""}
-              {(trade.pnl_pct ?? 0).toFixed(2)}%
-            </span>
+            {title ?? (
+              <>
+                Lệnh #{index + 1} · {symbol} ·{" "}
+                <span className={trade.side === "Long" ? "text-up" : "text-down"}>{trade.side}</span>{" "}
+                <span className={win ? "text-up" : "text-down"}>
+                  {win ? "+" : ""}
+                  {(trade.pnl_pct ?? 0).toFixed(2)}%
+                </span>
+              </>
+            )}
           </h2>
-          <button onClick={onClose} className="rounded-md p-1.5 text-muted hover:bg-surface-2">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {tfChoices && (
+              <div className="flex rounded-md border border-border text-xs">
+                {tfChoices.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => {
+                      setPlaying(false);
+                      setTf(t);
+                    }}
+                    className={`px-2 py-1 ${t === tf ? "bg-accent text-white" : "text-muted hover:bg-surface-2"}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button onClick={onClose} className="rounded-md p-1.5 text-muted hover:bg-surface-2">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted md:grid-cols-4">
-          <span>Vào: {trade.entry_ts ? new Date(trade.entry_ts).toLocaleString() : "—"}</span>
-          <span>Ra: {trade.exit_ts ? new Date(trade.exit_ts).toLocaleString() : "—"}</span>
-          <span>Entry: {trade.entry?.toFixed(2) ?? "—"}</span>
-          <span>Exit: {trade.exit?.toFixed(2) ?? "—"}</span>
-          <span>SL: {trade.sl?.toFixed(2) ?? "—"}</span>
-          <span>TP: {trade.tp?.toFixed(2) ?? "—"}</span>
-        </div>
+        {info ?? (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted md:grid-cols-4">
+            <span>Vào: {trade.entry_ts ? new Date(trade.entry_ts).toLocaleString() : "—"}</span>
+            <span>Ra: {trade.exit_ts ? new Date(trade.exit_ts).toLocaleString() : "—"}</span>
+            <span>Entry: {fmtPrice(trade.entry)}</span>
+            <span>Exit: {fmtPrice(trade.exit)}</span>
+            <span>SL: {fmtPrice(trade.sl)}</span>
+            <span>TP: {fmtPrice(trade.tp)}</span>
+          </div>
+        )}
 
-        <div ref={ref} className="mt-3 h-80 w-full" />
+        <div ref={ref} className="mt-3 h-80 w-full shrink-0" />
 
         {/* mô phỏng thời gian */}
         <div className="mt-3 flex items-center gap-3">

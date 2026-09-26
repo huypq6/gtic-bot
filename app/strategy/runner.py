@@ -145,6 +145,9 @@ class BotManager:
         discover()
         strat = get(strategy_name, strategy_version)(params)
         executor = await self._make_executor(bot_id, symbol, mode, params)
+        executor.trade_meta = {
+            "strategy": f"{strategy_name} v{strategy_version}", "tf": tf, "params": dict(params),
+        }
         if self._feed is not None:
             await self._feed.ensure_kline(symbol, tf)
         runner = StrategyRunner(

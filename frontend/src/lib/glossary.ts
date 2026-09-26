@@ -20,5 +20,8 @@ export const GLOSSARY: Record<string, string> = {
   side: "Chiều lệnh/vị thế: LONG/BUY (kỳ vọng tăng) · SHORT/SELL (kỳ vọng giảm).",
   ext_id: "Mã lệnh trên sàn (testnet/live).",
   status: "Trạng thái lệnh: NEW (chờ) · FILLED (đã khớp) · CANCELLED (đã hủy).",
+  r: "Bội số rủi ro: lãi/lỗ chia cho khoảng cách entry→SL ban đầu. +2R = lời gấp 2 lần mức chấp nhận lỗ; -1R = dừng lỗ đúng kế hoạch.",
+  mfe: "Max Favorable Excursion — giá chạy CÓ LỢI xa nhất trong lúc giữ lệnh (% và R). MFE cao mà thoát lỗ → TP/quản lý lệnh chưa tối ưu.",
+  mae: "Max Adverse Excursion — giá chạy NGƯỢC xa nhất trong lúc giữ lệnh (% và R). Lệnh thắng có MAE gần -1R → SL đang sát.",
   source: "Nguồn lệnh: BOT (tự động) · MANUAL (tay) · SYSTEM (hệ thống, vd auto-pause).",
 };
