@@ -37,6 +37,66 @@ class StrategyModel(Base):
     __table_args__ = (UniqueConstraint("name", "version", name="uq_strategy_name_version"),)
 
 
+class Account(Base):
+    """Tài khoản giao dịch (P9). PAPER: số dư giả lập, mô phỏng USDT-M Futures.
+
+    `balance` = số dư ví (wallet) = nạp − rút + lãi/lỗ đã chốt − phí; luôn cập nhật cùng
+    transaction với 1 dòng `account_txn` (sổ cái là nguồn sự thật, balance là cache).
+    """
+
+    __tablename__ = "account"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    mode: Mapped[str] = mapped_column(String, nullable=False, default="PAPER")
+    currency: Mapped[str] = mapped_column(String, nullable=False, default="USDT")
+    balance: Mapped[float] = mapped_column(Numeric, nullable=False, default=0)
+    peak_equity: Mapped[float] = mapped_column(Numeric, nullable=False, default=0)
+    # mô phỏng khớp lệnh
+    leverage: Mapped[float] = mapped_column(Numeric, nullable=False, default=1)
+    taker_fee: Mapped[float] = mapped_column(Numeric, nullable=False, default=0.0005)
+    maker_fee: Mapped[float] = mapped_column(Numeric, nullable=False, default=0.0002)
+    slippage_bps: Mapped[float] = mapped_column(Numeric, nullable=False, default=2)
+    # rào chắn rủi ro (% theo equity); NULL = tắt
+    max_risk_pct: Mapped[float | None] = mapped_column(Numeric)  # trần rủi ro 1 lệnh
+    max_open_risk_pct: Mapped[float | None] = mapped_column(Numeric)  # tổng rủi ro đang mở
+    max_positions: Mapped[int | None] = mapped_column(Integer)
+    daily_loss_pct: Mapped[float | None] = mapped_column(Numeric)  # lỗ trong ngày UTC → nghỉ
+    max_dd_pct: Mapped[float | None] = mapped_column(Numeric)  # sụt từ đỉnh → HALTED
+    status: Mapped[str] = mapped_column(String, nullable=False, default="ACTIVE")
+    halted_reason: Mapped[str | None] = mapped_column(String)
+    halted_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        CheckConstraint("status IN ('ACTIVE','HALTED')", name="ck_account_status"),
+        CheckConstraint("mode IN ('PAPER','TESTNET','LIVE')", name="ck_account_mode"),
+    )
+
+
+class AccountTxn(Base):
+    """Sổ cái: mọi biến động số dư ví. amount có dấu; balance_after = số dư sau dòng này."""
+
+    __tablename__ = "account_txn"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("account.id", ondelete="CASCADE"))
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    type: Mapped[str] = mapped_column(String, nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric, nullable=False)
+    balance_after: Mapped[float] = mapped_column(Numeric, nullable=False)
+    position_id: Mapped[int | None] = mapped_column(Integer)
+    bot_id: Mapped[int | None] = mapped_column(Integer)
+    symbol: Mapped[str | None] = mapped_column(String)
+    note: Mapped[str | None] = mapped_column(String)
+
+    __table_args__ = (
+        CheckConstraint(
+            "type IN ('DEPOSIT','WITHDRAW','REALIZED_PNL','FEE','ADJUST')", name="ck_txn_type"
+        ),
+    )
+
+
 class Bot(Base):
     __tablename__ = "bot"
 
@@ -47,6 +107,9 @@ class Bot(Base):
     mode: Mapped[str] = mapped_column(String, nullable=False)
     params: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String, nullable=False, default="STOPPED")
+    account_id: Mapped[int | None] = mapped_column(ForeignKey("account.id"))
+    # quản lý vốn: {"method": risk_pct|risk_usdt|notional_usdt|notional_pct|fixed_qty, "value": x}
+    sizing: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
@@ -112,6 +175,10 @@ class PositionModel(Base):
     strategy: Mapped[str | None] = mapped_column(String)  # "ict_po3 v4"
     tf: Mapped[str | None] = mapped_column(String)
     params: Mapped[dict | None] = mapped_column(JSONB)
+    account_id: Mapped[int | None] = mapped_column(Integer)
+    fee: Mapped[float | None] = mapped_column(Numeric)  # tổng phí vào + ra (USDT)
+    margin: Mapped[float | None] = mapped_column(Numeric)  # ký quỹ khóa khi mở
+    risk_amount: Mapped[float | None] = mapped_column(Numeric)  # USDT mất nếu chạm SL ban đầu
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

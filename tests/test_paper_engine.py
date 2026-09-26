@@ -4,6 +4,8 @@ Quy ước: 1 bot = 1 vị thế (không pyramiding). BUY = muốn LONG, SELL = 
 CLOSE = đóng vị thế. Tín hiệu ngược chiều sẽ ĐÓNG rồi MỞ chiều mới (flip).
 """
 
+import pytest
+
 from app.execution.paper_engine import PaperEngine
 from app.strategy.base import Signal
 
@@ -195,3 +197,54 @@ def test_unrealized_pnl():
     assert eng.unrealized_pnl(105) == (105 - 100) * 2
     eng.submit(close(), price=100)
     assert eng.unrealized_pnl(105) == 0.0
+
+
+# ---- mô phỏng sát sàn: phí maker/taker, trượt giá, gap SL, thanh lý ----
+def test_slippage_and_taker_fees():
+    eng = PaperEngine(fee_rate=0.0005, slippage_bps=10)  # 0.1%
+    ev = eng.submit(Signal("BUY", "X", size=1, sl=90, tp=110), 100)
+    assert ev[-1].fill.price == pytest.approx(100.1)  # mua trượt lên
+    assert ev[-1].fill.fee == pytest.approx(0.0005 * 100.1)
+    closed = eng.on_price(111)[0].closed  # TP bán trượt xuống
+    assert closed.exit_price == pytest.approx(110 * 0.999)
+    assert closed.exit_fee == pytest.approx(0.0005 * closed.exit_price)
+    assert closed.pnl == pytest.approx(closed.gross - closed.entry_fee - closed.exit_fee)
+
+
+def test_limit_entry_uses_maker_fee_no_slip():
+    eng = PaperEngine(fee_rate=0.0005, maker_fee=0.0002, slippage_bps=10)
+    eng.submit(Signal("BUY", "X", size=2, order_type="LIMIT", price=95), 100)
+    ev = eng.on_price(95)
+    fill = next(e.fill for e in ev if e.fill)
+    assert fill.price == 95 and fill.fee == pytest.approx(0.0002 * 95 * 2)
+
+
+def test_gap_fill_sl_at_worse_tick():
+    eng = PaperEngine(gap_fill=True)
+    eng.submit(Signal("SELL", "X", size=1, sl=105), 100)
+    closed = eng.on_price(107)[0].closed  # nhảy qua SL
+    assert closed.exit_price == 107 and closed.reason == "SL"
+
+
+def test_liquidation_with_leverage():
+    eng = PaperEngine(leverage=10, mmr=0.005)
+    eng.submit(Signal("BUY", "X", size=1), 100)  # không SL
+    assert eng.liq_price == pytest.approx(100 * (1 - 0.1 + 0.005))
+    assert eng.margin() == pytest.approx(10)
+    closed = eng.on_price(90)[0].closed
+    assert closed.reason == "LIQUIDATION"
+
+
+def test_no_liquidation_at_1x():
+    eng = PaperEngine()
+    eng.submit(Signal("SELL", "X", size=1), 100)
+    assert eng.liq_price is None and eng.on_price(250) == []
+
+
+def test_restore_open_position():
+    from app.strategy.base import Position
+
+    eng = PaperEngine(fee_rate=0.001)
+    eng.restore(Position("X", "LONG", 1, 100, sl=95), entry_fee=0.1)
+    closed = eng.on_price(94)[0].closed
+    assert closed.entry_fee == 0.1 and closed.reason == "SL"

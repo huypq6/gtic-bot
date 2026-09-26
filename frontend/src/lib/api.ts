@@ -52,6 +52,27 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// Gửi JSON; lỗi → Error mang `detail` của FastAPI (vd "không đủ số dư") để hiện cho người dùng.
+export async function sendJson<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const j = await res.json();
+      if (typeof j.detail === "string") msg = j.detail;
+      else if (Array.isArray(j.detail)) msg = j.detail.map((d: { msg: string }) => d.msg).join("; ");
+    } catch {
+      /* body không phải JSON */
+    }
+    throw new Error(msg);
+  }
+  return res.json() as Promise<T>;
+}
+
 export const syncKlines = (symbol: string, tf: string, start = "3 days ago UTC") =>
   postJson<{ synced: number }>("/api/klines/sync", { symbol, tf, start });
 
@@ -80,6 +101,13 @@ export interface BotInfo {
   status: string;
   /** open-time (ms) nến đóng cuối bot nhận live; null = chưa nhận nến nào. */
   last_candle?: number | null;
+  account_id: number | null;
+  sizing: Sizing | null;
+}
+
+export interface Sizing {
+  method: string; // risk_pct | risk_usdt | notional_pct | notional_usdt | fixed_qty
+  value: number;
 }
 
 export interface PositionRow {
@@ -118,17 +146,14 @@ export const createBot = (body: {
   mode: string;
   params: Record<string, unknown>;
   confirm?: string;
-}) => postJson<BotInfo>("/api/bots", body);
+  account_id?: number | null;
+  sizing?: Sizing | null;
+}) => sendJson<BotInfo>("POST", "/api/bots", body);
 
-export async function patchBot(id: number, body: { status?: string; params?: object }) {
-  const res = await fetch(`/api/bots/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json() as Promise<BotInfo>;
-}
+export const patchBot = (
+  id: number,
+  body: { status?: string; params?: object; sizing?: Sizing; account_id?: number },
+) => sendJson<BotInfo>("PATCH", `/api/bots/${id}`, body);
 
 export async function deleteBot(id: number) {
   const res = await fetch(`/api/bots/${id}`, { method: "DELETE" });
@@ -159,7 +184,7 @@ export const manualOrder = (body: {
   sl?: number | null;
   tp?: number | null;
   ref_price?: number | null;
-}) => postJson("/api/orders", body);
+}) => sendJson("POST", "/api/orders", body);
 
 export interface AuditRow {
   id: number;
@@ -214,7 +239,10 @@ export interface TradeRow {
   tp: number | null;
   init_sl: number | null;
   status: "OPEN" | "CLOSED";
-  exit_reason: string | null; // SL | TP | SIGNAL | MANUAL
+  exit_reason: string | null; // SL | TP | SIGNAL | MANUAL | LIQUIDATION
+  account_id: number | null;
+  fee: number | null; // tổng phí vào + ra (USDT)
+  margin: number | null;
   strategy: string | null;
   tf: string | null;
   params: Record<string, unknown> | null; // snapshot lúc mở lệnh
@@ -311,3 +339,73 @@ export const runBacktest = (body: {
   fee_rate?: number | null;
   params?: Record<string, unknown> | null;
 }) => postJson<BacktestResult>("/api/backtest", body);
+
+// ---- tài khoản & quản lý vốn (P9) ----
+export interface AccountSettings {
+  leverage: number;
+  taker_fee: number;
+  maker_fee: number;
+  slippage_bps: number;
+  max_risk_pct: number | null;
+  max_open_risk_pct: number | null;
+  max_positions: number | null;
+  daily_loss_pct: number | null;
+  max_dd_pct: number | null;
+}
+
+export interface AccountInfo {
+  id: number;
+  name: string;
+  mode: string;
+  currency: string;
+  status: "ACTIVE" | "HALTED";
+  halted_reason: string | null;
+  halted_until: string | null;
+  paused_today: boolean;
+  settings: AccountSettings;
+  balance: number;
+  equity: number;
+  used_margin: number;
+  available: number;
+  open_risk: number;
+  n_open: number;
+  daily_pnl: number;
+  daily_pnl_pct: number;
+  day_start_balance: number;
+  peak_equity: number;
+  dd_pct: number;
+  net_deposit: number;
+  total_pnl: number;
+  total_pnl_pct: number | null;
+  total_fees: number;
+  n_bots: number;
+}
+
+export interface LedgerRow {
+  id: number;
+  ts: number;
+  type: "DEPOSIT" | "WITHDRAW" | "REALIZED_PNL" | "FEE" | "ADJUST";
+  amount: number;
+  balance_after: number;
+  position_id: number | null;
+  bot_id: number | null;
+  symbol: string | null;
+  note: string | null;
+}
+
+export const fetchAccounts = () => getJson<AccountInfo[]>("/api/accounts");
+export const fetchSizingMethods = () =>
+  getJson<Record<string, string>>("/api/accounts/sizing-methods");
+export const createAccount = (body: Partial<AccountSettings> & { name: string; initial_balance: number }) =>
+  sendJson<AccountInfo>("POST", "/api/accounts", body);
+export const patchAccount = (id: number, body: Partial<AccountSettings> & { name?: string }) =>
+  sendJson<AccountInfo>("PATCH", `/api/accounts/${id}`, body);
+export const depositAccount = (id: number, amount: number, note?: string) =>
+  sendJson<{ balance: number }>("POST", `/api/accounts/${id}/deposit`, { amount, note });
+export const withdrawAccount = (id: number, amount: number, note?: string) =>
+  sendJson<{ balance: number }>("POST", `/api/accounts/${id}/withdraw`, { amount, note });
+export const resumeAccount = (id: number) =>
+  sendJson<{ resumed: number }>("POST", `/api/accounts/${id}/resume`);
+export const fetchLedger = (id: number) => getJson<LedgerRow[]>(`/api/accounts/${id}/ledger`);
+export const fetchEquity = (id: number) =>
+  getJson<{ balance: [number, number][]; pnl: [number, number][] }>(`/api/accounts/${id}/equity`);

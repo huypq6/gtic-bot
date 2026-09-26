@@ -7,14 +7,14 @@ Không gọi sàn. Mỗi bot 1 executor. Runner gọi `on_price` mỗi tick (che
 import logging
 from datetime import UTC, datetime
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.execution.base import Executor
 from app.execution.paper_engine import Closed, EngineEvent, Fill, PaperEngine
 from app.market.bus import EventBus
 from app.orders.models import OrderModel, PositionModel
-from app.strategy.base import Signal
+from app.strategy.base import Position, Signal
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,42 @@ class PaperExecutor(Executor):
         self._last_price = 0.0
         self._pos_db_id: int | None = None
         self._pending_db: dict[int, int] = {}  # engine pending oid → db order id
+        self.account_id: int | None = None
+        self._accounts = None  # AccountService (P9) — None = không ghi sổ (test/legacy)
+
+    def attach_account(self, account, service) -> None:
+        """Gắn tài khoản: engine mô phỏng theo cấu hình của nó + ghi sổ mọi lãi/lỗ/phí."""
+        self.account_id = account.id
+        self._accounts = service
+        e = self.engine
+        e.fee_rate = float(account.taker_fee)
+        e.maker_fee = float(account.maker_fee)
+        e.slip = float(account.slippage_bps) / 10_000
+        e.leverage = max(1.0, float(account.leverage))
+        e.gap_fill = True
+
+    async def restore_open(self) -> bool:
+        """Sau restart: nạp lại vị thế OPEN của bot/lệnh tay này vào engine."""
+        q = select(PositionModel).where(
+            PositionModel.status == "OPEN", PositionModel.mode == self.mode,
+            PositionModel.symbol == self.symbol,
+        )
+        q = q.where(
+            PositionModel.bot_id == self.bot_id if self.bot_id is not None
+            else PositionModel.bot_id.is_(None)
+        )
+        async with self._sf() as s:
+            p = (await s.execute(q.order_by(PositionModel.id.desc()).limit(1))).scalar_one_or_none()
+        if p is None:
+            return False
+        self.engine.restore(
+            Position(p.symbol, p.side, float(p.qty), float(p.entry_price),
+                     sl=float(p.sl) if p.sl is not None else None,
+                     tp=float(p.tp) if p.tp is not None else None),
+            entry_fee=float(p.fee or 0),
+        )
+        self._pos_db_id = p.id
+        return True
 
     def current_position(self):
         return self.engine.position
@@ -48,6 +84,8 @@ class PaperExecutor(Executor):
 
     async def on_price(self, price: float) -> None:
         self._last_price = price
+        if self._accounts:
+            self._accounts.mark(self.symbol, price)
         await self._apply(self.engine.on_price(price))
         await self._broadcast_position(price)
 
@@ -125,10 +163,15 @@ class PaperExecutor(Executor):
             await s.commit()
 
     async def _persist_position_open(self) -> None:
+        from app.account.risk import position_risk
+
         p = self.engine.position
         assert p is not None
         async with self._sf() as s:
             pos = PositionModel(
+                account_id=self.account_id, fee=self.engine.entry_fee,
+                margin=self.engine.margin(),
+                risk_amount=position_risk(p.side, p.qty, p.entry_price, p.sl),
                 bot_id=self.bot_id, mode=self.mode, symbol=self.symbol, side=p.side,
                 qty=p.qty, entry_price=p.entry_price, sl=p.sl, tp=p.tp, init_sl=p.sl, status="OPEN",
                 source=self.source, bot_ref=self.bot_id, **self.trade_meta,
@@ -137,6 +180,11 @@ class PaperExecutor(Executor):
             await s.flush()
             self._pos_db_id = pos.id
             await s.commit()
+        if self._accounts and self.account_id is not None:
+            await self._accounts.record_fee(
+                self.account_id, self.engine.entry_fee, position_id=pos.id,
+                bot_id=self.bot_id, symbol=self.symbol,
+            )
 
     async def _persist_order_filled(self, fill: Fill) -> None:
         async with self._sf() as s:
@@ -152,6 +200,7 @@ class PaperExecutor(Executor):
                     .values(
                         status="CLOSED", exit_price=closed.exit_price, pnl=closed.pnl,
                         exit_reason=closed.reason, closed_at=datetime.now(UTC),
+                        fee=closed.entry_fee + closed.exit_fee,
                     )
                 )
             # lệnh đóng = chiều ngược vị thế
@@ -161,9 +210,16 @@ class PaperExecutor(Executor):
                     bot_id=self.bot_id, source=self.source, mode=self.mode, symbol=self.symbol,
                     side=close_side, type="MARKET", qty=closed.qty, price=closed.exit_price,
                     status="FILLED", filled_qty=closed.qty, avg_price=closed.exit_price,
+                    fee=closed.exit_fee,
                 )
             )
             await s.commit()
+        if self._accounts and self.account_id is not None:
+            await self._accounts.record_close(
+                self.account_id, gross=closed.gross, exit_fee=closed.exit_fee,
+                position_id=self._pos_db_id, bot_id=self.bot_id, symbol=self.symbol,
+                reason=closed.reason,
+            )
         self._pos_db_id = None
         await self._broadcast_position_closed(closed)
 
@@ -172,7 +228,7 @@ class PaperExecutor(Executor):
         return OrderModel(
             bot_id=self.bot_id, source=self.source, mode=self.mode, symbol=self.symbol,
             side=fill.side, type=fill.type, qty=fill.qty, price=fill.price, status=status,
-            filled_qty=fill.qty, avg_price=fill.price,
+            filled_qty=fill.qty, avg_price=fill.price, fee=fill.fee,
             sl=p.sl if p else None, tp=p.tp if p else None,
         )
 

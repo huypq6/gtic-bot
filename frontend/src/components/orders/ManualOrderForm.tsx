@@ -38,6 +38,7 @@ export default function ManualOrderForm() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["positions"] });
       qc.invalidateQueries({ queryKey: ["audit"] });
+      qc.invalidateQueries({ queryKey: ["accounts"] });
     },
   });
 
@@ -62,6 +63,9 @@ export default function ManualOrderForm() {
         {side} {symbol}
       </button>
       {mark != null && <span className="text-xs text-faint">mark {mark.toFixed(2)}</span>}
+      {submit.isError && (
+        <p className="w-full text-xs text-down">Không đặt được: {(submit.error as Error).message}</p>
+      )}
     </div>
   );
 }

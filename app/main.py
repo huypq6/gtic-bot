@@ -18,6 +18,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.account.service import AccountService
+from app.api.accounts import router as accounts_router
 from app.api.backtest import router as backtest_router
 from app.api.routes import router as api_router
 from app.api.trading import router as trading_router
@@ -45,15 +47,18 @@ async def lifespan(app: FastAPI):
     watch = await ensure_seeded(async_session, settings.default_symbols)
     feed = MarketFeed(bus, symbols=watch, tf=settings.default_tf)
     order_manager = OrderManager(async_session)
+    accounts = AccountService(async_session, order_manager)
     bot_manager = BotManager(
-        bus, async_session, order_manager, feed=feed, backfill=settings.feed_autostart
+        bus, async_session, order_manager, feed=feed, backfill=settings.feed_autostart,
+        accounts=accounts,
     )
-    manual_trader = ManualTrader(bus, async_session)
+    manual_trader = ManualTrader(bus, async_session, accounts)
 
     app.state.bus = bus
     app.state.gateway = gateway
     app.state.feed = feed
     app.state.order_manager = order_manager
+    app.state.accounts = accounts
     app.state.bot_manager = bot_manager
     app.state.manual_trader = manual_trader
 
@@ -111,7 +116,8 @@ async def _restore_running_bots(bot_manager: BotManager) -> None:
             ).all()
         for bot, strat in rows:
             await bot_manager.start_bot(
-                bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode
+                bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode,
+                account_id=bot.account_id, sizing=bot.sizing,
             )
             logging.info("restore bot %s (%s)", bot.id, strat.name)
     except Exception:  # noqa: BLE001
@@ -133,6 +139,7 @@ app.add_middleware(
 app.include_router(api_router)
 app.include_router(trading_router)
 app.include_router(backtest_router)
+app.include_router(accounts_router)
 
 
 @app.websocket("/ws")

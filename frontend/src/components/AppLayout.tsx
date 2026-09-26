@@ -26,6 +26,7 @@ export default function AppLayout() {
           <Tab to="/library">Library</Tab>
           <Tab to="/trade">Trading</Tab>
           <Tab to="/orders">Orders</Tab>
+          <Tab to="/account">Tài khoản</Tab>
           <Tab to="/backtest">Backtest</Tab>
           <Tab to="/scanner">Scanner</Tab>
           <Tab to="/audit">Audit</Tab>

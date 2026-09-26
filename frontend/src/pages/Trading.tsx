@@ -5,10 +5,14 @@ import { Pause, Play, Square, Trash2 } from "lucide-react";
 import {
   createBot,
   deleteBot,
+  fetchAccounts,
   fetchBots,
   fetchConfig,
+  fetchSizingMethods,
   fetchStrategies,
   patchBot,
+  type BotInfo,
+  type Sizing,
 } from "../lib/api";
 import ModeBadge from "../components/ModeBadge";
 import PositionsTable from "../components/orders/PositionsTable";
@@ -30,6 +34,14 @@ export default function Trading() {
   const [mode, setMode] = useState("PAPER");
   const [params, setParams] = useState<Record<string, unknown>>({});
   const [showLiveModal, setShowLiveModal] = useState(false);
+  const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: fetchAccounts });
+  const { data: methods } = useQuery({ queryKey: ["sizing-methods"], queryFn: fetchSizingMethods });
+  const [accountId, setAccountId] = useState<number | "">("");
+  const [sizing, setSizing] = useState<Sizing>({ method: "risk_pct", value: 1 });
+  const paperAccounts = (accounts ?? []).filter((a) => a.mode === mode);
+  useEffect(() => {
+    if (accountId === "" && paperAccounts.length) setAccountId(paperAccounts[0].id);
+  }, [paperAccounts, accountId]);
 
   const selectedStrat = strategies?.find((s) => s.id === stratId);
   // symbol từ scanner (?symbol=) có thể ngoài watchlist → thêm vào options.
@@ -69,6 +81,7 @@ export default function Trading() {
         mode,
         params,
         confirm,
+        ...(mode === "PAPER" && accountId !== "" ? { account_id: accountId, sizing } : {}),
       }),
     onSuccess: () => {
       setShowLiveModal(false);
@@ -139,6 +152,24 @@ export default function Trading() {
               <option>LIVE</option>
             </select>
           </Field>
+          {mode === "PAPER" && (
+            <>
+              <Field label="Tài khoản">
+                <select
+                  value={accountId}
+                  onChange={(e) => setAccountId(Number(e.target.value))}
+                  className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
+                >
+                  {paperAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({Math.round(a.equity).toLocaleString("en-US")} {a.currency})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <SizingInput value={sizing} onChange={setSizing} methods={methods} />
+            </>
+          )}
           <button
             onClick={onCreate}
             disabled={create.isPending || stratId === ""}
@@ -161,7 +192,7 @@ export default function Trading() {
             />
           </div>
         )}
-        {create.isError && <p className="mt-2 text-sm text-down">Lỗi: {String(create.error)}</p>}
+        {create.isError && <p className="mt-2 text-sm text-down">Lỗi: {(create.error as Error).message}</p>}
       </section>
 
       {/* Bots */}
@@ -183,6 +214,7 @@ export default function Trading() {
                     {b.symbol} · {b.tf}
                   </span>
                   <StatusDot status={b.status} />
+                  <BotSizing bot={b} methods={methods} accountName={accounts?.find((a) => a.id === b.account_id)?.name} onSaved={refresh} />
                   <span
                     className="text-xs text-faint"
                     title="Nến đóng cuối cùng bot nhận được (UTC)"
@@ -236,6 +268,115 @@ export default function Trading() {
         <PositionsTable />
       </section>
     </div>
+  );
+}
+
+const SIZING_UNIT: Record<string, string> = {
+  risk_pct: "% vốn",
+  risk_usdt: "USDT",
+  notional_pct: "% vốn",
+  notional_usdt: "USDT",
+  fixed_qty: "coin",
+};
+
+const sizingText = (z: Sizing) =>
+  z.method === "risk_pct"
+    ? `rủi ro ${z.value}%/lệnh`
+    : z.method === "risk_usdt"
+      ? `rủi ro ${z.value} USDT/lệnh`
+      : z.method === "notional_pct"
+        ? `lệnh ${z.value}% vốn`
+        : z.method === "notional_usdt"
+          ? `lệnh ${z.value} USDT`
+          : `${z.value || "size strategy"} coin`;
+
+function SizingInput({
+  value,
+  onChange,
+  methods,
+}: {
+  value: Sizing;
+  onChange: (z: Sizing) => void;
+  methods?: Record<string, string>;
+}) {
+  return (
+    <Field label="Khối lượng lệnh">
+      <div className="flex items-center gap-1">
+        <select
+          value={value.method}
+          onChange={(e) => onChange({ ...value, method: e.target.value })}
+          title={methods?.[value.method]}
+          className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
+        >
+          {Object.entries(methods ?? { risk_pct: "" }).map(([k, d]) => (
+            <option key={k} value={k} title={d}>
+              {d || k}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min={0}
+          step="any"
+          value={value.value}
+          onChange={(e) => onChange({ ...value, value: Number(e.target.value) })}
+          className="w-20 rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
+        />
+        <span className="text-xs text-faint">{SIZING_UNIT[value.method]}</span>
+      </div>
+    </Field>
+  );
+}
+
+// Hiện + sửa nhanh cách tính khối lượng của bot (áp cho lệnh kế tiếp, không cần restart).
+function BotSizing({
+  bot,
+  methods,
+  accountName,
+  onSaved,
+}: {
+  bot: BotInfo;
+  methods?: Record<string, string>;
+  accountName?: string;
+  onSaved: () => void;
+}) {
+  const [edit, setEdit] = useState<Sizing | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  if (bot.account_id == null) return <span className="text-xs text-faint">không gắn tài khoản · size theo strategy</span>;
+  const cur = bot.sizing ?? { method: "fixed_qty", value: 0 };
+  if (!edit)
+    return (
+      <button
+        onClick={() => setEdit(cur)}
+        title="Sửa khối lượng lệnh"
+        className="rounded border border-border px-1.5 py-0.5 text-xs text-muted hover:bg-surface"
+      >
+        {accountName ?? `TK #${bot.account_id}`} · {sizingText(cur)}
+      </button>
+    );
+  return (
+    <span className="flex flex-wrap items-end gap-1">
+      <SizingInput value={edit} onChange={setEdit} methods={methods} />
+      <button
+        onClick={async () => {
+          try {
+            await patchBot(bot.id, { sizing: edit });
+            setEdit(null);
+            setErr(null);
+            onSaved();
+          } catch (e) {
+            setErr((e as Error).message);
+          }
+        }}
+        className="rounded bg-accent px-2 py-1.5 text-xs font-medium text-white"
+      >
+        Lưu
+      </button>
+      <button onClick={() => setEdit(null)} className="px-1.5 py-1.5 text-xs text-muted">
+        Hủy
+      </button>
+      {err && <span className="w-full text-xs text-down">{err}</span>}
+    </span>
   );
 }
 

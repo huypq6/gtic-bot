@@ -53,6 +53,7 @@ docker-compose.yml        # app + postgres(timescale)
 - P6 Testnet integration
 - P7 Scanner đề xuất cặp
 - P8 Live + rào chắn an toàn
+- P9 Tài khoản + quản lý vốn (P9a Paper ✅ · P9b Testnet/Live số dư thật · P9c Backtest theo quản lý vốn)
 
 ## NFR bắt buộc
 - Realtime < 1s: Binance WS (không poll) → EventBus → WS gateway.

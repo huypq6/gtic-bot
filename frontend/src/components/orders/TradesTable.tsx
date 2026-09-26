@@ -18,6 +18,7 @@ const REASON: Record<string, string> = {
   TP: "Chạm TP",
   SIGNAL: "Tín hiệu đóng",
   MANUAL: "Đóng tay",
+  LIQUIDATION: "Bị thanh lý",
 };
 
 const signed = (n: number | null, d = 2, suffix = "") =>
@@ -321,6 +322,8 @@ function TradeReview({ t, risk, onClose }: { t: TradeRow; risk: number; onClose:
           <div className="space-y-1">
             <Item k={`PnL quy đổi (1R = $${risk})`} v={usd(t.r != null ? t.r * risk : null)} cls={tone(t.r)} />
             <Item k="PnL thật" v={`${money(t.pnl)} USDT (${signed(t.pnl_pct, 2, "%")})`} cls={tone(t.pnl)} />
+            {t.fee != null && <Item k="Phí (vào + ra)" v={`${money(-t.fee)} USDT`} cls="text-down" />}
+            {t.margin != null && <Item k="Ký quỹ đã khóa" v={`${money(t.margin).replace("+", "")} USDT`} />}
             <Item k="R thực hiện" v={signed(t.r, 2, "R")} cls={tone(t.r)} />
             <Item
               k="MFE (lời tối đa)"

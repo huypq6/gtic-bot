@@ -104,6 +104,11 @@ async def compare_versions(
 
 
 # ---------------- bots ----------------
+class Sizing(BaseModel):
+    method: str = "risk_pct"  # xem app.account.risk.SIZING_METHODS
+    value: float = 1.0
+
+
 class CreateBot(BaseModel):
     strategy_id: int
     symbol: str
@@ -111,11 +116,49 @@ class CreateBot(BaseModel):
     mode: str = "PAPER"
     params: dict = {}
     confirm: str | None = None  # mode LIVE bắt buộc = "LIVE"
+    account_id: int | None = None  # PAPER: bỏ trống = tài khoản paper mặc định
+    sizing: Sizing | None = None
 
 
 class PatchBot(BaseModel):
     status: str | None = None  # RUNNING | PAUSED | STOPPED
     params: dict | None = None
+    sizing: Sizing | None = None
+    account_id: int | None = None
+
+
+def _check_sizing(sz: Sizing | None) -> dict | None:
+    from app.account.risk import SIZING_METHODS
+
+    if sz is None:
+        return None
+    if sz.method not in SIZING_METHODS:
+        raise HTTPException(422, f"phương pháp khối lượng '{sz.method}' không hợp lệ")
+    if sz.value < 0 or (sz.method != "fixed_qty" and sz.value == 0):
+        raise HTTPException(422, "giá trị khối lượng phải > 0")
+    if sz.method == "risk_pct" and sz.value > 10:
+        raise HTTPException(422, "rủi ro > 10% vốn/lệnh — quá liều, không cho phép")
+    return sz.model_dump()
+
+
+async def _check_account(session: AsyncSession, account_id: int | None, mode: str) -> int | None:
+    from app.orders.models import Account
+
+    if account_id is None:
+        if mode != "PAPER":
+            return None  # TESTNET/LIVE: P9b
+        acc = (
+            await session.execute(
+                select(Account).where(Account.mode == "PAPER").order_by(Account.id).limit(1)
+            )
+        ).scalar_one_or_none()
+        return acc.id if acc else None
+    acc = await session.get(Account, account_id)
+    if not acc:
+        raise HTTPException(404, "tài khoản không tồn tại")
+    if acc.mode != mode:
+        raise HTTPException(400, f"tài khoản {acc.mode} không dùng được cho bot {mode}")
+    return acc.id
 
 
 async def _bot_dict(session: AsyncSession, bot: Bot) -> dict:
@@ -125,6 +168,7 @@ async def _bot_dict(session: AsyncSession, bot: Bot) -> dict:
         "strategy": f"{strat.name} v{strat.version}" if strat else None,
         "symbol": bot.symbol, "tf": bot.tf, "mode": bot.mode,
         "params": bot.params, "status": bot.status,
+        "account_id": bot.account_id, "sizing": bot.sizing,
     }
 
 
@@ -162,9 +206,14 @@ async def create_bot(
         params = validate_params(_schema_for(strat), body.params)
     except ParamError as e:
         raise HTTPException(422, str(e)) from e
+    account_id = await _check_account(session, body.account_id, body.mode)
+    sizing = _check_sizing(body.sizing) or (
+        {"method": "risk_pct", "value": 1.0} if account_id else None
+    )
     bot = Bot(
         strategy_id=body.strategy_id, symbol=body.symbol, tf=body.tf,
         mode=body.mode, params=params, status="RUNNING",
+        account_id=account_id, sizing=sizing,
     )
     session.add(bot)
     await session.commit()
@@ -172,7 +221,8 @@ async def create_bot(
 
     try:
         await request.app.state.bot_manager.start_bot(
-            bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode
+            bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode,
+            account_id=bot.account_id, sizing=bot.sizing,
         )
     except ValueError as e:  # vd thiếu key testnet
         await session.delete(bot)
@@ -196,6 +246,32 @@ async def patch_bot(
             bot.params = validate_params(_schema_for(strat), body.params)
         except ParamError as e:
             raise HTTPException(422, str(e)) from e
+    restart = False
+    if body.sizing is not None:
+        bot.sizing = _check_sizing(body.sizing)
+        r = mgr._runners.get(bot_id)
+        if r:
+            r.sizing = bot.sizing  # áp cho lệnh kế tiếp, không cần restart
+    if body.account_id is not None and body.account_id != bot.account_id:
+        has_open = (
+            await session.execute(
+                select(PositionModel.id).where(
+                    PositionModel.bot_id == bot_id, PositionModel.status == "OPEN"
+                )
+            )
+        ).first()
+        if has_open:
+            raise HTTPException(409, "bot đang có lệnh mở — đóng lệnh trước khi đổi tài khoản")
+        bot.account_id = await _check_account(session, body.account_id, bot.mode)
+        restart = mgr.is_running(bot_id)
+    if restart:
+        strat = await session.get(StrategyModel, bot.strategy_id)
+        await mgr.stop_bot(bot_id)
+        await mgr.start_bot(
+            bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode,
+            account_id=bot.account_id, sizing=bot.sizing,
+        )
+        mgr.set_status(bot_id, bot.status)
     if body.status is not None:
         if body.status not in ("RUNNING", "PAUSED", "STOPPED"):
             raise HTTPException(400, "status không hợp lệ")
@@ -205,7 +281,8 @@ async def patch_bot(
         elif not mgr.is_running(bot_id):
             strat = await session.get(StrategyModel, bot.strategy_id)
             await mgr.start_bot(
-                bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode
+                bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode,
+                account_id=bot.account_id, sizing=bot.sizing,
             )
             mgr.set_status(bot_id, body.status)
         else:
@@ -365,6 +442,7 @@ async def list_trades(
             "side": p.side, "qty": qty, "entry_price": entry, "exit_price": f(p.exit_price),
             "sl": f(p.sl), "tp": f(p.tp), "init_sl": f(p.init_sl), "status": p.status,
             "exit_reason": reason,
+            "account_id": p.account_id, "fee": f(p.fee), "margin": f(p.margin),
             # snapshot lúc mở (còn nguyên khi bot bị xóa); vị thế cũ chưa có → bot hiện tại.
             "strategy": p.strategy or (f"{strat.name} v{strat.version}" if strat else None),
             "tf": p.tf or (bot.tf if bot else None),
@@ -407,7 +485,7 @@ async def close_position(
         if ex:
             await ex.close("MANUAL")  # engine đóng + persist + broadcast
         else:
-            await _db_close(session, pos, body.ref_price)
+            await _db_close(session, pos, body.ref_price, request.app.state.accounts)
 
     await om.execute(
         source="MANUAL", action="CLOSE", mode=pos.mode, bot_id=pos.bot_id,
@@ -464,7 +542,20 @@ async def manual_order(body: ManualOrder, request: Request) -> dict:
     if body.side not in ("BUY", "SELL"):
         raise HTTPException(400, "side phải BUY/SELL")
     om = request.app.state.order_manager
-    ex = request.app.state.manual_trader.ensure(body.symbol, body.mode)
+    ex = await request.app.state.manual_trader.ensure(body.symbol, body.mode)
+    if ex.account_id is not None:  # đủ ký quỹ mới cho vào lệnh (như sàn)
+        accounts = request.app.state.accounts
+        acc = await accounts.get(ex.account_id)
+        st = await accounts.snapshot(ex.account_id)
+        px = body.price if body.type == "LIMIT" and body.price else (body.ref_price or 0)
+        cost = body.qty * px / float(acc.leverage) + body.qty * px * float(acc.taker_fee)
+        freed = ex.engine.margin() if ex.engine.position else 0.0
+        if px and cost > st.available + freed:
+            raise HTTPException(
+                400,
+                f"không đủ số dư: cần ~{cost:.2f} USDT ký quỹ+phí, khả dụng "
+                f"{max(0.0, st.available + freed):.2f} USDT",
+            )
 
     async def do():
         if body.type == "MARKET" and body.ref_price:
@@ -512,7 +603,9 @@ async def list_audit(request: Request, limit: int = 100) -> list[dict]:
     return await request.app.state.order_manager.list_audit(limit)
 
 
-async def _db_close(session: AsyncSession, pos: PositionModel, ref_price: float | None) -> None:
+async def _db_close(
+    session: AsyncSession, pos: PositionModel, ref_price: float | None, accounts=None
+) -> None:
     """Đóng vị thế ở mức DB khi bot đã dừng (không còn engine)."""
     if ref_price is None:
         raise HTTPException(400, "cần ref_price để đóng vị thế của bot đã dừng")
@@ -521,7 +614,17 @@ async def _db_close(session: AsyncSession, pos: PositionModel, ref_price: float 
     pnl = (ref_price - entry) * qty if pos.side == "LONG" else (entry - ref_price) * qty
     pos.status = "CLOSED"
     pos.exit_price = ref_price
-    pos.pnl = pnl
+    exit_fee = 0.0
+    if accounts and pos.account_id is not None:
+        acc = await accounts.get(pos.account_id)
+        exit_fee = float(acc.taker_fee) * ref_price * qty if acc else 0.0
+    pos.pnl = pnl - float(pos.fee or 0) - exit_fee
+    pos.fee = float(pos.fee or 0) + exit_fee
     pos.exit_reason = "MANUAL"
     pos.closed_at = datetime.now(UTC)
     await session.commit()
+    if accounts and pos.account_id is not None:
+        await accounts.record_close(
+            pos.account_id, gross=pnl, exit_fee=exit_fee, position_id=pos.id,
+            bot_id=pos.bot_id, symbol=pos.symbol, reason="MANUAL",
+        )

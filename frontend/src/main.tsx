@@ -10,6 +10,7 @@ import Orders from "./pages/Orders";
 import Backtest from "./pages/Backtest";
 import Scanner from "./pages/Scanner";
 import Audit from "./pages/Audit";
+import Account from "./pages/Account";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="trade" element={<Trading />} />
             <Route path="library" element={<Library />} />
             <Route path="orders" element={<Orders />} />
+            <Route path="account" element={<Account />} />
             <Route path="backtest" element={<Backtest />} />
             <Route path="scanner" element={<Scanner />} />
             <Route path="audit" element={<Audit />} />
