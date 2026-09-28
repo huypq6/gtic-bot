@@ -55,8 +55,11 @@ Most retail bots either hide the logic or push you straight to real money. GTIC 
     <td colspan="2"><b>Backtest chart — entries/exits plotted on candles, plus the trade list</b><br/><img src="docs/screenshots/backtest-chart.png" alt="Backtest chart" /></td>
   </tr>
   <tr>
+    <td colspan="2"><b>Trade review — entry/exit, SL/TP, MFE/MAE on the chart, with a time-replay slider</b><br/><img src="docs/screenshots/trade-review.png" alt="Trade review" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><b>Trade results — R multiples, win/loss, MFE/MAE</b><br/><img src="docs/screenshots/orders.png" alt="Orders and trade results" /></td>
     <td width="50%"><b>Strategy library & methodology docs</b><br/><img src="docs/screenshots/library.png" alt="Strategy library" /></td>
-    <td width="50%"><b>Trade review — R, MFE/MAE, exit reason</b><br/><img src="docs/screenshots/orders.png" alt="Orders and trade review" /></td>
   </tr>
   <tr>
     <td width="50%"><b>Account, equity & risk guards</b><br/><img src="docs/screenshots/account.png" alt="Account page" /></td>
@@ -64,11 +67,14 @@ Most retail bots either hide the logic or push you straight to real money. GTIC 
   </tr>
   <tr>
     <td width="50%"><b>Pair scanner</b><br/><img src="docs/screenshots/scanner.png" alt="Scanner" /></td>
-    <td width="50%"><b>Mobile</b><br/><img src="docs/screenshots/mobile.png" alt="Mobile layout" /></td>
+    <td width="50%"><b>Audit log — every order recorded before it is sent</b><br/><img src="docs/screenshots/audit.png" alt="Audit log" /></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><b>Mobile</b><br/><img src="docs/screenshots/mobile.png" alt="Mobile layout" width="60%" /></td>
   </tr>
 </table>
 
-> Numbers in the screenshots come from a local test database and are shown to illustrate the UI — they are **not** performance claims.
+> Screenshots are taken from a real paper-trading instance. The numbers illustrate the UI — they are **not** performance claims.
 
 ## Operating modes
 
