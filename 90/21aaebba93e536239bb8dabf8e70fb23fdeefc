@@ -1,0 +1,25 @@
+CODE_OF_CONDUCT.md
+  s_b0e228b68e793d::t_1c2c80cda76f6a 1-83
+CONTRIBUTING.md
+  s_b0e228b68e793d::t_10c1f31cc03286 4
+README.md
+  s_b0e228b68e793d::t_8b943b3f3d51aa 251
+README.vi.md
+  s_b0e228b68e793d::t_c0bbf4c20be91f 255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9021aaebba93e536239bb8dabf8e70fb23fdeefc",
+  "prompts": {},
+  "sessions": {
+    "s_b0e228b68e793d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5efec822-4231-4769-aeb3-598074ab911c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
