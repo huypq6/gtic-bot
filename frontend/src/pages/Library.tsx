@@ -4,13 +4,14 @@ import { useNavigate } from "react-router";
 import { BookOpen, FlaskConical, Play, X } from "lucide-react";
 import { fetchStrategies, fetchStrategyDoc, type StrategyInfo } from "../lib/api";
 import Markdown from "../components/Markdown";
+import { t } from "../lib/i18n";
 
 export default function Library() {
   const navigate = useNavigate();
   const { data: strategies } = useQuery({ queryKey: ["strategies"], queryFn: fetchStrategies });
   const [docName, setDocName] = useState<string | null>(null);
 
-  // gộp theo name (nhiều version chung 1 phương pháp luận).
+  // group by name (several versions share one methodology).
   const families = new Map<string, StrategyInfo[]>();
   for (const s of strategies ?? []) {
     const list = families.get(s.name) ?? [];
@@ -20,7 +21,7 @@ export default function Library() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
-      <h2 className="mb-3 text-sm font-semibold">Thư viện chiến thuật</h2>
+      <h2 className="mb-3 text-sm font-semibold">{t("Strategy library")}</h2>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {[...families.entries()].map(([name, versions]) => {
           const latest = versions[versions.length - 1];
@@ -58,27 +59,27 @@ export default function Library() {
                   onClick={() => setDocName(name)}
                   className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-white hover:opacity-90"
                 >
-                  <BookOpen className="h-3.5 w-3.5" /> Phương pháp luận
+                  <BookOpen className="h-3.5 w-3.5" /> {t("Methodology")}
                 </button>
                 <button
-                  title="Backtest strategy này"
+                  title={t("Backtest this strategy")}
                   onClick={() => navigate("/backtest")}
                   className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted hover:bg-surface-2"
                 >
                   <FlaskConical className="h-3.5 w-3.5" /> Backtest
                 </button>
                 <button
-                  title="Tạo bot"
+                  title={t("Create bot")}
                   onClick={() => navigate("/trade")}
                   className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted hover:bg-surface-2"
                 >
-                  <Play className="h-3.5 w-3.5" /> Tạo bot
+                  <Play className="h-3.5 w-3.5" /> {t("Create bot")}
                 </button>
               </div>
             </div>
           );
         })}
-        {!families.size && <p className="text-sm text-faint">Chưa có strategy nào.</p>}
+        {!families.size && <p className="text-sm text-faint">{t("No strategies yet.")}</p>}
       </div>
 
       {docName && <DocReader name={docName} onClose={() => setDocName(null)} />}
@@ -100,7 +101,7 @@ function DocReader({ name, onClose }: { name: string; onClose: () => void }) {
       >
         <div className="mb-4 flex items-center justify-between">
           <span className="text-xs uppercase tracking-wide text-faint">
-            Phương pháp luận · {name}
+            {t("Methodology")} · {name}
           </span>
           <button
             onClick={onClose}
@@ -110,7 +111,7 @@ function DocReader({ name, onClose }: { name: string; onClose: () => void }) {
           </button>
         </div>
         {isLoading ? (
-          <p className="text-sm text-faint">Đang tải…</p>
+          <p className="text-sm text-faint">{t("Loading…")}</p>
         ) : (
           <Markdown>{data?.markdown ?? ""}</Markdown>
         )}

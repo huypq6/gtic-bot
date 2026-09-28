@@ -91,7 +91,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['bot_id'], ['bot.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    # NOTE: bỏ drop 'kline_ts_idx' — index này do Timescale hypertable quản lý, không phải Alembic.
+    # NOTE: dropping 'kline_ts_idx' skipped — this index is managed by the Timescale hypertable, not Alembic.
     # ### end Alembic commands ###
 
 

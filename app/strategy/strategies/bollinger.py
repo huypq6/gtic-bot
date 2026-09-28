@@ -1,6 +1,6 @@
-"""Bollinger Bands Reversion — hồi quy về trung bình.
+"""Bollinger Bands Reversion — mean reversion.
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
+=== EDIT THE STRATEGY HERE ===
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -12,7 +12,7 @@ from app.strategy.ta import sma, stdev
 class BollingerReversion(Strategy):
     name = "bollinger"
     version = "1"
-    description = "Bollinger Bands reversion — chạm dải dưới (BUY), chạm dải trên (SELL)."
+    description = "Bollinger Bands reversion — touch lower band (BUY), touch upper band (SELL)."
     default_params = {"period": 20, "mult": 2.0, "size": 0.001}
     param_schema = {
         "period": {"type": "int", "min": 5, "max": 200, "default": 20},
@@ -29,9 +29,9 @@ class BollingerReversion(Strategy):
             return []
         upper, lower = mid + mult * sd, mid - mult * sd
         if ctx.price <= lower:
-            return [Signal("BUY", ctx.symbol, size)]   # quá bán → bật về mid
+            return [Signal("BUY", ctx.symbol, size)]   # oversold → bounce back to mid
         if ctx.price >= upper:
-            return [Signal("SELL", ctx.symbol, size)]  # quá mua → rơi về mid
+            return [Signal("SELL", ctx.symbol, size)]  # overbought → fall back to mid
         return []
 
     def plot(self, candles):

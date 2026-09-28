@@ -1,61 +1,61 @@
-# EMA Crossover — Giao cắt trung bình động
+# EMA Crossover — Moving average crossover
 
-> Trường phái: **Trend-following**. Có 2 phiên bản: **v1** (cơ bản) và **v2** (thêm bộ lọc gap%).
+> Style: **Trend-following**. Two versions: **v1** (basic) and **v2** (adds a gap% filter).
 
-## Ý tưởng
+## Idea
 
-EMA (Exponential Moving Average) làm mượt giá, đặt trọng số cao hơn cho dữ liệu gần. Dùng **hai EMA** chu kỳ khác nhau: đường **nhanh** (fast) phản ứng nhanh, đường **chậm** (slow) phản ứng chậm. Khi nhanh cắt chậm → tín hiệu đổi xu hướng.
+The EMA (Exponential Moving Average) smooths price, giving more weight to recent data. Use **two EMAs** with different periods: the **fast** line reacts quickly, the **slow** line reacts slowly. When the fast line crosses the slow line → trend-change signal.
 
-## Công thức
+## Formula
 
 ```
-EMA_t = giá_t × k + EMA_(t-1) × (1 − k),   k = 2 / (period + 1)
+EMA_t = price_t × k + EMA_(t-1) × (1 − k),   k = 2 / (period + 1)
 ```
 
-Xét 2 điểm cuối của mỗi EMA (`prev`, `now`):
+Look at the last 2 points of each EMA (`prev`, `now`):
 
-- **Golden cross**: `fast` cắt **lên** `slow` (fast_prev ≤ slow_prev và fast_now > slow_now).
-- **Death cross**: `fast` cắt **xuống** `slow`.
+- **Golden cross**: `fast` crosses **above** `slow` (fast_prev ≤ slow_prev and fast_now > slow_now).
+- **Death cross**: `fast` crosses **below** `slow`.
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
 | Golden cross | **BUY** (LONG) |
 | Death cross | **SELL** (SHORT) |
-| Ngược chiều | Flip (đóng + mở chiều mới) |
+| Opposite direction | Flip (close + open the new side) |
 
-## v2 — Bộ lọc khoảng cách (gap%)
+## v2 — Distance filter (gap%)
 
-v1 trên khung nhỏ (1m) hay vào lệnh khi 2 EMA dính sát nhau → **giao cắt nhiễu**, phí ăn mòn lợi nhuận. **v2** chỉ vào lệnh khi:
+On low timeframes (1m), v1 often enters while the 2 EMAs are stuck close together → **noisy crosses**, and fees eat into profit. **v2** only enters when:
 
 ```
 |EMA_fast − EMA_slow| / EMA_slow × 100 ≥ gap_pct
 ```
 
-→ bỏ qua giao cắt yếu, **giảm số lệnh giả**. Thực nghiệm (backtest BTC 5m): v1 ≈ −20% / 91 lệnh, v2 ≈ +3.6% / 1 lệnh — bộ lọc giảm overtrade rõ rệt.
+→ skips weak crosses, **fewer false trades**. Empirically (BTC 5m backtest): v1 ≈ −20% / 91 trades, v2 ≈ +3.6% / 1 trade — the filter clearly reduces overtrading.
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `fast` | 9 | Chu kỳ EMA nhanh. |
-| `slow` | 21 | Chu kỳ EMA chậm (> fast). |
-| `size` | 0.001 | Khối lượng. |
-| `gap_pct` | 0.1 | (v2) Ngưỡng % khoảng cách 2 EMA để vào lệnh. |
+| `fast` | 9 | Fast EMA period. |
+| `slow` | 21 | Slow EMA period (> fast). |
+| `size` | 0.001 | Order size. |
+| `gap_pct` | 0.1 | (v2) Minimum % distance between the 2 EMAs to enter. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Đơn giản, bắt xu hướng tốt; v2 lọc nhiễu hiệu quả.
-- ❌ Trong sideway: cắt qua cắt lại liên tục (whipsaw).
-- ❌ Tín hiệu trễ (EMA là chỉ báo trễ).
+- ✅ Simple, catches trends well; v2 filters noise effectively.
+- ❌ In sideways markets: crosses back and forth repeatedly (whipsaw).
+- ❌ Lagging signals (EMA is a lagging indicator).
 
-## Khi nào dùng
+## When to use
 
-- Thị trường có xu hướng. Khung trung bình trở lên.
-- Trên khung nhỏ → ưu tiên **v2** (gap filter) để giảm lệnh giả.
+- Trending markets. Medium timeframes and above.
+- On low timeframes → prefer **v2** (gap filter) to reduce false trades.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Quét cặp `(fast, slow)` nhưng cẩn thận overfit; ưu tiên cặp "tròn" phổ biến (9/21, 12/26, 50/200).
-- So sánh **v1 vs v2** ở trang Backtest → "So sánh version".
+- Sweep `(fast, slow)` pairs but beware of overfitting; prefer common "round" pairs (9/21, 12/26, 50/200).
+- Compare **v1 vs v2** on the Backtest page → "Compare versions".

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchConfig, manualOrder } from "../../lib/api";
 import { useWsStore } from "../../lib/ws";
+import { t } from "../../lib/i18n";
 
 export default function ManualOrderForm() {
   const qc = useQueryClient();
@@ -64,7 +65,7 @@ export default function ManualOrderForm() {
       </button>
       {mark != null && <span className="text-xs text-faint">mark {mark.toFixed(2)}</span>}
       {submit.isError && (
-        <p className="w-full text-xs text-down">Không đặt được: {(submit.error as Error).message}</p>
+        <p className="w-full text-xs text-down">{t("Order failed: {msg}", { msg: (submit.error as Error).message })}</p>
       )}
     </div>
   );

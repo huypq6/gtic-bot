@@ -1,12 +1,12 @@
-# MACD Crossover — Giao cắt MACD / Signal
+# MACD Crossover — MACD / Signal crossover
 
-> Trường phái: **Trend / Momentum**. Khung gợi ý: 1h–1d.
+> Style: **Trend / Momentum**. Suggested timeframes: 1h–1d.
 
-## Ý tưởng
+## Idea
 
-MACD (Moving Average Convergence Divergence, Gerald Appel) đo **động lượng** qua chênh lệch hai EMA. Đường **MACD** cắt đường **Signal** (EMA của MACD) báo hiệu động lượng đổi chiều.
+MACD (Moving Average Convergence Divergence, Gerald Appel) measures **momentum** via the difference between two EMAs. The **MACD** line crossing the **Signal** line (an EMA of the MACD) signals a change in momentum direction.
 
-## Công thức
+## Formula
 
 ```
 MACD line   = EMA(close, fast) − EMA(close, slow)
@@ -14,32 +14,32 @@ Signal line = EMA(MACD line, signal)
 Histogram   = MACD − Signal
 ```
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
-| MACD cắt **LÊN** Signal (mp ≤ sp và mn > sn) | **BUY** (LONG) |
-| MACD cắt **XUỐNG** Signal | **SELL** (SHORT) |
+| MACD crosses **ABOVE** Signal (mp ≤ sp and mn > sn) | **BUY** (LONG) |
+| MACD crosses **BELOW** Signal | **SELL** (SHORT) |
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `fast` | 12 | EMA nhanh. |
-| `slow` | 26 | EMA chậm. |
-| `signal` | 9 | EMA của MACD line. |
-| `size` | 0.001 | Khối lượng. |
+| `fast` | 12 | Fast EMA. |
+| `slow` | 26 | Slow EMA. |
+| `signal` | 9 | EMA of the MACD line. |
+| `size` | 0.001 | Order size. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Bắt động lượng/xu hướng tốt; bộ tham số 12/26/9 phổ biến, đáng tin.
-- ❌ Trễ (dựa trên EMA); trong sideway hay tín hiệu giả (whipsaw).
+- ✅ Catches momentum/trends well; the 12/26/9 parameter set is popular and reliable.
+- ❌ Lagging (EMA-based); frequent false signals in sideways markets (whipsaw).
 
-## Khi nào dùng
+## When to use
 
-- Thị trường có xu hướng/động lượng. Kết hợp lọc xu hướng dài hạn để giảm tín hiệu giả.
+- Trending/momentum markets. Combine with a long-term trend filter to reduce false signals.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Giữ bộ tham số chuẩn trước khi tinh chỉnh; tránh overfit fast/slow/signal.
-- Có thể dùng **histogram** (MACD − Signal) đổi dấu thay cho crossover để vào sớm hơn.
+- Keep the standard parameter set before fine-tuning; avoid overfitting fast/slow/signal.
+- You can use the **histogram** (MACD − Signal) changing sign instead of the crossover to enter earlier.

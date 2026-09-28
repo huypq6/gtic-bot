@@ -42,7 +42,7 @@ def test_adx_dmi_insufficient():
 
 
 def test_stochastic_k_bounds():
-    cs = [candle(float(i)) for i in range(1, 20)]  # uptrend → close gần đỉnh → %K cao
+    cs = [candle(float(i)) for i in range(1, 20)]  # uptrend → close near the high → high %K
     k = stochastic_k(cs, 14)
     assert k is not None and 0 <= k <= 100 and k > 70
 
@@ -51,20 +51,20 @@ def test_stochastic_k_bounds():
 def test_psar_strategy_flips():
     s = ParabolicSar({"size": 1})
     actions = replay(s, [float(c) for c in list(range(1, 40)) + list(range(39, 1, -1))])
-    assert "SELL" in actions  # có lúc đảo xuống
+    assert "SELL" in actions  # reverses down at some point
 
 
 # ---- stochastic strategy ----
 def test_stoch_buy_when_oversold():
     s = Stochastic({"period": 5, "oversold": 20, "overbought": 80, "size": 1})
-    actions = replay(s, [float(c) for c in range(20, 5, -1)])  # giảm liên tục → %K thấp
+    actions = replay(s, [float(c) for c in range(20, 5, -1)])  # falls steadily → low %K
     assert "BUY" in actions
 
 
 # ---- keltner strategy ----
 def test_keltner_buy_on_breakout():
     s = KeltnerBreakout({"period": 10, "mult": 1.0, "size": 1})
-    # giá đi ngang rồi vọt lên → vượt dải trên
+    # price flat then jumps → breaks above the upper band
     closes = [100.0] * 20 + [130.0]
     bars = [candle(c) for c in closes]
     sigs = s.on_candle(Context("X", 130.0, bars, None))

@@ -1,7 +1,8 @@
-"""Interface cốt lõi cho chiến thuật — CHẠY CHUNG cả 4 mode (backtest/paper/testnet/live).
+"""Core strategy interface — SHARED by all 4 modes (backtest/paper/testnet/live).
 
-Strategy chỉ ĐỌC `Context` (engine bơm vào), trả về list `Signal`. KHÔNG gọi API,
-KHÔNG đụng DB, KHÔNG biết đang ở mode nào → đổi Executor = đổi mode (chống RK-4).
+A strategy only READS the `Context` (injected by the engine) and returns a list of `Signal`.
+It does NOT call APIs, does NOT touch the DB, and does NOT know which mode it runs in →
+swapping the Executor = swapping the mode (mitigates RK-4).
 """
 
 from abc import ABC, abstractmethod
@@ -15,7 +16,7 @@ class Signal:
     symbol: str
     size: float = 0.0
     order_type: str = "MARKET"  # MARKET | LIMIT
-    price: float | None = None  # cho LIMIT
+    price: float | None = None  # for LIMIT
     sl: float | None = None
     tp: float | None = None
 
@@ -34,7 +35,7 @@ class Position:
 class Context:
     symbol: str
     price: float
-    candles: list  # OHLCV gần nhất (cũ → mới), mỗi phần tử dict open/high/low/close/volume/ts
+    candles: list  # most recent OHLCV (old → new), each item a dict open/high/low/close/volume/ts
     position: Position | None
     indicators: dict = field(default_factory=dict)
     now: datetime | None = None
@@ -44,27 +45,27 @@ class Strategy(ABC):
     name: str = "base"
     version: str = "0"
     default_params: dict = {}
-    description: str = ""  # phương pháp luận — hiển thị ở Strategy Library
+    description: str = ""  # methodology — shown in the Strategy Library
 
     def __init__(self, params: dict | None = None) -> None:
         self.params = {**self.default_params, **(params or {})}
 
     @abstractmethod
     def on_candle(self, ctx: Context) -> list[Signal]:
-        """Nhận Context (chỉ đọc), trả về list Signal. Gọi mỗi khi 1 nến đóng."""
+        """Receives the (read-only) Context, returns a list of Signal. Called on candle close."""
         ...
 
     def plot(self, candles: list[dict]) -> dict[str, list]:
-        """Các đường overlay trên chart (tên → list giá trị, None ở warmup, dài = len(candles)).
+        """Chart overlay lines (name → list of values, None during warmup, length = len(candles)).
 
-        Mặc định rỗng (chỉ chiến thuật overlay-được mới override). Dùng cho viz backtest.
+        Empty by default (only overlay-capable strategies override it). Used for backtest charts.
         """
         return {}
 
     def plot_pane(self) -> dict[str, int]:
-        """Tên series → pane: 0 = overlay trên giá (mặc định), 1 = pane phụ cho oscillator.
+        """Series name → pane: 0 = overlay on price (default), 1 = secondary pane for oscillators.
 
-        Oscillator (RSI/ADX/Stoch/MACD) thang 0–100 hoặc nhỏ → để pane riêng, không
-        đè lên thang giá. Series không khai báo → pane 0.
+        Oscillators (RSI/ADX/Stoch/MACD) on a 0–100 or small scale → put in their own pane so
+        they do not squash the price scale. Undeclared series → pane 0.
         """
         return {}

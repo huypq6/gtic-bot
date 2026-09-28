@@ -1,5 +1,5 @@
-# DEV: mở http://localhost:5173 (Vite, HMR) → proxy /api + /ws sang api :8000.
-# api chạy uvicorn --reload (bind-mount source). Dùng:
+# DEV: open http://localhost:5173 (Vite, HMR) → proxies /api + /ws to api :8000.
+# api runs uvicorn --reload (bind-mounted source). Usage:
 #   docker compose -f docker-compose.dev.yml up --build
 services:
   db:
@@ -29,7 +29,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Bind-mount source để uvicorn --reload bắt thay đổi.
+    # Bind-mount the source so uvicorn --reload picks up changes.
     volumes:
       - ./app:/app/app
       - ./alembic:/app/alembic
@@ -46,7 +46,7 @@ services:
     volumes:
       - ./frontend:/app/frontend
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
-    # Vite proxy trỏ tới localhost:8000 — trong container cần trỏ tới api:8000.
+    # The Vite proxy points at localhost:8000 — inside the container it must point at api:8000.
     environment:
       VITE_PROXY_TARGET: http://api:8000
     depends_on:

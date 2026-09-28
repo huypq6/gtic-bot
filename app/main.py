@@ -1,11 +1,11 @@
 """FastAPI entrypoint — single process, asyncio.
 
-Lifespan spawn các asyncio task realtime: MarketFeed (Binance WS → EventBus),
-persister (ghi nến đóng vào DB), tracker trạng thái feed. P2+ thêm StrategyRunner,
+The lifespan spawns the realtime asyncio tasks: MarketFeed (Binance WS → EventBus),
+persister (writes closed candles to the DB), feed status tracker. P2+ adds StrategyRunner,
 Scanner...
 
-Prod (1 endpoint): nếu `frontend/dist` tồn tại → mount StaticFiles tại "/" để
-FastAPI phục vụ cả UI lẫn API trên cùng cổng. Dev: Vite (:5173) proxy sang đây.
+Prod (single endpoint): if `frontend/dist` exists → mount StaticFiles at "/" so
+FastAPI serves both the UI and the API on the same port. Dev: Vite (:5173) proxies here.
 """
 
 import asyncio
@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI):
 
     tasks = [
         asyncio.create_task(gateway.track_feed_status(), name="feed-status-tracker"),
-        # P9b: số dư/sổ cái tài khoản TESTNET/LIVE từ sàn (không có tài khoản sàn → no-op)
+        # P9b: TESTNET/LIVE account balance/ledger from the exchange (no exchange account → no-op)
         asyncio.create_task(run_exchange_sync(accounts), name="exchange-account-sync"),
     ]
     if settings.feed_autostart:
@@ -94,7 +94,7 @@ async def lifespan(app: FastAPI):
 
 
 async def _feed_autopause_watcher(bus: EventBus, bot_manager: BotManager) -> None:
-    """Mất feed (DOWN) → auto-pause mọi bot RUNNING (US-27). Nối lại KHÔNG tự resume."""
+    """Feed lost (DOWN) → auto-pause every RUNNING bot (US-27). Reconnect does NOT resume."""
     sub = bus.subscribe("feed")
     while True:
         msg = await sub.get()
@@ -105,7 +105,7 @@ async def _feed_autopause_watcher(bus: EventBus, bot_manager: BotManager) -> Non
 
 
 async def _restore_running_bots(bot_manager: BotManager) -> None:
-    """Khởi động lại các bot đang RUNNING sau khi process restart."""
+    """Restart RUNNING bots after a process restart."""
     from sqlalchemy import select
 
     from app.orders.models import Bot, StrategyModel
@@ -126,13 +126,13 @@ async def _restore_running_bots(bot_manager: BotManager) -> None:
             )
             logging.info("restore bot %s (%s)", bot.id, strat.name)
     except Exception:  # noqa: BLE001
-        logging.exception("không restore được bot đang chạy")
+        logging.exception("failed to restore running bots")
 
 
 app = FastAPI(title="GTIC Trading Bot", version="0.1.0", lifespan=lifespan)
 
-# CORS — cho phép truy cập từ origin khác (mobile/LAN). allow_credentials=False
-# vì chưa có auth cookie → an toàn dùng "*".
+# CORS — allow access from other origins (mobile/LAN). allow_credentials=False
+# since there is no auth cookie yet → "*" is safe.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -153,7 +153,7 @@ async def ws_endpoint(websocket: WebSocket) -> None:
 
 
 class SPAStaticFiles(StaticFiles):
-    """Serve static; fallback index.html cho client-side routes (vd /trade)."""
+    """Serve static; fallback to index.html for client-side routes (e.g. /trade)."""
 
     async def get_response(self, path: str, scope):
         try:
@@ -164,6 +164,6 @@ class SPAStaticFiles(StaticFiles):
             raise
 
 
-# Prod: serve built frontend. Chỉ mount khi dist tồn tại (dev dùng Vite proxy).
+# Prod: serve built frontend. Only mounted when dist exists (dev uses the Vite proxy).
 if FRONTEND_DIST.is_dir():
     app.mount("/", SPAStaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

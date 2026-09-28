@@ -1,4 +1,4 @@
-"""Review lệnh: MFE/MAE, R, kết quả, suy lý do thoát cho vị thế cũ."""
+"""Trade review: MFE/MAE, R, outcome, inferring the exit reason for legacy positions."""
 
 import pytest
 
@@ -6,7 +6,7 @@ from app.orders.trades import excursion, infer_reason, summarize
 
 BARS = [
     {"ts": 1, "high": 101, "low": 99},
-    {"ts": 2, "high": 104, "low": 97},  # đỉnh 104 / đáy 97
+    {"ts": 2, "high": 104, "low": 97},  # high 104 / low 97
     {"ts": 3, "high": 103, "low": 100},
 ]
 
@@ -25,17 +25,17 @@ def test_excursion_short():
 
 def test_excursion_never_negative_and_empty():
     e = excursion("LONG", 90, [{"ts": 1, "high": 95, "low": 91}])
-    assert e.mae == 0  # giá không lần nào dưới entry
-    assert excursion("LONG", 100, []).mfe is None  # thiếu nến → không bịa 0
+    assert e.mae == 0  # price never went below entry
+    assert excursion("LONG", 100, []).mfe is None  # missing candles → don't fabricate 0
 
 
 def test_excursion_capped_at_exit_bar():
-    # nến thoát chạy quá TP/SL sau khi lệnh đã đóng → không tính phần đó
+    # the exit candle runs past TP/SL after the position closed → that part is not counted
     e = excursion("LONG", 100, BARS, "TP", 102)
     assert (e.mfe, e.mfe_price) == (2, 102)
     e = excursion("SHORT", 100, BARS, "SL", 102)
     assert (e.mae, e.mae_price) == (2, 102)
-    assert excursion("LONG", 100, BARS, "SIGNAL", 102).mfe == 4  # thoát tín hiệu: giữ nguyên
+    assert excursion("LONG", 100, BARS, "SIGNAL", 102).mfe == 4  # signal exit: unchanged
 
 
 def test_summarize_win_in_r():
@@ -44,7 +44,7 @@ def test_summarize_win_in_r():
         exc=excursion("LONG", 100, BARS),
     )
     assert s["result"] == "WIN"
-    assert s["r"] == pytest.approx(2.0)  # +4/đv ÷ risk 2
+    assert s["r"] == pytest.approx(2.0)  # +4/unit ÷ risk 2
     assert s["pnl_pct"] == pytest.approx(4.0)
     assert s["mfe_r"] == pytest.approx(2.0)
     assert s["mae_r"] == pytest.approx(1.5)

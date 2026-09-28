@@ -1,17 +1,18 @@
 """Adapter Binance USDⓈ-M Futures (P9b) — testnet (testnet.binancefuture.com) & live.
 
-Vì sao Futures (không Spot): strategy có SHORT, paper + backtest đều mô phỏng USDT-M
-Futures → lệnh thật phải cùng thị trường thì kết quả mới so được với nhau.
+Why Futures (not Spot): strategies go SHORT, and paper + backtest both simulate USDT-M
+Futures → real orders must be on the same market for results to be comparable.
 
-Chuẩn hóa cho ExchangeExecutor/AccountService:
-- Làm tròn khối lượng theo stepSize (xuống), giá theo tickSize; chặn dưới minQty/minNotional.
-- MARKET dùng `newOrderRespType=RESULT` → có avgPrice/executedQty ngay.
-- SL/TP đặt TRÊN SÀN: STOP_MARKET / TAKE_PROFIT_MARKET `closePosition=true` (python-binance
-  tự chuyển sang endpoint Algo Order, trả `algoId`) → app chết lệnh vẫn được bảo vệ.
-- Đóng lệnh luôn `reduceOnly` → không bao giờ vô tình mở vị thế ngược.
-- Số dư/ký quỹ/lãi tạm từ `futures_account`, sổ cái từ `futures_income_history`.
+Normalization for ExchangeExecutor/AccountService:
+- Round quantity down to stepSize and price to tickSize; enforce minQty/minNotional floors.
+- MARKET uses `newOrderRespType=RESULT` → avgPrice/executedQty are available immediately.
+- SL/TP placed ON THE EXCHANGE: STOP_MARKET / TAKE_PROFIT_MARKET `closePosition=true`
+  (python-binance routes these to the Algo Order endpoint, returning `algoId`)
+  → positions stay protected even if the app dies.
+- Closing always uses `reduceOnly` → never accidentally opens an opposite position.
+- Balance/margin/unrealized PnL from `futures_account`, ledger from `futures_income_history`.
 
-Mọi lời gọi mạng tập trung ở đây → test bằng client giả cùng interface.
+All network calls are concentrated here → tested with a fake client exposing the same interface.
 """
 
 import logging
@@ -22,14 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 class ExchangeReject(Exception):
-    """Sàn / quy tắc sàn từ chối lệnh (khối lượng quá nhỏ, sai bước giá…)."""
+    """Exchange / exchange rules rejected the order (quantity too small, invalid tick size…)."""
 
 
 @dataclass
 class SymbolRules:
-    step: float  # bước khối lượng (LOT_SIZE / MARKET_LOT_SIZE)
+    step: float  # quantity step (LOT_SIZE / MARKET_LOT_SIZE)
     min_qty: float
-    tick: float  # bước giá (PRICE_FILTER)
+    tick: float  # price step (PRICE_FILTER)
     min_notional: float  # MIN_NOTIONAL.notional
 
     @staticmethod
@@ -50,10 +51,10 @@ class SymbolRules:
 
     def check(self, qty: float, price: float) -> None:
         if qty < self.min_qty or qty <= 0:
-            raise ExchangeReject(f"khối lượng {qty} < tối thiểu {self.min_qty}")
+            raise ExchangeReject(f"quantity {qty} < minimum {self.min_qty}")
         if price and qty * price < self.min_notional:
             raise ExchangeReject(
-                f"giá trị lệnh {qty * price:.2f} < tối thiểu {self.min_notional:g} USDT"
+                f"order notional {qty * price:.2f} < minimum {self.min_notional:g} USDT"
             )
 
 
@@ -90,12 +91,12 @@ class BinanceFuturesClient:
     async def close(self) -> None:
         await self._raw.close_connection()
 
-    # ---------- quy tắc sàn ----------
+    # ---------- exchange rules ----------
     async def rules(self, symbol: str) -> SymbolRules:
         if symbol not in self._rules:
             self._rules.update(parse_rules(await self._raw.futures_exchange_info()))
         if symbol not in self._rules:
-            raise ExchangeReject(f"{symbol} không có trên Binance Futures")
+            raise ExchangeReject(f"{symbol} is not listed on Binance Futures")
         return self._rules[symbol]
 
     async def ensure_leverage(self, symbol: str, leverage: float) -> None:
@@ -104,7 +105,7 @@ class BinanceFuturesClient:
             await self._raw.futures_change_leverage(symbol=symbol, leverage=lev)
             self._leverage[symbol] = lev
 
-    # ---------- lệnh ----------
+    # ---------- orders ----------
     @staticmethod
     def _norm(resp: dict) -> dict:
         avg = float(resp.get("avgPrice") or 0) or float(resp.get("price") or 0)
@@ -138,7 +139,9 @@ class BinanceFuturesClient:
     async def protect(
         self, symbol: str, side: str, sl: float | None, tp: float | None
     ) -> dict[str, str | None]:
-        """Đặt SL/TP trên sàn cho vị thế `side` (LONG/SHORT). Trả {"sl": algoId, "tp": algoId}."""
+        """Place SL/TP on the exchange for position `side` (LONG/SHORT).
+
+        Returns {"sl": algoId, "tp": algoId}."""
         r = await self.rules(symbol)
         close_side = "SELL" if side == "LONG" else "BUY"
         out: dict[str, str | None] = {"sl": None, "tp": None}
@@ -161,12 +164,12 @@ class BinanceFuturesClient:
                 continue
             try:
                 await self._raw.futures_cancel_algo_order(symbol=symbol, algoId=oid)
-            except Exception as e:  # noqa: BLE001 — đã khớp/đã hủy → bỏ qua
-                logger.info("hủy SL/TP %s %s: %s", symbol, oid, e)
+            except Exception as e:  # noqa: BLE001 — already filled/cancelled → ignore
+                logger.info("cancel SL/TP %s %s: %s", symbol, oid, e)
 
-    # ---------- trạng thái ----------
+    # ---------- state ----------
     async def position(self, symbol: str) -> dict:
-        """{"amt": số lượng có dấu (+LONG/−SHORT), "entry": giá vào}."""
+        """{"amt": signed quantity (+LONG/−SHORT), "entry": entry price}."""
         rows = await self._raw.futures_position_information(symbol=symbol)
         amt = sum(float(r.get("positionAmt") or 0) for r in rows)
         open_rows = [r for r in rows if float(r.get("positionAmt") or 0)]
@@ -174,7 +177,7 @@ class BinanceFuturesClient:
         return {"amt": amt, "entry": entry}
 
     async def last_close_fill(self, symbol: str, since_ms: int) -> dict | None:
-        """Fill đóng gần nhất (vd SL/TP trên sàn khớp) → giá TB + phí + lãi đã chốt."""
+        """Most recent closing fill (e.g. exchange SL/TP hit) → avg price + fee + realized PnL."""
         trades = await self._raw.futures_account_trades(symbol=symbol, startTime=since_ms)
         closes = [t for t in trades if float(t.get("realizedPnl") or 0) != 0]
         if not closes:
@@ -202,7 +205,7 @@ class BinanceFuturesClient:
         }
 
     async def income(self, since_ms: int | None) -> list[dict]:
-        """Sổ cái sàn: REALIZED_PNL, COMMISSION, FUNDING_FEE, TRANSFER… (cũ → mới)."""
+        """Exchange ledger: REALIZED_PNL, COMMISSION, FUNDING_FEE, TRANSFER… (oldest → newest)."""
         params = {"limit": 1000}
         if since_ms:
             params["startTime"] = since_ms

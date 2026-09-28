@@ -1,18 +1,21 @@
-"""Backtest MÔ PHỎNG TÀI KHOẢN (P9c) — cùng luật với paper/live, khác vectorbt ở chỗ:
+"""ACCOUNT-SIMULATION backtest (P9c) — same rules as paper/live; differs from vectorbt in that:
 
-- Khối lượng theo quản lý vốn (`size_order`: risk_pct/risk_usdt/notional…) + rào chắn
-  (trần rủi ro, lỗ ngày → nghỉ hết ngày UTC, sụt vốn → DỪNG) — cùng code với runner live.
-- Khớp bằng `PaperEngine` y như paper: phí taker/maker, trượt giá, SL khớp theo gap,
-  đòn bẩy + thanh lý. SL/TP/limit kiểm TRONG nến theo đường O→(L,H)→C (nến tăng: O→L→H→C;
-  nến giảm: O→H→L→C) — bi quan vừa phải, như tick live đi qua.
-- Strategy nhận cửa sổ trượt `window` nến cuối (= deque của StrategyRunner) và tín hiệu
-  khớp ở giá đóng nến (= tick đầu tiên sau khi nến đóng ở live).
-- Lãi kép: vốn tăng/giảm → lệnh sau to/nhỏ theo equity.
+- Position size follows money management (`size_order`: risk_pct/risk_usdt/notional…) + guardrails
+  (risk cap, daily loss → halt for the rest of the UTC day, drawdown → STOP) — same code as the
+  live runner.
+- Fills via `PaperEngine` exactly like paper: taker/maker fees, slippage, SL filled at the gap,
+  leverage + liquidation. SL/TP/limit are checked WITHIN the candle along the path O→(L,H)→C
+  (bullish candle: O→L→H→C; bearish candle: O→H→L→C) — moderately pessimistic, like live ticks
+  passing through.
+- The strategy receives a sliding window of the last `window` candles (= StrategyRunner's deque)
+  and signals fill at the candle close price (= first tick after the candle closes in live).
+- Compounding: equity grows/shrinks → subsequent orders get bigger/smaller with equity.
 
-Thuần Python, không vectorbt, không DB → test được; chạy sync (API gọi trong threadpool).
+Pure Python, no vectorbt, no DB → testable; runs sync (the API calls it in a threadpool).
 """
 
 import math
+import re
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 
@@ -45,7 +48,7 @@ class SimConfig:
     max_open_risk_pct: float | None = None
     daily_loss_pct: float | None = None
     max_dd_pct: float | None = None
-    window: int = 1000  # = lookback của StrategyRunner
+    window: int = 1000  # = StrategyRunner lookback
 
     def limits(self) -> Limits:
         return Limits(
@@ -73,17 +76,17 @@ class _Sim:
         self.day = None
         self.day_start_balance = cfg.capital
         self.realized_today = 0.0
-        self.halted_until_day: int | None = None  # nghỉ vì lỗ ngày
-        self.dd_halt_ts: int | None = None  # DỪNG vì sụt vốn (không tự mở lại)
+        self.halted_until_day: int | None = None  # halted due to daily loss
+        self.dd_halt_ts: int | None = None  # STOPPED due to drawdown (does not reopen by itself)
         self.n_day_halts = 0
         self.liquidated = False
-        self.open: dict | None = None  # meta vị thế đang mở
+        self.open: dict | None = None  # metadata of the currently open position
         self.trades: list[dict] = []
         self.rejects: dict[str, int] = {}
-        self.capped: dict[str, int] = {}  # lệnh bị CO khối lượng (vẫn vào) theo lý do
+        self.capped: dict[str, int] = {}  # orders whose size was SHRUNK (still entered), by reason
         self.fees = 0.0
 
-    # ---------- trạng thái tài khoản ----------
+    # ---------- account state ----------
     def unrealized(self, price: float) -> float:
         return self.eng.unrealized_pnl(price)
 
@@ -105,7 +108,7 @@ class _Sim:
             self.day_start_balance = self.balance
             self.realized_today = 0.0
 
-    # ---------- sự kiện engine → sổ sách ----------
+    # ---------- engine events → bookkeeping ----------
     def apply(self, events, ts: int, sig=None) -> None:
         for e in events:
             if e.closed:
@@ -119,7 +122,7 @@ class _Sim:
         self.balance -= fee
         self.realized_today -= fee
         self.fees += fee
-        eq = self.balance + fee  # equity lúc quyết định vào (trước phí)
+        eq = self.balance + fee  # equity at entry decision time (before fees)
         self.open = {
             "side": p.side, "entry_ts": ts, "entry": p.entry_price, "qty": p.qty,
             "sl": p.sl, "tp": p.tp, "risk": position_risk(p.side, p.qty, p.entry_price, p.sl)
@@ -160,14 +163,14 @@ class _Sim:
         m["mfe"] = max(m["mfe"], fav)
         m["mae"] = max(m["mae"], -fav)
 
-    # ---------- rào chắn ----------
+    # ---------- guardrails ----------
     def blocked(self, ts: int, price: float) -> str | None:
         if self.liquidated:
-            return "tài khoản cháy"
+            return "account liquidated"
         if self.dd_halt_ts is not None:
-            return "tài khoản DỪNG do sụt vốn"
+            return "account STOPPED due to drawdown"
         if self.halted_until_day is not None and ts // DAY_MS < self.halted_until_day:
-            return "nghỉ tới hết ngày do lỗ ngày"
+            return "halted until end of day due to daily loss"
         why = check_halt(self.state(price), self.lim)
         if why:
             if self.lim.max_dd_pct is not None and self.state(price).dd_pct >= self.lim.max_dd_pct:
@@ -179,10 +182,17 @@ class _Sim:
         return None
 
     def reject(self, reason: str) -> None:
-        key = reason.split(" ")[0] if reason else "?"
-        key = {"sụt": "sụt vốn", "lỗ": "lỗ ngày", "nghỉ": "lỗ ngày", "tài": "tài khoản dừng",
-               "tổng": "tổng rủi ro mở", "giá": "dưới tối thiểu", "không": "không đủ số dư",
-               "phương": "thiếu SL"}.get(key, reason)
+        # group reject reasons into a few stable buckets (first matching keyword wins)
+        low = (reason or "?").lower()
+        buckets = (
+            ("account", "account halted"), ("drawdown", "drawdown"),
+            ("daily loss", "daily loss"), ("today's loss", "daily loss"),
+            ("open risk", "total open risk"), ("minimum", "below minimum"),
+            ("balance", "insufficient balance"),
+        )
+        key = next((b for kw, b in buckets if kw in low), None)
+        if key is None:
+            key = "missing SL" if re.search(r"\bsl\b|stop-loss", low) else reason
         self.rejects[key] = self.rejects.get(key, 0) + 1
 
 
@@ -203,9 +213,9 @@ def simulate(
 def simulate_with(
     strategy, candles: list[dict], cfg: SimConfig, tf: str = "15m", symbol: str = ""
 ) -> dict:
-    """Như `simulate` nhưng nhận sẵn instance strategy (test / nhiều cấu hình)."""
+    """Like `simulate` but takes a ready-made strategy instance (tests / many configs)."""
     if len(candles) < 5:
-        raise ValueError("không đủ dữ liệu để backtest")
+        raise ValueError("not enough data to backtest")
     tf_ms = TF_MS.get(tf, 60_000)
     sim = _Sim(symbol, cfg, tf_ms)
     method = cfg.sizing.get("method", "risk_pct")
@@ -216,17 +226,18 @@ def simulate_with(
     for i, c in enumerate(candles):
         ts = c["ts"]
         sim.new_day(ts)
-        # 1) trong nến: SL/TP/limit/thanh lý theo đường giá
+        # 1) within the candle: SL/TP/limit/liquidation along the price path
         if sim.eng.position or sim.eng.pending:
             for k, px in enumerate(_path(c)):
-                # chỉ tick MỞ CỬA mới có thể nhảy qua SL (gap); trong nến giá chạy liên tục
-                # qua các mức → SL khớp đúng tại SL (+ trượt giá).
+                # only the OPEN tick can jump past the SL (gap); within the candle price moves
+                # continuously
+                # through levels → SL fills exactly at SL (+ slippage).
                 sim.eng.gap_fill = k == 0
                 sim.apply(sim.eng.on_price(px), ts)
                 sim.track(px)
         close = c["close"]
-        close_ts = ts + tf_ms  # tín hiệu khớp khi nến đóng
-        # 2) nến đóng → strategy
+        close_ts = ts + tf_ms  # signals fill when the candle closes
+        # 2) candle closed → strategy
         ctx = Context(
             symbol=symbol, price=close, candles=candles[max(0, i - W + 1): i + 1],
             position=sim.eng.position,
@@ -264,7 +275,7 @@ def simulate_with(
         if sim.liquidated:
             break
 
-    # đóng vị thế còn mở ở giá cuối để số liệu đủ (đánh dấu END)
+    # close any still-open position at the last price so the stats are complete (marked END)
     last = candles[min(len(candles) - 1, len(equity) - 1)]
     if sim.eng.position:
         sim.apply(sim.eng.force_close(last["close"], "END"), last["ts"] + tf_ms)
@@ -292,7 +303,7 @@ def _stats(sim: _Sim, equity: list[tuple[int, float]], cfg: SimConfig, candles) 
     span_days = max(1e-9, (equity[-1][0] - cur_start) / DAY_MS)
     cagr = ((final / cap) ** (365 / span_days) - 1) * 100 if final > 0 and span_days >= 7 else None
 
-    # lợi nhuận theo ngày (Sharpe) + theo tháng
+    # daily returns (Sharpe) + monthly returns
     daily: dict[int, float] = {}
     monthly: dict[str, list[float]] = {}
     for ts, v in equity:

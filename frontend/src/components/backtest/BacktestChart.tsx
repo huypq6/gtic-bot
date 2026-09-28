@@ -14,12 +14,13 @@ import { loadRange } from "../../lib/datafeed";
 import { chartColors } from "../../lib/chartTheme";
 import { useTheme } from "../../lib/theme";
 import type { BacktestTrade, IndicatorSeries } from "../../lib/api";
+import { t } from "../../lib/i18n";
 
 const LINE_COLORS = ["#8b9cba", "#5cc3b4", "#e0a458", "#c98bdb", "#6fb1e0", "#d98b8b"];
-const OSC_PANE = 1; // pane phụ cho oscillator (RSI/ADX/Stoch/MACD)
+const OSC_PANE = 1; // secondary pane for oscillators (RSI/ADX/Stoch/MACD)
 const OSC_PANE_HEIGHT = 130;
 
-// Chuẩn hóa series về {pane, data} — run cũ lưu mảng [[ts,v]] (pane 0).
+// Normalize series to {pane, data} — older runs stored a [[ts,v]] array (pane 0).
 function normSeries(raw: IndicatorSeries): { pane: number; data: [number, number][] } {
   if (Array.isArray(raw)) return { pane: 0, data: raw };
   return { pane: raw.pane ?? 0, data: raw.data };
@@ -35,7 +36,7 @@ interface Props {
   onSelect?: (i: number) => void; // click marker/trade
 }
 
-// Chart backtest: nến + đường indicator theo chiến lược + marker vào/ra mỗi lệnh (US-11).
+// Backtest chart: candles + the strategy's indicator lines + entry/exit markers for each trade (US-11).
 export default function BacktestChart({ symbol, tf, from, to, indicators, trades }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -72,7 +73,7 @@ export default function BacktestChart({ symbol, tf, from, to, indicators, trades
       if (cancelled) return;
       candle.setData(bars);
 
-      // đường indicator — pane 0 overlay trên giá, pane 1 cho oscillator (thang riêng).
+      // indicator lines — pane 0 overlays price, pane 1 for oscillators (own scale).
       let hasOscPane = false;
       Object.entries(indicators).forEach(([name, raw], idx) => {
         const { pane, data } = normSeries(raw);
@@ -83,7 +84,7 @@ export default function BacktestChart({ symbol, tf, from, to, indicators, trades
             color: LINE_COLORS[idx % LINE_COLORS.length],
             lineWidth: 1,
             priceLineVisible: false,
-            lastValueVisible: pane === OSC_PANE, // oscillator: hiện giá trị cuối cho dễ đọc
+            lastValueVisible: pane === OSC_PANE, // oscillator: show last value for readability
             title: name,
           },
           pane,
@@ -92,25 +93,25 @@ export default function BacktestChart({ symbol, tf, from, to, indicators, trades
       });
       if (hasOscPane) chart.panes()[OSC_PANE]?.setHeight(OSC_PANE_HEIGHT);
 
-      // marker vào/ra mỗi lệnh
+      // entry/exit marker for each trade
       const markers: SeriesMarker<Time>[] = [];
-      for (const t of trades) {
-        const long = t.side === "Long";
-        if (t.entry_ts)
+      for (const tr of trades) {
+        const long = tr.side === "Long";
+        if (tr.entry_ts)
           markers.push({
-            time: (t.entry_ts / 1000) as Time,
+            time: (tr.entry_ts / 1000) as Time,
             position: long ? "belowBar" : "aboveBar",
             color: c.up,
             shape: long ? "arrowUp" : "arrowDown",
-            text: "vào",
+            text: t("entry"),
           });
-        if (t.exit_ts)
+        if (tr.exit_ts)
           markers.push({
-            time: (t.exit_ts / 1000) as Time,
+            time: (tr.exit_ts / 1000) as Time,
             position: long ? "aboveBar" : "belowBar",
-            color: (t.pnl_pct ?? 0) >= 0 ? c.up : c.down,
+            color: (tr.pnl_pct ?? 0) >= 0 ? c.up : c.down,
             shape: long ? "arrowDown" : "arrowUp",
-            text: `ra ${(t.pnl_pct ?? 0) >= 0 ? "+" : ""}${(t.pnl_pct ?? 0).toFixed(1)}%`,
+            text: `${t("exit")} ${(tr.pnl_pct ?? 0) >= 0 ? "+" : ""}${(tr.pnl_pct ?? 0).toFixed(1)}%`,
           });
       }
       markers.sort((a, b) => (a.time as number) - (b.time as number));
@@ -124,7 +125,7 @@ export default function BacktestChart({ symbol, tf, from, to, indicators, trades
       chartRef.current = null;
       candleRef.current = null;
     };
-    // indicators/trades đổi khi chạy backtest mới cùng symbol+tf+range → phải vẽ lại.
+    // indicators/trades change when a new backtest runs on the same symbol+tf+range → must redraw.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, tf, from, to, theme, indicators, trades]);
 

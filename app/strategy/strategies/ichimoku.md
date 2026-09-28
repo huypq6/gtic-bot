@@ -1,68 +1,68 @@
-# Ichimoku Kinko Hyo — Hệ thống cân bằng một lần nhìn
+# Ichimoku Kinko Hyo — One-Glance Equilibrium Chart
 
-> Trường phái: **Trend-following** (đa chỉ báo). Khung gợi ý: 1h–1d. Cần nhiều dữ liệu (≥ 78 nến).
+> School: **Trend-following** (multi-indicator). Suggested timeframe: 1h–1d. Needs a lot of data (≥ 78 candles).
 
-## Phiên bản
-- **v1** (`ichimoku.py`) — thô: vào theo cross + mây, thoát khi đảo tín hiệu. KHÔNG cắt lỗ → giữ lệnh dài.
-- **v2** (`ichimoku_v2.py`) — v1 + **ATR trailing stop** (`atr_mult`) để ghìm max DD, vẫn để lời chạy theo trend.
+## Versions
+- **v1** (`ichimoku.py`) — raw: enters on cross + cloud, exits when the signal reverses. NO stop-loss → holds trades for a long time.
+- **v2** (`ichimoku_v2.py`) — v1 + **ATR trailing stop** (`atr_mult`) to rein in max DD while still letting profits run with the trend.
 
-### Nghiên cứu (skill strategy-research)
-- **Sweep v1** (`scripts/sweep_ichimoku.py`): bộ tốt `conv=9 base=52 span_b=52` → PnL TB +15% (3/4 thị trường),
-  win ~36% NHƯNG **maxDD 33–70%** → quá cao cho mục tiêu DD thấp.
-- **v2 trailing**: cắt DD rõ nhưng dao 2 lưỡi (cũng cắt lệnh thắng lớn). `atr_mult` nhỏ = DD thấp
-  nhưng cắt PnL trend; cần sweep + walk-forward để chốt.
-- **Khung TF (quyết định)**: ichimoku v2 trail×2, bộ conv9/base52/spanB52, cửa sổ chính xác:
-  - **15m: ÂM NẶNG** (BTC −15.6%, ETH −23.3%; 56–66 lệnh whipsaw) → KHÔNG dùng 15m.
-  - **1h: BTC +26.8%, win 45%, maxDD 7.1%** (chạm cả 3 mục tiêu in-sample); ETH −1.9%.
-  - 4h: BTC +31% (DD 15.6%), ETH +9.3% (DD 35.7%) — lời nhưng DD cao.
-  - ⇒ Trend-following cần trend dài: chạy **1h/4h**, ngược hẳn ict_po3 (intraday 15m).
-- **Sweep v2 (1h/4h)**: bộ bền nhất `conv=9 base=26 span_b=104 trail×2` → PnL TB **+28.7%**, 4/4 thị trường
-  dương, win 38% NHƯNG **maxDD 28.2%** → fail mục tiêu DD thấp. TẠM GÁC (chưa walk-forward) — ưu tiên
-  ict_po3 v4 theo yêu cầu; nếu quay lại: cần cơ chế giảm DD thêm (vd position sizing theo ATR) trước.
+### Research (strategy-research skill)
+- **v1 sweep** (`scripts/sweep_ichimoku.py`): good config `conv=9 base=52 span_b=52` → average PnL +15% (3/4 markets),
+  win ~36% BUT **maxDD 33–70%** → too high for the low-DD goal.
+- **v2 trailing**: clearly cuts DD but is a double-edged sword (also cuts big winners). Small `atr_mult` = low DD
+  but cuts trend PnL; needs a sweep + walk-forward to settle.
+- **Timeframe (decision)**: ichimoku v2 trail×2, config conv9/base52/spanB52, exact windows:
+  - **15m: HEAVILY NEGATIVE** (BTC −15.6%, ETH −23.3%; 56–66 whipsaw trades) → do NOT use 15m.
+  - **1h: BTC +26.8%, win 45%, maxDD 7.1%** (hits all 3 goals in-sample); ETH −1.9%.
+  - 4h: BTC +31% (DD 15.6%), ETH +9.3% (DD 35.7%) — profitable but high DD.
+  - ⇒ Trend-following needs long trends: run on **1h/4h**, the complete opposite of ict_po3 (intraday 15m).
+- **v2 sweep (1h/4h)**: most robust config `conv=9 base=26 span_b=104 trail×2` → average PnL **+28.7%**, 4/4 markets
+  positive, win 38% BUT **maxDD 28.2%** → fails the low-DD goal. SHELVED FOR NOW (no walk-forward yet) — ict_po3 v4
+  prioritized as requested; if revisiting: first needs a further DD-reduction mechanism (e.g. ATR-based position sizing).
 
-## Ý tưởng
+## Idea
 
-Ichimoku (Goichi Hosoda) gộp nhiều thành phần thành một hệ thống "nhìn một lần thấy ngay" xu hướng, hỗ trợ/kháng cự và động lượng. Tín hiệu mạnh khi **nhiều thành phần đồng thuận**.
+Ichimoku (Goichi Hosoda) combines several components into a "see it at a glance" system for trend, support/resistance and momentum. Signals are strong when **multiple components agree**.
 
-## Thành phần
+## Components
 
-| Đường | Công thức |
+| Line | Formula |
 |---|---|
-| **Tenkan-sen** (chuyển đổi) | (HH + LL) / 2 trong `conv` nến (9) |
-| **Kijun-sen** (cơ sở) | (HH + LL) / 2 trong `base` nến (26) |
-| **Senkou Span A** | (Tenkan + Kijun) / 2, vẽ trước `base` nến |
-| **Senkou Span B** | (HH + LL) / 2 trong `span_b` nến (52), vẽ trước `base` nến |
-| **Mây (Kumo)** | vùng giữa Span A và Span B |
+| **Tenkan-sen** (conversion) | (HH + LL) / 2 over `conv` candles (9) |
+| **Kijun-sen** (base) | (HH + LL) / 2 over `base` candles (26) |
+| **Senkou Span A** | (Tenkan + Kijun) / 2, plotted `base` candles ahead |
+| **Senkou Span B** | (HH + LL) / 2 over `span_b` candles (52), plotted `base` candles ahead |
+| **Cloud (Kumo)** | the area between Span A and Span B |
 
-## Quy tắc vào/ra lệnh (bản dùng ở đây)
+## Entry/exit rules (the version used here)
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
-| Tenkan cắt **LÊN** Kijun **VÀ** giá **trên** mây | **BUY** (LONG) |
-| Tenkan cắt **XUỐNG** Kijun **VÀ** giá **dưới** mây | **SELL** (SHORT) |
+| Tenkan crosses **ABOVE** Kijun **AND** price is **above** the cloud | **BUY** (LONG) |
+| Tenkan crosses **BELOW** Kijun **AND** price is **below** the cloud | **SELL** (SHORT) |
 
-Lọc theo mây giúp chỉ vào lệnh thuận xu hướng chính → giảm tín hiệu giả.
+The cloud filter ensures entries only follow the main trend → fewer false signals.
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `conv` | 9 | Chu kỳ Tenkan. |
-| `base` | 26 | Chu kỳ Kijun + độ dịch mây. |
-| `span_b` | 52 | Chu kỳ Senkou Span B. |
-| `size` | 0.001 | Khối lượng. |
+| `conv` | 9 | Tenkan period. |
+| `base` | 26 | Kijun period + cloud displacement. |
+| `span_b` | 52 | Senkou Span B period. |
+| `size` | 0.001 | Position size. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Bộ lọc đa tầng (cross + mây) → tín hiệu chất lượng, ít nhiễu.
-- ✅ Thấy ngay vùng hỗ trợ/kháng cự (mây).
-- ❌ Trễ; cần nhiều dữ liệu; tham số nhạy với khung thời gian.
+- ✅ Multi-layer filter (cross + cloud) → quality signals, little noise.
+- ✅ Support/resistance zones (the cloud) are visible at a glance.
+- ❌ Lagging; needs a lot of data; parameters are sensitive to the timeframe.
 
-## Khi nào dùng
+## When to use
 
-- Thị trường có xu hướng, khung trung–dài. Là bộ lọc xu hướng tốt để kết hợp.
+- Trending markets, medium–long timeframes. A good trend filter to combine with other strategies.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Cần đủ lịch sử (≥ span_b + base nến) cho mỗi quyết định.
-- Có thể thêm điều kiện Chikou Span (giá trễ) nếu muốn chặt hơn.
+- Needs enough history (≥ span_b + base candles) for each decision.
+- A Chikou Span (lagging price) condition can be added for stricter entries.

@@ -1,4 +1,4 @@
-// Theme switch sáng/tối — set/bỏ class `.dark` trên <html>, lưu localStorage.
+// Light/dark theme switch — sets/removes the `.dark` class on <html>, persisted in localStorage.
 import { create } from "zustand";
 
 export type Theme = "light" | "dark";

@@ -66,9 +66,9 @@ def test_macd_cross_signals_on_trend_reversal():
 # ---- supertrend ----
 def test_supertrend_strategy_flips():
     s = Supertrend({"period": 5, "mult": 2, "size": 1})
-    closes = list(range(1, 40)) + list(range(39, 1, -1))  # lên rồi xuống
+    closes = list(range(1, 40)) + list(range(39, 1, -1))  # up then down
     actions = replay(s, [float(c) for c in closes])
-    assert "SELL" in actions  # có lúc đảo xuống
+    assert "SELL" in actions  # reverses down at some point
 
 
 # ---- registry ----

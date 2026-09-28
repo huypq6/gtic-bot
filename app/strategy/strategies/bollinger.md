@@ -1,12 +1,12 @@
-# Bollinger Bands Reversion — Hồi quy về dải giữa
+# Bollinger Bands Reversion — Reverting to the middle band
 
-> Trường phái: **Mean-reversion**. Khung gợi ý: 15m–4h. Hợp thị trường dao động trong biên.
+> Style: **Mean-reversion**. Suggested timeframes: 15m–4h. Suits range-bound markets.
 
-## Ý tưởng
+## Idea
 
-Dải Bollinger (John Bollinger) gồm: **dải giữa** = SMA(period), **dải trên/dưới** = giữa ± mult × độ lệch chuẩn. Khoảng ±2σ bao phủ ~95% biến động. Giả thuyết mean-reversion: giá chạm **dải biên** thường bị "kéo" về dải giữa.
+Bollinger Bands (John Bollinger) consist of: **middle band** = SMA(period), **upper/lower bands** = middle ± mult × standard deviation. The ±2σ range covers ~95% of price movement. Mean-reversion hypothesis: when price touches an **outer band** it tends to get "pulled" back to the middle band.
 
-## Công thức
+## Formula
 
 ```
 mid   = SMA(close, period)
@@ -15,31 +15,31 @@ upper = mid + mult × sd
 lower = mid − mult × sd
 ```
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
-| `giá ≤ dải dưới` | **BUY** — quá bán, kỳ vọng bật về mid |
-| `giá ≥ dải trên` | **SELL** — quá mua, kỳ vọng rơi về mid |
+| `price ≤ lower band` | **BUY** — oversold, expect a bounce back to mid |
+| `price ≥ upper band` | **SELL** — overbought, expect a drop back to mid |
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `period` | 20 | Chu kỳ SMA + độ lệch chuẩn. |
-| `mult` | 2.0 | Hệ số nhân độ lệch chuẩn (độ rộng dải). |
-| `size` | 0.001 | Khối lượng. |
+| `period` | 20 | SMA + standard deviation period. |
+| `mult` | 2.0 | Standard deviation multiplier (band width). |
+| `size` | 0.001 | Order size. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Hiệu quả khi thị trường **sideway**, biên ổn định.
-- ❌ Khi **bứt phá xu hướng** (band expansion), giá có thể "đi men theo dải" → bắt ngược dễ lỗ.
-- ❌ Không SL thì rủi ro đuôi lớn (giống mọi mean-reversion).
+- ✅ Effective in **sideways** markets with a stable range.
+- ❌ On a **trend breakout** (band expansion), price can "walk the band" → fading it easily loses.
+- ❌ Without an SL, tail risk is large (as with any mean-reversion).
 
-## Khi nào dùng
+## When to use
 
-- Thị trường tích lũy/đi ngang. Cân nhắc lọc bằng độ rộng dải (squeeze) hoặc thêm SL.
+- Consolidating/sideways markets. Consider filtering by band width (squeeze) or adding an SL.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Thử `mult` 1.5–2.5 và `period`. Backtest cả giai đoạn trend để thấy điểm yếu.
+- Try `mult` 1.5–2.5 and different `period` values. Also backtest trending periods to see the weaknesses.

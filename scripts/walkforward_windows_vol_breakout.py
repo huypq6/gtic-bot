@@ -1,11 +1,12 @@
-"""Walk-forward CỬA SỔ 30 NGÀY cho vol_breakout noise40 — tiêu chí skill: dương ≥ 2/3 cửa sổ.
+"""30-DAY WINDOW walk-forward for vol_breakout noise40.
 
-Chạy:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/walkforward_windows_vol_breakout.py
-Params CỐ ĐỊNH. Per-cặp + danh mục equal-weight (bin 6h, forward-fill).
+Skill criterion: positive in ≥ 2/3 of windows.
+
+Run:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/walkforward_windows_vol_breakout.py
+FIXED params. Per pair + equal-weight portfolio (6h bins, forward-fill).
 """
 
 import asyncio
-from datetime import datetime, timezone
 
 from app.backtest.engine import run_backtest
 from app.db import async_session
@@ -21,7 +22,7 @@ WIN_MS = 30 * 24 * 3600 * 1000
 
 
 def window_returns(curve: list) -> list[float]:
-    """equity [[ts,v]] → PnL% từng cửa sổ 30 ngày (từ đầu curve)."""
+    """equity [[ts,v]] → PnL% per 30-day window (from the start of the curve)."""
     t0 = curve[0][0]
     wins: dict[int, list[float]] = {}
     for ts, v in curve:
@@ -36,19 +37,19 @@ async def main() -> None:
             await sync_historical(s, sym, TF, START)
             await s.commit()
             data[sym] = await get_klines(s, sym, TF, limit=40000)
-            print(f"  data {sym}: {len(data[sym])} nến")
+            print(f"  data {sym}: {len(data[sym])} candles")
 
     curves = {}
-    print(f"Cửa sổ 30 ngày, params cố định: {PARAMS}\n")
+    print(f"30-day windows, fixed params: {PARAMS}\n")
     for sym, candles in data.items():
         r = run_backtest("vol_breakout", "1", PARAMS, candles, 1000.0, FEE, TF, 1)
         curves[sym] = r["equity_curve"]
         wr = window_returns(r["equity_curve"])
         pos = sum(1 for v in wr if v > 0)
-        print(f"  {sym}: {pos}/{len(wr)} cửa sổ dương · " +
+        print(f"  {sym}: {pos}/{len(wr)} windows positive · " +
               " ".join(f"{v:+.1f}%" for v in wr))
 
-    # danh mục equal-weight
+    # equal-weight portfolio
     BIN = 6 * 3600 * 1000
     binned = {s: {ts // BIN: v / 1000.0 for ts, v in c} for s, c in curves.items()}
     bins = sorted(set().union(*(set(b) for b in binned.values())))
@@ -61,9 +62,10 @@ async def main() -> None:
         port.append([bn * BIN, sum(last.values()) / len(last)])
     wr = window_returns(port)
     pos = sum(1 for v in wr if v > 0)
-    print(f"\n  DANH MỤC {len(binned)} cặp: {pos}/{len(wr)} cửa sổ dương · " +
+    print(f"\n  PORTFOLIO {len(binned)} pairs: {pos}/{len(wr)} windows positive · " +
           " ".join(f"{v:+.1f}%" for v in wr))
-    print("\nTiêu chí skill: dương ≥ ~2/3 cửa sổ, không dồn PnL vào 1 giai đoạn.")
+    print("\nSkill criterion: positive in ≥ ~2/3 of windows, PnL not concentrated in a single "
+          "period.")
 
 
 if __name__ == "__main__":

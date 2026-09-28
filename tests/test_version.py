@@ -1,4 +1,4 @@
-"""/api/version — phiên bản hiện trên web."""
+"""/api/version — the version shown on the web."""
 
 import json
 
@@ -20,4 +20,4 @@ def test_version_from_file(tmp_path, monkeypatch):
 def test_version_falls_back_to_git():
     v.get_version.cache_clear()
     info = v.get_version()
-    assert info["version"] and info["commit"]  # repo dev có git
+    assert info["version"] and info["commit"]  # the dev repo has git

@@ -1,4 +1,4 @@
-// Indicator tính client-side (US-02). P1: EMA overlay. RSI/MACD subpane sau.
+// Client-side indicators (US-02). P1: EMA overlay. RSI/MACD subpanes later.
 import type { CandlestickData, LineData, UTCTimestamp } from "lightweight-charts";
 
 export function ema(bars: CandlestickData[], period: number): LineData[] {

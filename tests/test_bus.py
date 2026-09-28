@@ -1,4 +1,4 @@
-"""EventBus — pub/sub in-memory trên asyncio.Queue."""
+"""EventBus — in-memory pub/sub on asyncio.Queue."""
 
 import asyncio
 
@@ -52,14 +52,14 @@ async def test_unsubscribe_stops_delivery():
 
 async def test_publish_no_subscribers_is_noop():
     bus = EventBus()
-    await bus.publish("nobody", {"x": 1})  # không raise
+    await bus.publish("nobody", {"x": 1})  # does not raise
 
 
 async def test_full_queue_drops_without_blocking():
     bus = EventBus()
     sub = bus.subscribe("feed", maxsize=1)
     await bus.publish("feed", {"n": 1})
-    await bus.publish("feed", {"n": 2})  # queue đầy → drop, không treo
+    await bus.publish("feed", {"n": 2})  # queue full → drop, does not hang
     assert (await asyncio.wait_for(sub.get(), timeout=1)) == {"n": 1}
     assert sub.empty()
 

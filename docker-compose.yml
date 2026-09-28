@@ -1,5 +1,5 @@
 # PROD: 1 endpoint :8000 (FastAPI serve static UI + API) + Postgres/Timescale.
-# Dùng: docker compose up --build
+# Usage: docker compose up --build
 services:
   db:
     image: timescale/timescaledb:latest-pg16
@@ -16,9 +16,9 @@ services:
       timeout: 3s
       retries: 10
     ports:
-      # Host 15432 → container 5432 (tránh đụng Postgres chạy sẵn ở host trên 5432).
-      # App nối DB qua mạng nội bộ docker (db:5432) nên KHÔNG bị ảnh hưởng; cổng host này
-      # chỉ để truy cập DB từ máy host (psql -h localhost -p 15432).
+      # Host 15432 → container 5432 (avoids clashing with a Postgres already running on the host at 5432).
+      # The app reaches the DB over the internal docker network (db:5432), so it is NOT affected; this host port
+      # is only for accessing the DB from the host machine (psql -h localhost -p 15432).
       - "15432:5432"
 
   app:
@@ -27,7 +27,7 @@ services:
     env_file:
       - .env
     environment:
-      # Trong compose, host DB là "db" (override DATABASE_URL của .env nếu cần).
+      # Inside compose the DB host is "db" (overrides DATABASE_URL from .env if needed).
       DATABASE_URL: postgresql+asyncpg://botuser:botpass@db:5432/tradingbot
     depends_on:
       db:

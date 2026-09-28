@@ -1,4 +1,5 @@
-"""StrategyRunner + BotManager: bot nhận nến đúng tf, chống trùng nến, đăng ký stream với feed."""
+"""StrategyRunner + BotManager: bot receives candles of the right tf, dedupes candles,
+registers streams with the feed."""
 
 import asyncio
 
@@ -48,11 +49,11 @@ async def test_runner_dedupes_and_skips_stale_candles():
     task = asyncio.create_task(r.run())
     await _drain(bus)
     topic = "kline.BTCUSDT.15m"
-    await bus.publish(topic, _k(900_000))       # trùng nến cuối → thay, không nhân đôi
-    await bus.publish(topic, _k(0))             # nến cũ → bỏ
-    await bus.publish(topic, _k(1_800_000, closed=False))  # chưa đóng → không gọi strategy
+    await bus.publish(topic, _k(900_000))       # same as last candle → replace, no dup
+    await bus.publish(topic, _k(0))             # stale candle → skip
+    await bus.publish(topic, _k(1_800_000, closed=False))  # not closed yet → strategy not called
     await bus.publish(topic, _k(1_800_000))
-    await bus.publish("kline.BTCUSDT.1m", _k(1_860_000, tf="1m"))  # tf khác → không nghe
+    await bus.publish("kline.BTCUSDT.1m", _k(1_860_000, tf="1m"))  # different tf → not listened to
     await _drain(bus)
     task.cancel()
     assert strat.seen == [[0, 900_000], [0, 900_000, 1_800_000]]

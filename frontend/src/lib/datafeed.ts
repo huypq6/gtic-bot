@@ -1,5 +1,5 @@
-// Datafeed adapter — CÔ LẬP nguồn dữ liệu chart. Khi swap lightweight-charts →
-// TradingView Charting Library, chỉ sửa file này, không đụng component chart.
+// Datafeed adapter — ISOLATES the chart data source. When swapping lightweight-charts →
+// TradingView Charting Library, only edit this file, not the chart components.
 import type { CandlestickData, UTCTimestamp } from "lightweight-charts";
 import { getJson } from "./api";
 import type { KlineMsg } from "./ws";
@@ -21,7 +21,7 @@ export const toBar = (k: RawKline | KlineMsg): CandlestickData => ({
   close: k.close,
 });
 
-// Lịch sử (REST). Backend trả mảng theo thời gian tăng dần.
+// History (REST). Backend returns an array in ascending time order.
 export async function loadHistory(
   symbol: string,
   tf: string,
@@ -33,7 +33,7 @@ export async function loadHistory(
   return raw.map(toBar);
 }
 
-// Nến trong khoảng [from, to] (ms) — cho chart backtest.
+// Candles in the range [from, to] (ms) — for the backtest chart.
 export async function loadRange(
   symbol: string,
   tf: string,

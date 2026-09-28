@@ -32,7 +32,7 @@ router = APIRouter(prefix="/api")
 # ---------------- strategies ----------------
 @router.get("/strategies")
 async def list_strategies(session: AsyncSession = Depends(get_session)) -> list[dict]:
-    """Quét file registry → sync DB → trả về (kèm id DB + param_schema cho UI)."""
+    """Scan the file registry → sync to DB → return (with DB id + param_schema for the UI)."""
     discover()
     await sync_to_db(session)
     by_key = {(c.name, c.version): c for c in all_strategies()}
@@ -53,18 +53,24 @@ async def list_strategies(session: AsyncSession = Depends(get_session)) -> list[
 
 
 @router.get("/strategies/{name}/doc")
-async def strategy_doc(name: str) -> dict:
-    """Tài liệu phương pháp luận (markdown) của strategy — đọc app/strategy/strategies/<name>.md."""
+async def strategy_doc(name: str, lang: str = "en") -> dict:
+    """Strategy methodology doc (markdown) — reads app/strategy/strategies/<name>.md.
+
+    `lang=vi` serves `<name>.vi.md` when it exists; otherwise falls back to `<name>.md`.
+    """
     import re
     from pathlib import Path
 
     from app.strategy import strategies as strat_pkg
 
     if not re.fullmatch(r"[a-z0-9_]+", name):
-        raise HTTPException(404, "tên không hợp lệ")
-    f = Path(strat_pkg.__path__[0]) / f"{name}.md"
+        raise HTTPException(404, "invalid name")
+    base = Path(strat_pkg.__path__[0])
+    f = base / f"{name}.md"
+    if lang == "vi" and (base / f"{name}.vi.md").is_file():
+        f = base / f"{name}.vi.md"
     if not f.is_file():
-        return {"name": name, "markdown": "_Chưa có tài liệu phương pháp luận cho strategy này._"}
+        return {"name": name, "markdown": "_No methodology documentation for this strategy yet._"}
     return {"name": name, "markdown": f.read_text(encoding="utf-8")}
 
 
@@ -72,7 +78,7 @@ async def strategy_doc(name: str) -> dict:
 async def compare_versions(
     name: str, session: AsyncSession = Depends(get_session)
 ) -> list[dict]:
-    """So sánh hiệu năng các version (gộp backtest_run) theo version (US-08)."""
+    """Compare performance across versions (aggregating backtest_run per version) (US-08)."""
     strats = (
         await session.execute(
             select(StrategyModel).where(StrategyModel.name == name).order_by(StrategyModel.version)
@@ -105,7 +111,7 @@ async def compare_versions(
 
 # ---------------- bots ----------------
 class Sizing(BaseModel):
-    method: str = "risk_pct"  # xem app.account.risk.SIZING_METHODS
+    method: str = "risk_pct"  # see app.account.risk.SIZING_METHODS
     value: float = 1.0
 
 
@@ -115,8 +121,8 @@ class CreateBot(BaseModel):
     tf: str = "1m"
     mode: str = "PAPER"
     params: dict = {}
-    confirm: str | None = None  # mode LIVE bắt buộc = "LIVE"
-    account_id: int | None = None  # PAPER: bỏ trống = tài khoản paper mặc định
+    confirm: str | None = None  # LIVE mode requires = "LIVE"
+    account_id: int | None = None  # PAPER: empty = default paper account
     sizing: Sizing | None = None
 
 
@@ -133,18 +139,18 @@ def _check_sizing(sz: Sizing | None) -> dict | None:
     if sz is None:
         return None
     if sz.method not in SIZING_METHODS:
-        raise HTTPException(422, f"phương pháp khối lượng '{sz.method}' không hợp lệ")
+        raise HTTPException(422, f"invalid sizing method '{sz.method}'")
     if sz.value < 0 or (sz.method != "fixed_qty" and sz.value == 0):
-        raise HTTPException(422, "giá trị khối lượng phải > 0")
+        raise HTTPException(422, "sizing value must be > 0")
     if sz.method == "risk_pct" and sz.value > 10:
-        raise HTTPException(422, "rủi ro > 10% vốn/lệnh — quá liều, không cho phép")
+        raise HTTPException(422, "risk > 10% of equity per trade — too aggressive, not allowed")
     return sz.model_dump()
 
 
 async def _check_account(session: AsyncSession, account_id: int | None, mode: str) -> int | None:
     from app.orders.models import Account
 
-    if account_id is None:  # mặc định: tài khoản đầu tiên cùng mode (sàn: duy nhất)
+    if account_id is None:  # default: first account with the same mode (exchange: the only one)
         acc = (
             await session.execute(
                 select(Account).where(Account.mode == mode).order_by(Account.id).limit(1)
@@ -153,9 +159,9 @@ async def _check_account(session: AsyncSession, account_id: int | None, mode: st
         return acc.id if acc else None
     acc = await session.get(Account, account_id)
     if not acc:
-        raise HTTPException(404, "tài khoản không tồn tại")
+        raise HTTPException(404, "account not found")
     if acc.mode != mode:
-        raise HTTPException(400, f"tài khoản {acc.mode} không dùng được cho bot {mode}")
+        raise HTTPException(400, f"a {acc.mode} account cannot be used for a {mode} bot")
     return acc.id
 
 
@@ -179,7 +185,8 @@ async def list_bots(
     out = []
     for b in bots:
         d = await _bot_dict(session, b)
-        # open-time nến đóng cuối runner nhận — None = chưa nhận nến live nào (feed chưa stream).
+        # open-time of the last closed candle the runner received — None = no live candle yet
+        # (feed not streaming).
         d["last_candle"] = mgr.last_candle_ts(b.id) if mgr else None
         out.append(d)
     return out
@@ -191,15 +198,15 @@ async def create_bot(
 ) -> dict:
     strat = await session.get(StrategyModel, body.strategy_id)
     if not strat:
-        raise HTTPException(404, "strategy không tồn tại")
+        raise HTTPException(404, "strategy not found")
     if body.mode not in ("PAPER", "TESTNET", "LIVE"):
-        raise HTTPException(400, f"mode {body.mode} không hợp lệ")
+        raise HTTPException(400, f"invalid mode {body.mode}")
     if body.mode == "LIVE":
-        # Rào chắn: cờ env + xác nhận gõ "LIVE" (NFR an toàn).
+        # Guardrail: env flag + typed "LIVE" confirmation (safety NFR).
         if not settings.enable_live:
-            raise HTTPException(403, "mode LIVE bị khóa — cần ENABLE_LIVE=1")
+            raise HTTPException(403, "LIVE mode is locked — requires ENABLE_LIVE=1")
         if body.confirm != "LIVE":
-            raise HTTPException(400, "mode LIVE cần xác nhận gõ 'LIVE'")
+            raise HTTPException(400, "LIVE mode requires typing 'LIVE' to confirm")
     try:
         params = validate_params(_schema_for(strat), body.params)
     except ParamError as e:
@@ -222,7 +229,7 @@ async def create_bot(
             bot.id, strat.name, strat.version, bot.params, bot.symbol, bot.tf, bot.mode,
             account_id=bot.account_id, sizing=bot.sizing,
         )
-    except ValueError as e:  # vd thiếu key testnet
+    except ValueError as e:  # e.g. missing testnet key
         await session.delete(bot)
         await session.commit()
         raise HTTPException(400, str(e)) from e
@@ -235,7 +242,7 @@ async def patch_bot(
 ) -> dict:
     bot = await session.get(Bot, bot_id)
     if not bot:
-        raise HTTPException(404, "bot không tồn tại")
+        raise HTTPException(404, "bot not found")
     mgr = request.app.state.bot_manager
 
     if body.params is not None:
@@ -249,7 +256,7 @@ async def patch_bot(
         bot.sizing = _check_sizing(body.sizing)
         r = mgr._runners.get(bot_id)
         if r:
-            r.sizing = bot.sizing  # áp cho lệnh kế tiếp, không cần restart
+            r.sizing = bot.sizing  # applies to the next order, no restart needed
     if body.account_id is not None and body.account_id != bot.account_id:
         has_open = (
             await session.execute(
@@ -259,7 +266,7 @@ async def patch_bot(
             )
         ).first()
         if has_open:
-            raise HTTPException(409, "bot đang có lệnh mở — đóng lệnh trước khi đổi tài khoản")
+            raise HTTPException(409, "bot has an open position — close it before switching account")
         bot.account_id = await _check_account(session, body.account_id, bot.mode)
         restart = mgr.is_running(bot_id)
     if restart:
@@ -272,7 +279,7 @@ async def patch_bot(
         mgr.set_status(bot_id, bot.status)
     if body.status is not None:
         if body.status not in ("RUNNING", "PAUSED", "STOPPED"):
-            raise HTTPException(400, "status không hợp lệ")
+            raise HTTPException(400, "invalid status")
         bot.status = body.status
         if body.status == "STOPPED":
             await mgr.stop_bot(bot_id)
@@ -295,7 +302,7 @@ async def delete_bot(
 ) -> dict:
     bot = await session.get(Bot, bot_id)
     if not bot:
-        raise HTTPException(404, "bot không tồn tại")
+        raise HTTPException(404, "bot not found")
     strat = await session.get(StrategyModel, bot.strategy_id)
     await request.app.state.order_manager.write_audit(
         source="MANUAL", action="DELETE_BOT", mode=bot.mode, bot_id=bot_id, symbol=bot.symbol,
@@ -305,7 +312,7 @@ async def delete_bot(
         },
     )
     await request.app.state.bot_manager.stop_bot(bot_id)
-    # Giữ lịch sử order/position (orphan bot_id NULL) → tránh vi phạm FK khi xóa bot.
+    # Keep order/position history (orphaned bot_id NULL) → avoids FK violations when deleting a bot.
     await session.execute(
         update(OrderModel).where(OrderModel.bot_id == bot_id).values(bot_id=None)
     )
@@ -372,19 +379,19 @@ async def list_orders(
     ]
 
 
-# ---------------- review lệnh ----------------
+# ---------------- trade review ----------------
 _TF_MS = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000, "4h": 14_400_000}
 
 
 async def _hold_bars(
     session: AsyncSession, symbol: str, tf: str | None, start: datetime, end: datetime
 ) -> list[dict]:
-    """Nến trong thời gian giữ lệnh: ưu tiên 1m (MFE/MAE sát nhất), đủ ≤ 5000 nến."""
+    """Candles over the holding period: prefer 1m (most accurate MFE/MAE), ≤ 5000 candles."""
     span = (end - start).total_seconds() * 1000
     tfs = [t for t in ("1m", "5m", "15m", "1h", "4h") if span / _TF_MS[t] <= 5000]
     if tf and tf in _TF_MS and tf not in tfs:
         tfs.append(tf)
-    s0 = datetime.fromtimestamp(start.timestamp() // 60 * 60, tz=UTC)  # nến chứa lúc vào
+    s0 = datetime.fromtimestamp(start.timestamp() // 60 * 60, tz=UTC)  # candle containing entry
     for t in tfs:
         bars = await get_klines(session, symbol, t, s0, end, limit=5000)
         if bars:
@@ -400,7 +407,7 @@ async def list_trades(
     bot_id: int | None = None,
     session: AsyncSession = Depends(get_session),
 ) -> list[dict]:
-    """Mỗi vị thế = 1 lệnh để review: chiến lược, kết quả, PnL, R, MFE/MAE."""
+    """Each position = 1 trade to review: strategy, outcome, PnL, R, MFE/MAE."""
     q = (
         select(PositionModel, Bot, StrategyModel)
         .outerjoin(Bot, Bot.id == PositionModel.bot_id)
@@ -441,7 +448,7 @@ async def list_trades(
             "sl": f(p.sl), "tp": f(p.tp), "init_sl": f(p.init_sl), "status": p.status,
             "exit_reason": reason,
             "account_id": p.account_id, "fee": f(p.fee), "margin": f(p.margin),
-            # snapshot lúc mở (còn nguyên khi bot bị xóa); vị thế cũ chưa có → bot hiện tại.
+            # snapshot at open (survives bot deletion); older positions without one → current bot.
             "strategy": p.strategy or (f"{strat.name} v{strat.version}" if strat else None),
             "tf": p.tf or (bot.tf if bot else None),
             "params": p.params if p.params is not None else (bot.params if bot else None),
@@ -455,9 +462,9 @@ async def list_trades(
     return out
 
 
-# ---------------- can thiệp tay (P3) ----------------
+# ---------------- manual intervention (P3) ----------------
 def _route_executor(request: Request, bot_id: int | None, symbol: str):
-    """Tìm executor giữ vị thế: bot đang chạy → bot executor; ngược lại → manual."""
+    """Find the executor holding the position: running bot → bot executor; otherwise → manual."""
     if bot_id is not None:
         ex = request.app.state.bot_manager.get_executor(bot_id)
         if ex:
@@ -466,7 +473,7 @@ def _route_executor(request: Request, bot_id: int | None, symbol: str):
 
 
 class CloseBody(BaseModel):
-    ref_price: float | None = None  # giá tham chiếu nếu bot đã dừng (đóng DB)
+    ref_price: float | None = None  # reference price if the bot is stopped (DB close)
 
 
 @router.post("/positions/{pos_id}/close")
@@ -475,13 +482,13 @@ async def close_position(
 ) -> dict:
     pos = await session.get(PositionModel, pos_id)
     if not pos or pos.status != "OPEN":
-        raise HTTPException(404, "vị thế không mở")
+        raise HTTPException(404, "position is not open")
     om = request.app.state.order_manager
     ex = _route_executor(request, pos.bot_id, pos.symbol)
 
     async def do():
         if ex:
-            await ex.close("MANUAL")  # engine đóng + persist + broadcast
+            await ex.close("MANUAL")  # engine closes + persists + broadcasts
         else:
             await _db_close(session, pos, body.ref_price, request.app.state.accounts)
 
@@ -503,7 +510,7 @@ async def edit_sltp(
 ) -> dict:
     pos = await session.get(PositionModel, pos_id)
     if not pos or pos.status != "OPEN":
-        raise HTTPException(404, "vị thế không mở")
+        raise HTTPException(404, "position is not open")
     om = request.app.state.order_manager
     ex = _route_executor(request, pos.bot_id, pos.symbol)
 
@@ -526,22 +533,22 @@ class ManualOrder(BaseModel):
     side: str  # BUY | SELL
     type: str = "MARKET"  # MARKET | LIMIT
     qty: float
-    price: float | None = None  # cho LIMIT
+    price: float | None = None  # for LIMIT
     sl: float | None = None
     tp: float | None = None
-    ref_price: float | None = None  # giá hiện tại cho MARKET
+    ref_price: float | None = None  # current price for MARKET
     mode: str = "PAPER"
 
 
 @router.post("/orders")
 async def manual_order(body: ManualOrder, request: Request) -> dict:
     if body.mode != "PAPER":
-        raise HTTPException(400, f"mode {body.mode} chưa hỗ trợ (P3: PAPER)")
+        raise HTTPException(400, f"mode {body.mode} not supported yet (P3: PAPER)")
     if body.side not in ("BUY", "SELL"):
-        raise HTTPException(400, "side phải BUY/SELL")
+        raise HTTPException(400, "side must be BUY/SELL")
     om = request.app.state.order_manager
     ex = await request.app.state.manual_trader.ensure(body.symbol, body.mode)
-    if ex.account_id is not None:  # đủ ký quỹ mới cho vào lệnh (như sàn)
+    if ex.account_id is not None:  # only allow the order with sufficient margin (like the exchange)
         accounts = request.app.state.accounts
         acc = await accounts.get(ex.account_id)
         st = await accounts.snapshot(ex.account_id)
@@ -551,7 +558,7 @@ async def manual_order(body: ManualOrder, request: Request) -> dict:
         if px and cost > st.available + freed:
             raise HTTPException(
                 400,
-                f"không đủ số dư: cần ~{cost:.2f} USDT ký quỹ+phí, khả dụng "
+                f"insufficient balance: need ~{cost:.2f} USDT margin+fees, available "
                 f"{max(0.0, st.available + freed):.2f} USDT",
             )
 
@@ -578,13 +585,13 @@ async def cancel_order(
 ) -> dict:
     o = await session.get(OrderModel, order_id)
     if not o or o.status != "NEW":
-        raise HTTPException(404, "không có lệnh chờ để hủy")
+        raise HTTPException(404, "no pending order to cancel")
     om = request.app.state.order_manager
     ex = _route_executor(request, o.bot_id, o.symbol)
 
     async def do():
         if ex:
-            await ex.cancel()  # hủy pending của symbol → mark CANCELLED + broadcast
+            await ex.cancel()  # cancel the symbol's pending order → mark CANCELLED + broadcast
         else:
             o.status = "CANCELLED"
             await session.commit()
@@ -604,9 +611,9 @@ async def list_audit(request: Request, limit: int = 100) -> list[dict]:
 async def _db_close(
     session: AsyncSession, pos: PositionModel, ref_price: float | None, accounts=None
 ) -> None:
-    """Đóng vị thế ở mức DB khi bot đã dừng (không còn engine)."""
+    """Close the position at the DB level when the bot is stopped (no engine)."""
     if ref_price is None:
-        raise HTTPException(400, "cần ref_price để đóng vị thế của bot đã dừng")
+        raise HTTPException(400, "ref_price is required to close a stopped bot's position")
     entry = float(pos.entry_price)
     qty = float(pos.qty)
     pnl = (ref_price - entry) * qty if pos.side == "LONG" else (entry - ref_price) * qty

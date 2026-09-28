@@ -6,6 +6,7 @@ import { chartColors } from "../../lib/chartTheme";
 import { useTheme } from "../../lib/theme";
 import InfoTip from "../InfoTip";
 import { sizingText } from "../account/SizingInput";
+import { t } from "../../lib/i18n";
 
 const COLORS = ["#1f9e8a", "#6f8fd8", "#e0a458", "#c98bdb", "#d98b8b", "#8b9cba", "#5cc3b4", "#b5a33f", "#9aa0a6"];
 
@@ -22,17 +23,21 @@ export default function SimResult({ res }: { res: BacktestResult }) {
   const cmp = st.compare ?? [];
   const cap = res.capital ?? 0;
   const warn: string[] = [];
-  if (st.liquidated) warn.push("Tài khoản CHÁY (equity về 0).");
+  if (st.liquidated) warn.push(t("Account LIQUIDATED (equity went to 0)."));
   if (st.dd_halt_ts)
-    warn.push(`Chạm giới hạn sụt vốn → tài khoản DỪNG từ ${new Date(st.dd_halt_ts).toLocaleDateString()} (không vào lệnh nữa).`);
-  if (st.day_halts) warn.push(`${st.day_halts} ngày bị nghỉ do chạm giới hạn lỗ ngày.`);
+    warn.push(
+      t("Drawdown limit hit → account HALTED from {date} (no further trades).", { date: new Date(st.dd_halt_ts).toLocaleDateString() }),
+    );
+  if (st.day_halts) warn.push(t("{n} days paused after hitting the daily loss limit.", { n: st.day_halts }));
   const capped = Object.entries(st.capped ?? {});
   if (capped.length)
     warn.push(
-      `Lệnh bị CO khối lượng: ${capped.map(([k, v]) => `${v}× ${k}`).join(", ")} — rủi ro thực tế thấp hơn mục tiêu (tăng đòn bẩy hoặc giảm % rủi ro).`,
+      t("Position size CAPPED: {list} — actual risk is below target (raise leverage or lower the risk %).", {
+        list: capped.map(([k, v]) => `${v}× ${k}`).join(", "),
+      }),
     );
   const rej = Object.entries(st.rejects ?? {});
-  if (rej.length) warn.push(`Tín hiệu bị chặn: ${rej.map(([k, v]) => `${v}× ${k}`).join(", ")}.`);
+  if (rej.length) warn.push(t("Signals blocked: {list}.", { list: rej.map(([k, v]) => `${v}× ${k}`).join(", ") }));
 
   return (
     <>
@@ -48,83 +53,83 @@ export default function SimResult({ res }: { res: BacktestResult }) {
       )}
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-        <M label="Vốn cuối" value={`${usd(res.final_equity)}`} sub={`từ ${usd(cap)} USDT`} cls={tone((res.final_equity ?? 0) - cap)} />
-        <M label="Lợi nhuận" value={sgn(res.pnl_pct)} sub={st.cagr_pct != null ? `${sgn(st.cagr_pct)}/năm` : undefined} cls={tone(res.pnl_pct)} />
+        <M label={t("Final equity")} value={`${usd(res.final_equity)}`} sub={t("from {v} USDT", { v: usd(cap) })} cls={tone((res.final_equity ?? 0) - cap)} />
+        <M label={t("Return")} value={sgn(res.pnl_pct)} sub={st.cagr_pct != null ? t("{v}/yr", { v: sgn(st.cagr_pct) }) : undefined} cls={tone(res.pnl_pct)} />
         <M
-          label="Sụt vốn tối đa"
-          tip="Từ đỉnh equity xuống đáy. Kèm thời gian dài nhất nằm dưới đỉnh."
+          label={t("Max drawdown")}
+          tip={t("Peak-to-trough decline in equity, plus the longest time spent below the peak.")}
           value={`-${n2(res.max_dd)}%`}
-          sub={`dưới đỉnh lâu nhất ${st.longest_dd_days} ngày`}
+          sub={t("longest below peak: {n} days", { n: st.longest_dd_days })}
           cls="text-down"
         />
-        <M label="Calmar" tip="Lợi nhuận/năm ÷ sụt vốn tối đa. > 1 là tốt." value={n2(st.calmar)} />
-        <M label="Sharpe" tip="Theo lợi nhuận ngày, năm hóa." value={n2(res.sharpe)} />
-        <M label="Số lệnh" value={`${res.n_trades ?? 0}`} sub={`thắng ${n2(res.winrate, 1)}%`} />
+        <M label="Calmar" tip={t("Annual return ÷ max drawdown. > 1 is good.")} value={n2(st.calmar)} />
+        <M label="Sharpe" tip={t("Based on daily returns, annualized.")} value={n2(res.sharpe)} />
+        <M label={t("Trades")} value={`${res.n_trades ?? 0}`} sub={t("win {v}%", { v: n2(res.winrate, 1) })} />
         <M
           label="Profit factor"
-          tip="Tổng lãi ÷ tổng lỗ (USDT, đã trừ phí). > 1.5 là tốt."
+          tip={t("Gross profit ÷ gross loss (USDT, after fees). > 1.5 is good.")}
           value={n2(st.profit_factor)}
         />
         <M
-          label="R trung bình"
-          tip="Kỳ vọng mỗi lệnh theo bội số rủi ro (đã trừ phí). Dương = có lợi thế."
+          label={t("Avg R")}
+          tip={t("Expectancy per trade in multiples of risk (after fees). Positive = has an edge.")}
           value={sgn(st.avg_r, 2, "R")}
-          sub={`tốt nhất ${sgn(st.best_r, 1, "R")} · tệ nhất ${sgn(st.worst_r, 1, "R")}`}
+          sub={t("best {best} · worst {worst}", { best: sgn(st.best_r, 1, "R"), worst: sgn(st.worst_r, 1, "R") })}
           cls={tone(st.avg_r)}
         />
         <M
-          label="Phí giao dịch"
+          label={t("Trading fees")}
           value={usd(st.total_fees)}
-          sub={`= ${n2(st.fees_pct_of_capital)}% vốn ban đầu`}
+          sub={t("= {v}% of starting capital", { v: n2(st.fees_pct_of_capital) })}
           cls={st.fees_pct_of_capital > 5 ? "text-warn" : ""}
         />
-        <M label="Chuỗi thua dài nhất" value={`${st.max_loss_streak} lệnh`} />
-        <M label="Tháng có lãi" value={`${st.positive_months}/${st.monthly.length}`} />
+        <M label={t("Longest losing streak")} value={t("{n} trades", { n: st.max_loss_streak })} />
+        <M label={t("Profitable months")} value={`${st.positive_months}/${st.monthly.length}`} />
         <M
-          label="Giá trị lệnh TB"
-          tip="Giá trị vị thế trung bình so với equity lúc vào. > 100% = đang dùng đòn bẩy."
+          label={t("Avg position size")}
+          tip={t("Average position value relative to equity at entry. > 100% = using leverage.")}
           value={st.avg_notional_pct != null ? `${st.avg_notional_pct}%` : "—"}
-          sub="của equity"
+          sub={t("of equity")}
         />
       </section>
 
       {cmp.length > 1 && (
         <section className="rounded-xl border border-border bg-surface p-4">
-          <h3 className="mb-2 text-sm font-semibold">So sánh cách quản lý vốn (cùng tín hiệu, cùng dữ liệu)</h3>
+          <h3 className="mb-2 text-sm font-semibold">{t("Position sizing comparison (same signals, same data)")}</h3>
           <CompareCurves rows={cmp} />
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-faint">
-                  <th className="px-2 py-1.5 font-medium">Cấu hình</th>
-                  <th className="px-2 py-1.5 text-right font-medium">Vốn cuối</th>
-                  <th className="px-2 py-1.5 text-right font-medium">Lợi nhuận</th>
-                  <th className="px-2 py-1.5 text-right font-medium">/năm</th>
-                  <th className="px-2 py-1.5 text-right font-medium">Sụt vốn</th>
+                  <th className="px-2 py-1.5 font-medium">{t("Setup")}</th>
+                  <th className="px-2 py-1.5 text-right font-medium">{t("Final equity")}</th>
+                  <th className="px-2 py-1.5 text-right font-medium">{t("Return")}</th>
+                  <th className="px-2 py-1.5 text-right font-medium">{t("/yr")}</th>
+                  <th className="px-2 py-1.5 text-right font-medium">{t("Drawdown")}</th>
                   <th className="px-2 py-1.5 text-right font-medium">Calmar</th>
                   <th className="px-2 py-1.5 text-right font-medium">PF</th>
-                  <th className="px-2 py-1.5 text-right font-medium">Phí</th>
-                  <th className="px-2 py-1.5 text-right font-medium">Lệnh TB</th>
-                  <th className="px-2 py-1.5 font-medium">Ghi chú</th>
+                  <th className="px-2 py-1.5 text-right font-medium">{t("Fees")}</th>
+                  <th className="px-2 py-1.5 text-right font-medium">{t("Avg size")}</th>
+                  <th className="px-2 py-1.5 font-medium">{t("Notes")}</th>
                 </tr>
               </thead>
               <tbody>
                 {cmp.map((c, i) => {
                   const best = Math.max(...cmp.map((x) => x.calmar ?? -Infinity));
                   const notes = [
-                    c.liquidated && "cháy TK",
-                    c.dd_halt_ts && "DỪNG do sụt vốn",
-                    c.day_halts > 0 && `${c.day_halts} ngày nghỉ`,
+                    c.liquidated && t("liquidated"),
+                    c.dd_halt_ts && t("HALTED by drawdown"),
+                    c.day_halts > 0 && t("{n} days paused", { n: c.day_halts }),
                     Object.values(c.capped ?? {}).reduce((a, b) => a + b, 0) > 0 &&
-                      `${Object.values(c.capped).reduce((a, b) => a + b, 0)} lệnh bị co`,
+                      t("{n} trades capped", { n: Object.values(c.capped).reduce((a, b) => a + b, 0) }),
                   ].filter(Boolean);
                   return (
                     <tr key={i} className="border-t border-border">
                       <td className="px-2 py-1.5">
                         <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-                        {sizingText(c.sizing)} · {c.leverage}×{i === 0 && <span className="ml-1 text-xs text-faint">(chính)</span>}
+                        {sizingText(c.sizing)} · {c.leverage}×{i === 0 && <span className="ml-1 text-xs text-faint">{t("(main)")}</span>}
                         {c.calmar === best && cmp.length > 1 && best > 0 && (
-                          <span className="ml-1 rounded bg-up/15 px-1 text-[11px] font-semibold text-up">tốt nhất theo Calmar</span>
+                          <span className="ml-1 rounded bg-up/15 px-1 text-[11px] font-semibold text-up">{t("best by Calmar")}</span>
                         )}
                       </td>
                       <td className="px-2 py-1.5 text-right tabular-nums">{usd(c.final_equity)}</td>
@@ -143,15 +148,16 @@ export default function SimResult({ res }: { res: BacktestResult }) {
             </table>
           </div>
           <p className="mt-2 text-xs text-faint">
-            Cùng chuỗi tín hiệu nên winrate/R như nhau; khác nhau ở khối lượng → lợi nhuận, sụt vốn, phí và việc
-            có chạm rào chắn hay không. Chọn cấu hình theo mức sụt vốn bạn chịu được, không chỉ theo lợi nhuận.
+            {t(
+              "Same signal sequence, so win rate/R are identical; only position size differs → return, drawdown, fees and whether guards get hit. Pick the setup by the drawdown you can tolerate, not just by return.",
+            )}
           </p>
         </section>
       )}
 
       {st.monthly.length > 0 && (
         <section className="rounded-xl border border-border bg-surface p-4">
-          <h3 className="mb-2 text-sm font-semibold">Lợi nhuận theo tháng</h3>
+          <h3 className="mb-2 text-sm font-semibold">{t("Monthly returns")}</h3>
           <Monthly data={st.monthly} />
         </section>
       )}

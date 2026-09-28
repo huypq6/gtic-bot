@@ -1,7 +1,8 @@
 import { AlertTriangle, Wifi } from "lucide-react";
 import { useWsStore } from "../lib/ws";
+import { t } from "../lib/i18n";
 
-// US-27: cảnh báo khi mất kết nối feed. OK → ẩn.
+// US-27: warning when the feed connection is lost. OK → hidden.
 export default function FeedBanner() {
   const feed = useWsStore((s) => s.feed);
   if (feed === "OK") return null;
@@ -15,9 +16,9 @@ export default function FeedBanner() {
     >
       {down ? <AlertTriangle className="h-4 w-4" /> : <Wifi className="h-4 w-4" />}
       <span>
-        {feed === "CONNECTING" && "Đang kết nối feed…"}
-        {feed === "RECONNECTING" && "Mất feed — đang kết nối lại…"}
-        {feed === "DOWN" && "Feed DOWN — bot đã tự động PAUSE (US-27). Nối lại không tự resume."}
+        {feed === "CONNECTING" && t("Connecting to feed…")}
+        {feed === "RECONNECTING" && t("Feed lost — reconnecting…")}
+        {feed === "DOWN" && t("Feed DOWN — bots auto-PAUSED (US-27). Reconnecting does not auto-resume.")}
       </span>
     </div>
   );

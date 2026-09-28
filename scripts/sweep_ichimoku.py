@@ -1,9 +1,9 @@
-"""Quét tham số ichimoku trên dữ liệu thật (in-process). Theo skill strategy-research.
+"""Parameter sweep for ichimoku on real data (in-process). Follows the strategy-research skill.
 
-Chạy:  PYTHONPATH=. uv run python scripts/sweep_ichimoku.py
+Run:  PYTHONPATH=. uv run python scripts/sweep_ichimoku.py
 
-Ichimoku = trend thuần (BUY/SELL khi Tenkan×Kijun + lọc mây; thoát khi đảo tín hiệu — KHÔNG SL/TP,
-giữ qua ngày). Chú ý cột maxDD: mục tiêu DD thấp khó đạt với trend giữ lệnh dài.
+Ichimoku = pure trend (BUY/SELL on Tenkan×Kijun + cloud filter; exits on signal reversal — NO SL/TP,
+holds overnight). Watch the maxDD column: a low-DD goal is hard to hit with long-held trend trades.
 """
 
 import asyncio
@@ -40,13 +40,13 @@ async def load_data() -> dict:
             await sync_historical(s, sym, tf, start)
             await s.commit()
             data[(sym, tf)] = await get_klines(s, sym, tf, limit=20000)
-            print(f"  data {sym} {tf}: {len(data[(sym, tf)])} nến")
+            print(f"  data {sym} {tf}: {len(data[(sym, tf)])} candles")
     return data
 
 
 def evaluate(params: dict, data: dict) -> dict:
     pnls, wins, trades, worst_dd, pos = [], [], 0, 0.0, 0
-    for (sym, tf), candles in data.items():
+    for (_sym, tf), candles in data.items():
         try:
             r = run_backtest("ichimoku", "1", params, candles, 1000.0, FEE, tf, 1)
         except Exception:  # noqa: BLE001
@@ -70,27 +70,31 @@ def fmt(p: dict) -> str:
 
 
 async def main() -> None:
-    print("Nạp dữ liệu…")
+    print("Loading data…")
     data = await load_data()
     grid = build_grid()
-    print(f"\nQuét {len(grid)} bộ × {len(MARKETS)} thị trường = {len(grid) * len(MARKETS)} backtest…\n")
+    print(f"\nSweeping {len(grid)} sets × {len(MARKETS)} markets = {len(grid) * len(MARKETS)} "
+          "backtests…\n")
     results = [r for p in grid if (r := evaluate(p, data))]
     elig = [r for r in results if r["trades"] >= MIN_TOTAL_TRADES]
     elig.sort(key=lambda r: (r["pos"], r["mean_pnl"], r["worst_pnl"]), reverse=True)
 
-    print(f"{'='*88}\nTOP (lọc ≥{MIN_TOTAL_TRADES} lệnh; xếp #thị-trường-dương, rồi PnL TB):")
-    print(f"  {'#dương':>7} {'PnL_TB%':>9} {'worst%':>8} {'win%':>6} {'lệnh':>5} {'maxDD%':>7}  params")
+    print(f"{'='*88}\nTOP (filtered ≥{MIN_TOTAL_TRADES} trades; ranked by #profitable-markets, "
+          "then avg PnL):")
+    print(f"  {'#pos':>7} {'avgPnL%':>9} {'worst%':>8} {'win%':>6} {'trades':>6} {'maxDD%':>7}  "
+          "params")
     for r in elig[:15]:
         print(f"  {r['pos']:>5}/4 {r['mean_pnl']:>9.2f} {r['worst_pnl']:>8.2f} "
               f"{r['mean_win']:>6.1f} {r['trades']:>5} {r['max_dd']:>7.2f}  {fmt(r['params'])}")
     if elig:
         b = elig[0]
-        print(f"\nĐỀ XUẤT (bền nhất): {fmt(b['params'])} → PnL TB {b['mean_pnl']:.2f}%, "
-              f"lời {b['pos']}/4, win {b['mean_win']:.1f}%, maxDD {b['max_dd']:.2f}%, {b['trades']} lệnh")
+        print(f"\nRECOMMENDED (most robust): {fmt(b['params'])} → avg PnL {b['mean_pnl']:.2f}%, "
+              f"profitable {b['pos']}/4, win {b['mean_win']:.1f}%, maxDD {b['max_dd']:.2f}%, "
+              f"{b['trades']} trades")
         print(f"  params = {b['params']}")
     else:
-        print("\nKhông bộ nào đủ lệnh.")
-    print("\n⚠️  IN-SAMPLE → phải walk-forward trước khi kết luận.")
+        print("\nNo parameter set has enough trades.")
+    print("\n⚠️  IN-SAMPLE → must walk-forward before drawing conclusions.")
 
 
 if __name__ == "__main__":

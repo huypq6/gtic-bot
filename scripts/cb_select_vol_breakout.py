@@ -1,11 +1,11 @@
-"""Chọn config circuit-breaker cho vol_breakout trên dữ liệu ĐÃ NHÌN (365d, Jun25–Jun26).
+"""Select a circuit-breaker config for vol_breakout on ALREADY-SEEN data (365d, Jun25–Jun26).
 
-Chạy:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/cb_select_vol_breakout.py
-Sau khi chọn 1 config → phán quyết MỘT LẦN trên vùng chưa nhìn (cb_validate_vol_breakout.py).
+Run:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/cb_select_vol_breakout.py
+After picking 1 config → ONE-SHOT verdict on the unseen period (cb_validate_vol_breakout.py).
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.backtest.engine import run_backtest
 from app.db import async_session
@@ -14,9 +14,9 @@ from app.market.store import get_klines
 BASE = {"k": 0.6, "k_mode": 1, "noise_len": 40, "direction": 1, "trend_len": 0, "sl_mode": 0,
         "atr_len": 14, "atr_mult": 1.5, "entry_cutoff_h": 22, "size": 0.001}
 CONFIGS = {
-    "baseline (cb tắt)": {**BASE},
-    "cb 10%/30d nghỉ14d": {**BASE, "cb_thresh_pct": 10.0, "cb_window_d": 30, "cb_pause_d": 14},
-    "cb 8%/30d nghỉ7d":   {**BASE, "cb_thresh_pct": 8.0, "cb_window_d": 30, "cb_pause_d": 7},
+    "baseline (cb off)": {**BASE},
+    "cb 10%/30d pause14d": {**BASE, "cb_thresh_pct": 10.0, "cb_window_d": 30, "cb_pause_d": 14},
+    "cb 8%/30d pause7d":   {**BASE, "cb_thresh_pct": 8.0, "cb_window_d": 30, "cb_pause_d": 7},
 }
 SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
 TF = "15m"
@@ -37,8 +37,8 @@ async def main() -> None:
     async with async_session() as s:
         for sym in SYMBOLS:
             data[sym] = await get_klines(s, sym, TF, limit=40000)
-            print(f"  data {sym}: {len(data[sym])} nến "
-                  f"({datetime.fromtimestamp(data[sym][0]['ts']/1000, tz=timezone.utc).date()} →)")
+            print(f"  data {sym}: {len(data[sym])} candles "
+                  f"({datetime.fromtimestamp(data[sym][0]['ts']/1000, tz=UTC).date()} →)")
 
     for cname, params in CONFIGS.items():
         print(f"\n{'='*96}\nCONFIG {cname}")
@@ -47,8 +47,9 @@ async def main() -> None:
             wr = window_returns(r["equity_curve"])
             pos = sum(1 for v in wr if v > 0)
             print(f"  {sym}: pnl={r['pnl_pct']:+.2f}% maxDD={r['max_dd']:.2f}% n={r['n_trades']} | "
-                  f"{pos}/{len(wr)} cửa sổ dương · " + " ".join(f"{v:+.1f}%" for v in wr))
-    print("\nChọn config cắt được Nov–Dec 2025 mà không giết cả năm → validate trên vùng CHƯA NHÌN.")
+                  f"{pos}/{len(wr)} windows positive · " + " ".join(f"{v:+.1f}%" for v in wr))
+    print("\nPick the config that cuts Nov–Dec 2025 without killing the whole year → validate on "
+          "the UNSEEN period.")
 
 
 if __name__ == "__main__":

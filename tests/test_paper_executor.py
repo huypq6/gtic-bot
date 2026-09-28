@@ -1,7 +1,7 @@
-"""PaperExecutor end-to-end với DB thật (skip nếu không có DB, vd CI).
+"""PaperExecutor end-to-end with a real DB (skipped without a DB, e.g. CI).
 
-Kiểm: engine → persist (position/order) → broadcast bus. Dùng symbol sentinel để
-dọn sạch sau test.
+Checks: engine → persist (position/order) → bus broadcast. Uses a sentinel symbol to
+clean up after the test.
 """
 
 import os
@@ -35,9 +35,9 @@ async def session_factory():
         async with engine.connect():
             pass
     except Exception:
-        pytest.skip("DB không sẵn sàng — bỏ qua test executor DB")
+        pytest.skip("DB not available — skipping executor DB test")
     sf = async_sessionmaker(engine, expire_on_commit=False)
-    # dọn trước
+    # clean up first
     async with sf() as s:
         await s.execute(delete(OrderModel).where(OrderModel.symbol == TEST_SYMBOL))
         await s.execute(delete(PositionModel).where(PositionModel.symbol == TEST_SYMBOL))
@@ -56,17 +56,17 @@ async def test_buy_then_tp_persists_and_broadcasts(session_factory):
 
     await ex.on_price(100)  # set last price
     await ex.submit(Signal("BUY", TEST_SYMBOL, size=2, tp=110, sl=90))
-    await ex.on_price(111)  # chạm TP → đóng
+    await ex.on_price(111)  # TP hit → close
 
-    # broadcast: có order + position OPEN + position CLOSED
+    # broadcast: has order + position OPEN + position CLOSED
     types = [(t, m.get("type"), m.get("status")) for t, m in bus.msgs]
     assert any(m.get("type") == "order" for _, m in bus.msgs)
     assert any(m.get("status") == "OPEN" for _, m in bus.msgs)
     closed = [m for _, m in bus.msgs if m.get("status") == "CLOSED"]
     assert closed and closed[0]["pnl"] == (110 - 100) * 2  # +20
-    assert types  # không rỗng
+    assert types  # not empty
 
-    # DB: position đã CLOSED với pnl đúng
+    # DB: position is CLOSED with the correct pnl
     async with session_factory() as s:
         rows = (
             await s.execute(select(PositionModel).where(PositionModel.symbol == TEST_SYMBOL))
@@ -74,13 +74,13 @@ async def test_buy_then_tp_persists_and_broadcasts(session_factory):
     assert len(rows) == 1
     assert rows[0].status == "CLOSED"
     assert float(rows[0].pnl) == 20.0
-    # review: lưu lý do thoát + SL ban đầu (mốc 1R)
+    # review: exit reason + initial SL (the 1R reference) are stored
     assert rows[0].exit_reason == "TP"
     assert float(rows[0].init_sl) == 90.0
 
 
 async def test_position_snapshot_survives_bot_meta(session_factory):
-    """Snapshot strategy/tf/params ghi vào position lúc mở (còn khi bot bị xóa)."""
+    """Strategy/tf/params snapshot written to the position at open (kept if the bot is deleted)."""
     ex = PaperExecutor(None, TEST_SYMBOL, "PAPER", FakeBus(), session_factory)
     ex.trade_meta = {"strategy": "demo v1", "tf": "15m", "params": {"size": 1}}
     await ex.on_price(100)

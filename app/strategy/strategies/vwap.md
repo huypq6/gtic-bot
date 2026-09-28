@@ -1,44 +1,44 @@
-# VWAP Cross — Giá cắt giá trung bình theo khối lượng
+# VWAP Cross — Price crossing the volume-weighted average price
 
-> Trường phái: **Trend / Momentum** (theo dòng tiền). Khung gợi ý: 5m–1h.
+> Style: **Trend / Momentum** (following money flow). Suggested timeframes: 5m–1h.
 
-## Ý tưởng
+## Idea
 
-VWAP (Volume Weighted Average Price) là **giá trung bình có trọng số khối lượng** — phản ánh mức giá mà phần lớn khối lượng đã giao dịch, thường được coi là "giá hợp lý" tham chiếu của tổ chức. Giá vượt lên VWAP → phe mua chiếm ưu thế; rơi xuống → phe bán.
+VWAP (Volume Weighted Average Price) is the **volume-weighted average price** — it reflects the price at which most of the volume has traded, and is often treated as the institutional "fair price" reference. Price rising above VWAP → buyers are in control; falling below → sellers.
 
-## Công thức
+## Formula
 
 ```
 typical price = (high + low + close) / 3
-VWAP (rolling N) = Σ(typical × volume) / Σ(volume)   trên `period` nến gần nhất
+VWAP (rolling N) = Σ(typical × volume) / Σ(volume)   over the last `period` candles
 ```
 
-> Bản này dùng **rolling VWAP** theo cửa sổ `period` nến (không reset theo ngày) để phù hợp engine.
+> This version uses a **rolling VWAP** over a `period`-candle window (no daily reset) to fit the engine.
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
-| Giá cắt **LÊN** VWAP (prev ≤ VWAP, now > VWAP) | **BUY** (LONG) |
-| Giá cắt **XUỐNG** VWAP | **SELL** (SHORT) |
+| Price crosses **ABOVE** VWAP (prev ≤ VWAP, now > VWAP) | **BUY** (LONG) |
+| Price crosses **BELOW** VWAP | **SELL** (SHORT) |
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `period` | 20 | Số nến tính VWAP (cửa sổ rolling). |
-| `size` | 0.001 | Khối lượng. |
+| `period` | 20 | Number of candles for VWAP (rolling window). |
+| `size` | 0.001 | Order size. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Gắn với **dòng tiền thực** (volume), không chỉ giá; mốc tham chiếu trực quan.
-- ❌ Trong sideway hay cắt qua lại (whipsaw); rolling VWAP khác VWAP-theo-ngày kinh điển.
+- ✅ Tied to **real money flow** (volume), not just price; an intuitive reference level.
+- ❌ Crosses back and forth in sideways markets (whipsaw); rolling VWAP differs from the classic daily VWAP.
 
-## Khi nào dùng
+## When to use
 
-- Khung trong ngày (intraday), thị trường có volume rõ. Hợp làm bộ lọc thiên hướng (bias) trong phiên.
+- Intraday timeframes, markets with meaningful volume. Good as an in-session bias filter.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Volume trong dữ liệu phải hợp lệ (khác 0). Thử `period` theo khung.
-- Cân nhắc VWAP **neo theo ngày** (anchored) nếu cần đúng chuẩn intraday.
+- Volume in the data must be valid (non-zero). Tune `period` to the timeframe.
+- Consider a **daily-anchored** VWAP if you need the standard intraday version.

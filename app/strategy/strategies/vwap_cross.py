@@ -1,6 +1,6 @@
-"""VWAP Cross — giá cắt đường VWAP (giá trung bình theo khối lượng).
+"""VWAP Cross — price crossing the VWAP line (volume-weighted average price).
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
+=== EDIT THE STRATEGY HERE ===
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -12,7 +12,7 @@ from app.strategy.ta import vwap
 class VwapCross(Strategy):
     name = "vwap"
     version = "1"
-    description = "VWAP cross — giá cắt LÊN VWAP (BUY), cắt XUỐNG (SELL)."
+    description = "VWAP cross — price crosses ABOVE VWAP (BUY), crosses BELOW (SELL)."
     default_params = {"period": 20, "size": 0.001}
     param_schema = {
         "period": {"type": "int", "min": 5, "max": 500, "default": 20},

@@ -1,7 +1,7 @@
-"""Factory cho mode TESTNET — ExchangeExecutor + Binance USDⓈ-M Futures testnet.
+"""Factory for TESTNET mode — ExchangeExecutor + Binance USDⓈ-M Futures testnet.
 
-Cần `BINANCE_TESTNET_KEY/SECRET` (tạo ở testnet.binancefuture.com). Lệnh thật trên
-môi trường giả (không tiền thật).
+Requires `BINANCE_TESTNET_KEY/SECRET` (created at testnet.binancefuture.com). Real orders on a
+simulated environment (no real money).
 """
 
 from app.config import Settings

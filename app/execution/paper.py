@@ -1,7 +1,7 @@
-"""PaperExecutor — khớp lệnh nội bộ (PaperEngine) + persist DB + broadcast bus.
+"""PaperExecutor — internal order matching (PaperEngine) + DB persistence + bus broadcast.
 
-Không gọi sàn. Mỗi bot 1 executor. Runner gọi `on_price` mỗi tick (check SL/TP/limit
-+ phát PnL realtime) và `submit` khi có Signal.
+Never calls the exchange. One executor per bot. The runner calls `on_price` on every tick (checks
+SL/TP/limit + publishes realtime PnL) and `submit` when there is a Signal.
 """
 
 import logging
@@ -40,10 +40,10 @@ class PaperExecutor(Executor):
         self._pos_db_id: int | None = None
         self._pending_db: dict[int, int] = {}  # engine pending oid → db order id
         self.account_id: int | None = None
-        self._accounts = None  # AccountService (P9) — None = không ghi sổ (test/legacy)
+        self._accounts = None  # AccountService (P9) — None = no ledger (tests/legacy)
 
     def attach_account(self, account, service) -> None:
-        """Gắn tài khoản: engine mô phỏng theo cấu hình của nó + ghi sổ mọi lãi/lỗ/phí."""
+        """Attach an account: the engine simulates per its config + every PnL/fee is booked."""
         self.account_id = account.id
         self._accounts = service
         e = self.engine
@@ -54,7 +54,7 @@ class PaperExecutor(Executor):
         e.gap_fill = True
 
     async def restore_open(self) -> bool:
-        """Sau restart: nạp lại vị thế OPEN của bot/lệnh tay này vào engine."""
+        """After restart: reload this bot's/manual order's OPEN position into the engine."""
         q = select(PositionModel).where(
             PositionModel.status == "OPEN", PositionModel.mode == self.mode,
             PositionModel.symbol == self.symbol,
@@ -93,11 +93,11 @@ class PaperExecutor(Executor):
         await self._apply(self.engine.submit(Signal("CANCEL", self.symbol), self._last_price))
 
     async def close(self, reason: str = "MANUAL") -> None:
-        """Đóng vị thế hiện tại (can thiệp tay)."""
+        """Close the current position (manual intervention)."""
         await self._apply(self.engine.force_close(self._last_price, reason))
 
     async def seed_price(self, price: float) -> None:
-        """Đặt giá tham chiếu cho lệnh tay MARKET trước khi submit."""
+        """Set the reference price for a manual MARKET order before submit."""
         self._last_price = price
 
     async def modify_sltp(self, sl: float | None, tp: float | None) -> None:
@@ -115,7 +115,7 @@ class PaperExecutor(Executor):
                 await s.commit()
         await self._broadcast_position(self._last_price)
 
-    # ---------- áp dụng events ----------
+    # ---------- applying events ----------
     async def _apply(self, events: list[EngineEvent]) -> None:
         for e in events:
             if e.queued:
@@ -126,12 +126,12 @@ class PaperExecutor(Executor):
                 await self._persist_position_open()
             if e.filled_pending_id is not None:
                 await self._mark_order(e.filled_pending_id, "FILLED")
-            elif e.fill:  # market fill → tạo order FILLED mới
+            elif e.fill:  # market fill → create a new FILLED order
                 await self._persist_order_filled(e.fill)
             if e.fill:
                 await self._broadcast_order(e.fill, "FILLED")
             if e.opened:
-                await self._broadcast_position(self._last_price)  # phát OPEN ngay
+                await self._broadcast_position(self._last_price)  # publish OPEN immediately
             if e.cancelled_ids:
                 for oid in e.cancelled_ids:
                     await self._mark_order(oid, "CANCELLED")
@@ -203,7 +203,7 @@ class PaperExecutor(Executor):
                         fee=closed.entry_fee + closed.exit_fee,
                     )
                 )
-            # lệnh đóng = chiều ngược vị thế
+            # the closing order = opposite side of the position
             close_side = "SELL" if closed.side == "LONG" else "BUY"
             s.add(
                 OrderModel(
@@ -234,7 +234,7 @@ class PaperExecutor(Executor):
 
     @property
     def pos_key(self) -> str:
-        # khóa ổn định để frontend phân biệt vị thế bot vs lệnh tay.
+        # stable key so the frontend can tell bot positions from manual orders.
         return f"bot:{self.bot_id}" if self.bot_id is not None else f"manual:{self.symbol}"
 
     # ---------- broadcast ----------

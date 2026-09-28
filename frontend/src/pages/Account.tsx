@@ -18,6 +18,7 @@ import {
 import EquityCurve from "../components/backtest/EquityCurve";
 import InfoTip from "../components/InfoTip";
 import ModeBadge from "../components/ModeBadge";
+import { t } from "../lib/i18n";
 
 const usd = (n: number | null | undefined, sign = false) =>
   n == null
@@ -31,11 +32,11 @@ const pct = (n: number | null | undefined, sign = false) =>
 const tone = (n: number | null | undefined) => (n == null || n === 0 ? "" : n > 0 ? "text-up" : "text-down");
 
 const TXN: Record<LedgerRow["type"], string> = {
-  DEPOSIT: "Nạp",
-  WITHDRAW: "Rút",
-  REALIZED_PNL: "Lãi/lỗ lệnh",
-  FEE: "Phí",
-  ADJUST: "Điều chỉnh",
+  DEPOSIT: t("Deposit"),
+  WITHDRAW: t("Withdraw"),
+  REALIZED_PNL: t("Trade PnL"),
+  FEE: t("Fee"),
+  ADJUST: t("Adjustment"),
 };
 
 export default function Account() {
@@ -82,13 +83,13 @@ export default function Account() {
           onClick={() => setCreating(true)}
           className="flex items-center gap-1 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-2"
         >
-          <Plus className="h-4 w-4" /> Tài khoản mới
+          <Plus className="h-4 w-4" /> {t("New account")}
         </button>
       </div>
 
       {creating && <CreateAccount onDone={() => { setCreating(false); refresh(); }} />}
       {!accounts?.length && !creating && (
-        <p className="text-sm text-faint">Chưa có tài khoản. Tạo một tài khoản paper để bắt đầu.</p>
+        <p className="text-sm text-faint">{t("No accounts yet. Create a paper account to get started.")}</p>
       )}
       {acc && <AccountView key={acc.id} acc={acc} onChange={refresh} />}
     </div>
@@ -107,19 +108,19 @@ function AccountView({ acc, onChange }: { acc: AccountInfo; onChange: () => void
           <ShieldAlert className="h-5 w-5 shrink-0 text-down" />
           <div className="flex-1">
             <div className="font-semibold text-down">
-              {acc.status === "HALTED" ? "Tài khoản đã DỪNG — bot không vào lệnh mới" : "Tạm nghỉ đến hết ngày (UTC)"}
+              {acc.status === "HALTED" ? t("Account HALTED — bots won't open new positions") : t("Paused until end of day (UTC)")}
             </div>
             <div className="text-muted">
               {acc.halted_reason}
-              {acc.paused_today && acc.halted_until && ` · mở lại lúc ${new Date(acc.halted_until).toLocaleString()}`}
-              . Lệnh đang mở vẫn giữ SL/TP.
+              {acc.paused_today && acc.halted_until && ` · ${t("resumes at {time}", { time: new Date(acc.halted_until).toLocaleString() })}`}
+              . {t("Open positions keep their SL/TP.")}
             </div>
           </div>
           <button
             onClick={() => resume.mutate()}
             className="rounded-md border border-down/50 px-3 py-1.5 text-xs font-medium text-down hover:bg-down/10"
           >
-            Tôi đã xem xét — mở khóa
+            {t("I've reviewed it — unlock")}
           </button>
         </div>
       )}
@@ -127,53 +128,53 @@ function AccountView({ acc, onChange }: { acc: AccountInfo; onChange: () => void
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
         <Card
           big
-          label="Tổng tài sản (equity)"
-          tip="Số dư ví + lãi/lỗ tạm của lệnh đang mở."
+          label={t("Total equity")}
+          tip={t("Wallet balance + unrealized PnL of open positions.")}
           value={`${usd(acc.equity)} ${acc.currency}`}
         />
         <Card
-          label="Lãi/lỗ tích lũy"
-          tip="Equity − tiền nạp ròng (nạp − rút). Nạp/rút không tính là lãi/lỗ."
+          label={t("Cumulative PnL")}
+          tip={t("Equity − net deposits (deposits − withdrawals). Deposits/withdrawals don't count as PnL.")}
           value={usd(acc.total_pnl, true)}
           sub={acc.total_pnl_pct != null ? pct(acc.total_pnl_pct, true) : undefined}
           cls={tone(acc.total_pnl)}
         />
         <Card
-          label="Hôm nay (UTC)"
+          label={t("Today (UTC)")}
           value={usd(acc.daily_pnl, true)}
-          sub={`${pct(acc.daily_pnl_pct, true)}${s.daily_loss_pct != null ? ` · giới hạn -${s.daily_loss_pct}%` : ""}`}
+          sub={`${pct(acc.daily_pnl_pct, true)}${s.daily_loss_pct != null ? ` · ${t("limit -{pct}%", { pct: s.daily_loss_pct })}` : ""}`}
           cls={tone(acc.daily_pnl)}
         />
         <Card
-          label="Sụt vốn từ đỉnh"
-          tip="Equity hiện tại so với đỉnh cao nhất (đã loại trừ nạp/rút). Chạm giới hạn → tài khoản DỪNG."
+          label={t("Drawdown from peak")}
+          tip={t("Current equity vs. its highest peak (excluding deposits/withdrawals). Hitting the limit → account HALTED.")}
           value={pct(-acc.dd_pct)}
-          sub={`đỉnh ${usd(acc.peak_equity)}${s.max_dd_pct != null ? ` · dừng ở -${s.max_dd_pct}%` : ""}`}
+          sub={`${t("peak {v}", { v: usd(acc.peak_equity) })}${s.max_dd_pct != null ? ` · ${t("halts at -{pct}%", { pct: s.max_dd_pct })}` : ""}`}
           cls={acc.dd_pct > 0 ? "text-down" : ""}
         />
-        <Card label="Số dư ví" tip="Nạp − rút + lãi/lỗ đã chốt − phí." value={usd(acc.balance)} />
+        <Card label={t("Wallet balance")} tip={t("Deposits − withdrawals + realized PnL − fees.")} value={usd(acc.balance)} />
         <Card
-          label="Ký quỹ đang dùng"
+          label={t("Margin in use")}
           value={usd(acc.used_margin)}
-          sub={`${acc.n_open} lệnh mở · đòn bẩy ${s.leverage}×`}
+          sub={t("{n} open · leverage {lev}×", { n: acc.n_open, lev: s.leverage })}
         />
         <Card
-          label="Khả dụng"
-          tip="Có thể dùng để vào lệnh mới hoặc rút = equity − ký quỹ."
+          label={t("Available")}
+          tip={t("Usable for new positions or withdrawals = equity − margin.")}
           value={usd(acc.available)}
         />
         <Card
-          label="Lãi/lỗ tạm"
+          label={t("Unrealized PnL")}
           value={usd(acc.equity - acc.balance, true)}
           cls={tone(acc.equity - acc.balance)}
         />
         <Card
-          label="Rủi ro đang mở"
-          tip="Tổng tiền sẽ mất nếu mọi lệnh đang mở chạm SL."
+          label={t("Open risk")}
+          tip={t("Total loss if every open position hits its SL.")}
           value={usd(acc.open_risk)}
-          sub={`${pct(acc.equity ? (acc.open_risk / acc.equity) * 100 : 0)}${s.max_open_risk_pct != null ? ` / trần ${s.max_open_risk_pct}%` : ""}`}
+          sub={`${pct(acc.equity ? (acc.open_risk / acc.equity) * 100 : 0)}${s.max_open_risk_pct != null ? ` / ${t("cap {pct}%", { pct: s.max_open_risk_pct })}` : ""}`}
         />
-        <Card label="Phí đã trả" value={usd(acc.total_fees)} sub={`nạp ròng ${usd(acc.net_deposit)}`} />
+        <Card label={t("Fees paid")} value={usd(acc.total_fees)} sub={t("net deposits {v}", { v: usd(acc.net_deposit) })} />
       </section>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -230,12 +231,12 @@ function Equity({ id }: { id: number }) {
   return (
     <>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Diễn biến vốn</h2>
+        <h2 className="text-sm font-semibold">{t("Equity history")}</h2>
         <div className="flex rounded-md border border-border text-xs">
           {(
             [
-              ["balance", "Tài sản"],
-              ["pnl", "Lãi/lỗ (bỏ nạp/rút)"],
+              ["balance", t("Equity")],
+              ["pnl", t("PnL (excl. deposits/withdrawals)")],
             ] as const
           ).map(([k, l]) => (
             <button
@@ -251,7 +252,7 @@ function Equity({ id }: { id: number }) {
       {data && data[view].length > 1 ? (
         <EquityCurve data={data[view]} />
       ) : (
-        <p className="py-10 text-center text-sm text-faint">Chưa đủ dữ liệu để vẽ.</p>
+        <p className="py-10 text-center text-sm text-faint">{t("Not enough data to plot yet.")}</p>
       )}
     </>
   );
@@ -262,19 +263,20 @@ function ExchangePanel({ acc, onChange }: { acc: AccountInfo; onChange: () => vo
   return (
     <>
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-        Đồng bộ Binance Futures <ModeBadge mode={acc.mode} />
+        {t("Binance Futures sync")} <ModeBadge mode={acc.mode} />
       </h2>
       <div className="space-y-2 text-sm">
         <p className="text-muted">
-          Số dư, ký quỹ, lãi tạm lấy từ sàn; lãi/lỗ, phí, funding, chuyển tiền nhập từ lịch sử income của sàn
-          (tự động mỗi 15 giây).
+          {t(
+            "Balance, margin and unrealized PnL come from the exchange; PnL, fees, funding and transfers are imported from the exchange's income history (automatically every 15 seconds).",
+          )}
         </p>
         <p className="text-xs text-faint">
-          Lần cuối: {acc.last_sync_at ? new Date(acc.last_sync_at).toLocaleString() : "chưa đồng bộ"}
+          {t("Last sync:")} {acc.last_sync_at ? new Date(acc.last_sync_at).toLocaleString() : t("never synced")}
         </p>
         {acc.sync_error && (
           <p className="rounded-md border border-down/40 bg-down/10 px-2 py-1.5 text-xs text-down">
-            Lỗi kết nối sàn: {acc.sync_error}
+            {t("Exchange connection error:")} {acc.sync_error}
           </p>
         )}
         <button
@@ -282,12 +284,12 @@ function ExchangePanel({ acc, onChange }: { acc: AccountInfo; onChange: () => vo
           disabled={sync.isPending}
           className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface-2 disabled:opacity-50"
         >
-          <RefreshCw className={`h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} /> Đồng bộ ngay
+          <RefreshCw className={`h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} /> {t("Sync now")}
         </button>
         {sync.isError && <p className="text-xs text-down">{(sync.error as Error).message}</p>}
         <p className="text-xs text-faint">
-          Nạp/rút: chuyển USDT Spot ↔ USDⓈ-M Futures trên Binance — sổ cái ghi nhận tự động.
-          {acc.mode === "LIVE" && " ⚠️ Tài khoản TIỀN THẬT."}
+          {t("Deposits/withdrawals: transfer USDT Spot ↔ USDⓈ-M Futures on Binance — the ledger records them automatically.")}
+          {acc.mode === "LIVE" && ` ⚠️ ${t("REAL-MONEY account.")}`}
         </p>
       </div>
     </>
@@ -302,7 +304,14 @@ function MoneyForm({ acc, onChange }: { acc: AccountInfo; onChange: () => void }
     mutationFn: (kind: "in" | "out") =>
       (kind === "in" ? depositAccount : withdrawAccount)(acc.id, Number(amount), note || undefined),
     onSuccess: (r, kind) => {
-      setMsg({ ok: true, text: `${kind === "in" ? "Đã nạp" : "Đã rút"} ${amount} ${acc.currency}. Số dư ví: ${usd(r.balance)}` });
+      setMsg({
+        ok: true,
+        text: t(kind === "in" ? "Deposited {amount} {cur}. Wallet balance: {bal}" : "Withdrew {amount} {cur}. Wallet balance: {bal}", {
+          amount,
+          cur: acc.currency,
+          bal: usd(r.balance),
+        }),
+      });
       setAmount("");
       setNote("");
       onChange();
@@ -312,10 +321,10 @@ function MoneyForm({ acc, onChange }: { acc: AccountInfo; onChange: () => void }
   const valid = Number(amount) > 0;
   return (
     <>
-      <h2 className="mb-3 text-sm font-semibold">Nạp / rút (giả lập)</h2>
+      <h2 className="mb-3 text-sm font-semibold">{t("Deposit / withdraw (simulated)")}</h2>
       <div className="flex flex-col gap-2 text-sm">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-faint">Số tiền ({acc.currency})</span>
+          <span className="text-xs text-faint">{t("Amount ({cur})", { cur: acc.currency })}</span>
           <input
             type="number"
             min={0}
@@ -326,7 +335,7 @@ function MoneyForm({ acc, onChange }: { acc: AccountInfo; onChange: () => void }
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-faint">Ghi chú (tùy chọn)</span>
+          <span className="text-xs text-faint">{t("Note (optional)")}</span>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -339,17 +348,17 @@ function MoneyForm({ acc, onChange }: { acc: AccountInfo; onChange: () => void }
             onClick={() => move.mutate("in")}
             className="flex flex-1 items-center justify-center gap-1 rounded-md bg-up/90 px-3 py-1.5 font-semibold text-white hover:bg-up disabled:opacity-50"
           >
-            <ArrowDownToLine className="h-4 w-4" /> Nạp
+            <ArrowDownToLine className="h-4 w-4" /> {t("Deposit")}
           </button>
           <button
             disabled={!valid || move.isPending}
             onClick={() => move.mutate("out")}
             className="flex flex-1 items-center justify-center gap-1 rounded-md border border-border px-3 py-1.5 font-semibold hover:bg-surface-2 disabled:opacity-50"
           >
-            <ArrowUpFromLine className="h-4 w-4" /> Rút
+            <ArrowUpFromLine className="h-4 w-4" /> {t("Withdraw")}
           </button>
         </div>
-        <p className="text-xs text-faint">Rút tối đa {usd(Math.max(0, acc.available))} (khả dụng, trừ ký quỹ lệnh đang mở).</p>
+        <p className="text-xs text-faint">{t("Max withdrawal {v} (available balance, minus margin of open positions).", { v: usd(Math.max(0, acc.available)) })}</p>
         {msg && <p className={`text-xs ${msg.ok ? "text-up" : "text-down"}`}>{msg.text}</p>}
       </div>
     </>
@@ -359,15 +368,15 @@ function MoneyForm({ acc, onChange }: { acc: AccountInfo; onChange: () => void }
 type FormVals = Record<keyof AccountSettings, string>;
 
 const FIELDS: { k: keyof AccountSettings; label: string; tip: string; unit: string; optional?: boolean; scale?: number }[] = [
-  { k: "leverage", label: "Đòn bẩy", tip: "Ký quỹ = giá trị lệnh / đòn bẩy. >1× có giá thanh lý.", unit: "×" },
-  { k: "taker_fee", label: "Phí taker", tip: "Lệnh market, SL/TP. Binance Futures VIP0: 0.05%.", unit: "%", scale: 100 },
-  { k: "maker_fee", label: "Phí maker", tip: "Lệnh limit khớp. Binance Futures VIP0: 0.02%.", unit: "%", scale: 100 },
-  { k: "slippage_bps", label: "Trượt giá", tip: "Lệnh market/stop khớp lệch bất lợi. 1 bps = 0.01%.", unit: "bps" },
-  { k: "max_risk_pct", label: "Trần rủi ro / lệnh", tip: "Lệnh nào đòi rủi ro hơn mức này sẽ bị co lại.", unit: "% vốn", optional: true },
-  { k: "max_open_risk_pct", label: "Trần tổng rủi ro mở", tip: "Tổng tiền mất nếu mọi lệnh chạm SL không vượt mức này.", unit: "% vốn", optional: true },
-  { k: "max_positions", label: "Số lệnh mở tối đa", tip: "Số vị thế mở cùng lúc trên tài khoản.", unit: "lệnh", optional: true },
-  { k: "daily_loss_pct", label: "Lỗ tối đa / ngày", tip: "Chạm → nghỉ vào lệnh mới đến hết ngày UTC.", unit: "%", optional: true },
-  { k: "max_dd_pct", label: "Sụt vốn tối đa", tip: "Từ đỉnh equity. Chạm → DỪNG tài khoản đến khi bạn mở khóa.", unit: "%", optional: true },
+  { k: "leverage", label: t("Leverage"), tip: t("Margin = position value / leverage. Above 1× there is a liquidation price."), unit: "×" },
+  { k: "taker_fee", label: t("Taker fee"), tip: t("Market orders, SL/TP. Binance Futures VIP0: 0.05%."), unit: "%", scale: 100 },
+  { k: "maker_fee", label: t("Maker fee"), tip: t("Filled limit orders. Binance Futures VIP0: 0.02%."), unit: "%", scale: 100 },
+  { k: "slippage_bps", label: t("Slippage"), tip: t("Market/stop orders fill at a worse price. 1 bps = 0.01%."), unit: "bps" },
+  { k: "max_risk_pct", label: t("Max risk / trade"), tip: t("Trades requiring more risk than this are scaled down."), unit: t("% equity"), optional: true },
+  { k: "max_open_risk_pct", label: t("Max total open risk"), tip: t("Total loss if every position hits its SL will not exceed this."), unit: t("% equity"), optional: true },
+  { k: "max_positions", label: t("Max open positions"), tip: t("Number of positions open at the same time on the account."), unit: t("positions"), optional: true },
+  { k: "daily_loss_pct", label: t("Max daily loss"), tip: t("When hit → no new positions until the end of the UTC day."), unit: "%", optional: true },
+  { k: "max_dd_pct", label: t("Max drawdown"), tip: t("From peak equity. When hit → account HALTED until you unlock it."), unit: "%", optional: true },
 ];
 
 const toForm = (s: AccountSettings): FormVals =>
@@ -379,7 +388,7 @@ const toForm = (s: AccountSettings): FormVals =>
   ) as FormVals;
 
 function SettingsForm({ acc, onChange }: { acc: AccountInfo; onChange: () => void }) {
-  // tài khoản sàn: trượt giá là thật (không mô phỏng); phí chỉ để ước tính lãi tạm
+  // exchange account: slippage is real (not simulated); fees are only used to estimate unrealized PnL
   const fields = acc.is_exchange ? FIELDS.filter((f) => f.k !== "slippage_bps") : FIELDS;
   const [vals, setVals] = useState<FormVals>(() => toForm(acc.settings));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -389,7 +398,7 @@ function SettingsForm({ acc, onChange }: { acc: AccountInfo; onChange: () => voi
       for (const f of fields) {
         const raw = vals[f.k].trim();
         if (raw === "") {
-          if (f.optional) body[f.k] = null; // bỏ trống = tắt rào chắn
+          if (f.optional) body[f.k] = null; // empty = guard disabled
           continue;
         }
         body[f.k] = Number(raw) / (f.scale ?? 1);
@@ -398,7 +407,7 @@ function SettingsForm({ acc, onChange }: { acc: AccountInfo; onChange: () => voi
     },
     onSuccess: (a) => {
       setVals(toForm(a.settings));
-      setMsg({ ok: true, text: "Đã lưu — áp dụng cho lệnh mới." });
+      setMsg({ ok: true, text: t("Saved — applies to new positions.") });
       onChange();
     },
     onError: (e: Error) => setMsg({ ok: false, text: e.message }),
@@ -406,13 +415,13 @@ function SettingsForm({ acc, onChange }: { acc: AccountInfo; onChange: () => voi
   return (
     <>
       <h2 className="mb-1 text-sm font-semibold">
-        {acc.is_exchange ? "Đòn bẩy & rào chắn rủi ro" : "Mô phỏng sàn & rào chắn rủi ro"}
+        {acc.is_exchange ? t("Leverage & risk guards") : t("Exchange simulation & risk guards")}
       </h2>
       <p className="mb-3 text-xs text-faint">
         {acc.is_exchange
-          ? "Đòn bẩy được đặt lên sàn trước mỗi lệnh. Phí chỉ dùng ước tính lãi tạm — phí thật lấy từ sàn."
-          : "Mô phỏng Binance USDT-M Futures. Lệnh đang mở giữ nguyên cấu hình lúc vào."}{" "}
-        Bỏ trống ô rào chắn = tắt.
+          ? t("Leverage is set on the exchange before each order. Fees are only used to estimate unrealized PnL — actual fees come from the exchange.")
+          : t("Simulates Binance USDT-M Futures. Open positions keep the settings they were opened with.")}{" "}
+        {t("Leave a guard field empty to disable it.")}
       </p>
       <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3 xl:grid-cols-5">
         {fields.map((f) => (
@@ -426,7 +435,7 @@ function SettingsForm({ acc, onChange }: { acc: AccountInfo; onChange: () => voi
                 min={0}
                 step="any"
                 value={vals[f.k]}
-                placeholder={f.optional ? "tắt" : ""}
+                placeholder={f.optional ? t("off") : ""}
                 onChange={(e) => setVals({ ...vals, [f.k]: e.target.value })}
                 className="w-full min-w-0 rounded-md border border-border bg-surface-2 px-2 py-1.5"
               />
@@ -441,7 +450,7 @@ function SettingsForm({ acc, onChange }: { acc: AccountInfo; onChange: () => voi
           disabled={save.isPending}
           className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
         >
-          Lưu cấu hình
+          {t("Save settings")}
         </button>
         {msg && <span className={`text-xs ${msg.ok ? "text-up" : "text-down"}`}>{msg.text}</span>}
       </div>
@@ -457,34 +466,34 @@ function Ledger({ id, currency }: { id: number; currency: string }) {
   });
   return (
     <>
-      <h2 className="mb-3 text-sm font-semibold">Sổ cái (mọi biến động số dư)</h2>
+      <h2 className="mb-3 text-sm font-semibold">{t("Ledger (all balance changes)")}</h2>
       <div className="max-h-96 overflow-auto">
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-surface">
             <tr className="text-left text-xs uppercase tracking-wide text-faint">
-              <th className="px-2 py-1.5 font-medium">Thời gian</th>
-              <th className="px-2 py-1.5 font-medium">Loại</th>
-              <th className="px-2 py-1.5 font-medium">Chi tiết</th>
-              <th className="px-2 py-1.5 text-right font-medium">Số tiền</th>
-              <th className="px-2 py-1.5 text-right font-medium">Số dư sau</th>
+              <th className="px-2 py-1.5 font-medium">{t("Time")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("Type")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("Details")}</th>
+              <th className="px-2 py-1.5 text-right font-medium">{t("Amount")}</th>
+              <th className="px-2 py-1.5 text-right font-medium">{t("Balance after")}</th>
             </tr>
           </thead>
           <tbody>
-            {(data ?? []).map((t) => (
-              <tr key={t.id} className="border-t border-border">
-                <td className="px-2 py-1.5 text-xs tabular-nums text-muted">{new Date(t.ts).toLocaleString()}</td>
-                <td className="px-2 py-1.5">{TXN[t.type]}</td>
+            {(data ?? []).map((r) => (
+              <tr key={r.id} className="border-t border-border">
+                <td className="px-2 py-1.5 text-xs tabular-nums text-muted">{new Date(r.ts).toLocaleString()}</td>
+                <td className="px-2 py-1.5">{TXN[r.type]}</td>
                 <td className="px-2 py-1.5 text-xs text-muted">
-                  {[t.symbol, t.bot_id != null ? `bot #${t.bot_id}` : null, t.position_id != null ? `lệnh #${t.position_id}` : null, t.note]
+                  {[r.symbol, r.bot_id != null ? `bot #${r.bot_id}` : null, r.position_id != null ? t("position #{id}", { id: r.position_id }) : null, r.note]
                     .filter(Boolean)
                     .join(" · ")}
                 </td>
-                <td className={`px-2 py-1.5 text-right tabular-nums ${tone(t.amount)}`}>
-                  {Math.abs(t.amount) < 0.01 && t.amount !== 0
-                    ? `${t.amount > 0 ? "+" : ""}${t.amount.toPrecision(3)}`
-                    : usd(t.amount, true)}
+                <td className={`px-2 py-1.5 text-right tabular-nums ${tone(r.amount)}`}>
+                  {Math.abs(r.amount) < 0.01 && r.amount !== 0
+                    ? `${r.amount > 0 ? "+" : ""}${r.amount.toPrecision(3)}`
+                    : usd(r.amount, true)}
                 </td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{usd(t.balance_after)} {currency}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums">{usd(r.balance_after)} {currency}</td>
               </tr>
             ))}
           </tbody>
@@ -516,36 +525,36 @@ function CreateAccount({ onDone }: { onDone: () => void }) {
   return (
     <section className="rounded-xl border border-accent/40 bg-surface p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Tạo tài khoản</h2>
+        <h2 className="text-sm font-semibold">{t("Create account")}</h2>
         <button onClick={onDone} className="rounded p-1 text-muted hover:bg-surface-2">
           <X className="h-4 w-4" />
         </button>
       </div>
       <div className="flex flex-wrap items-end gap-3 text-sm">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-faint">Tên</span>
+          <span className="text-xs text-faint">{t("Name")}</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="vd Thử ict_po3 rủi ro 2%"
+            placeholder={t("e.g. Test ict_po3 at 2% risk")}
             className="w-64 rounded-md border border-border bg-surface-2 px-2 py-1.5"
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-faint">Loại</span>
+          <span className="text-xs text-faint">{t("Type")}</span>
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value)}
             className="rounded-md border border-border bg-surface-2 px-2 py-1.5"
           >
-            <option value="PAPER">PAPER (giả lập)</option>
+            <option value="PAPER">{t("PAPER (simulated)")}</option>
             <option value="TESTNET">TESTNET (Binance Futures testnet)</option>
-            <option value="LIVE">LIVE (tiền thật)</option>
+            <option value="LIVE">{t("LIVE (real money)")}</option>
           </select>
         </label>
         {paper && (
           <label className="flex flex-col gap-1">
-            <span className="text-xs text-faint">Vốn ban đầu (USDT)</span>
+            <span className="text-xs text-faint">{t("Starting balance (USDT)")}</span>
             <input
               type="number"
               min={0}
@@ -557,7 +566,7 @@ function CreateAccount({ onDone }: { onDone: () => void }) {
         )}
         {mode === "LIVE" && (
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-down">Gõ LIVE để xác nhận</span>
+            <span className="text-xs font-semibold text-down">{t("Type LIVE to confirm")}</span>
             <input
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
@@ -566,7 +575,7 @@ function CreateAccount({ onDone }: { onDone: () => void }) {
           </label>
         )}
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-faint">Đòn bẩy</span>
+          <span className="text-xs text-faint">{t("Leverage")}</span>
           <input
             type="number"
             min={1}
@@ -581,13 +590,19 @@ function CreateAccount({ onDone }: { onDone: () => void }) {
           onClick={() => create.mutate()}
           className="rounded-md bg-accent px-3 py-1.5 font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
         >
-          Tạo
+          {t("Create")}
         </button>
       </div>
       <p className="mt-2 text-xs text-faint">
         {paper
-          ? "Mặc định: phí 0.05%/0.02%, trượt 2 bps, rủi ro tối đa 2%/lệnh, tổng rủi ro mở 6%, lỗ ngày 3%, sụt vốn 15%. Chỉnh sau trong phần cấu hình."
-          : `Số dư lấy từ ví USDⓈ-M Futures trên Binance ${mode === "TESTNET" ? "testnet" : "(TIỀN THẬT)"} bằng key trong .env (${mode === "TESTNET" ? "BINANCE_TESTNET_KEY/SECRET" : "BINANCE_KEY/SECRET + ENABLE_LIVE=1"}). Mỗi loại chỉ 1 tài khoản. Rào chắn mặc định như paper.`}
+          ? t("Defaults: fees 0.05%/0.02%, slippage 2 bps, max risk 2%/trade, total open risk 6%, daily loss 3%, drawdown 15%. Adjust later in the settings section.")
+          : t(
+              "Balance is read from the Binance USDⓈ-M Futures wallet {env} using the keys in .env ({keys}). One account per type. Default guards are the same as paper.",
+              {
+                env: mode === "TESTNET" ? "testnet" : t("(REAL MONEY)"),
+                keys: mode === "TESTNET" ? "BINANCE_TESTNET_KEY/SECRET" : "BINANCE_KEY/SECRET + ENABLE_LIVE=1",
+              },
+            )}
       </p>
       {create.isError && <p className="mt-2 text-xs text-down">{(create.error as Error).message}</p>}
     </section>

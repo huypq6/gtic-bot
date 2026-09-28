@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router";
 import { Moon, Sun } from "lucide-react";
 import { useWsStore } from "../lib/ws";
 import { useTheme } from "../lib/theme";
+import { lang, setLang, t } from "../lib/i18n";
 import FeedBanner from "./FeedBanner";
 import VersionBadge from "./VersionBadge";
 
@@ -26,7 +27,7 @@ export default function AppLayout() {
           <Tab to="/library">Library</Tab>
           <Tab to="/trade">Trading</Tab>
           <Tab to="/orders">Orders</Tab>
-          <Tab to="/account">Tài khoản</Tab>
+          <Tab to="/account">{t("Account")}</Tab>
           <Tab to="/backtest">Backtest</Tab>
           <Tab to="/scanner">Scanner</Tab>
           <Tab to="/audit">Audit</Tab>
@@ -34,8 +35,15 @@ export default function AppLayout() {
         <div className="flex shrink-0 items-center gap-2 text-xs">
           <VersionBadge />
           <button
+            onClick={() => setLang(lang === "en" ? "vi" : "en")}
+            title={t("Language")}
+            className="rounded-md px-1.5 py-1 font-semibold text-muted hover:bg-surface-2 hover:text-text"
+          >
+            {lang === "en" ? "VI" : "EN"}
+          </button>
+          <button
             onClick={toggleTheme}
-            title={theme === "dark" ? "Chuyển sáng" : "Chuyển tối"}
+            title={theme === "dark" ? t("Switch to light") : t("Switch to dark")}
             className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-text"
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

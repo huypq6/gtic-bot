@@ -1,4 +1,5 @@
-// REST client. Dùng đường dẫn tương đối /api → Vite proxy (dev) / cùng origin (prod).
+// REST client. Uses relative /api paths → Vite proxy (dev) / same origin (prod).
+import { lang } from "./i18n";
 
 export async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(path);
@@ -52,7 +53,7 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// Gửi JSON; lỗi → Error mang `detail` của FastAPI (vd "không đủ số dư") để hiện cho người dùng.
+// Send JSON; on error → Error carrying FastAPI's `detail` (e.g. "insufficient balance") to show the user.
 export async function sendJson<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(path, {
     method,
@@ -66,7 +67,7 @@ export async function sendJson<T>(method: string, path: string, body?: unknown):
       if (typeof j.detail === "string") msg = j.detail;
       else if (Array.isArray(j.detail)) msg = j.detail.map((d: { msg: string }) => d.msg).join("; ");
     } catch {
-      /* body không phải JSON */
+      /* body is not JSON */
     }
     throw new Error(msg);
   }
@@ -88,7 +89,7 @@ export interface StrategyInfo {
 }
 
 export const fetchStrategyDoc = (name: string) =>
-  getJson<{ name: string; markdown: string }>(`/api/strategies/${name}/doc`);
+  getJson<{ name: string; markdown: string }>(`/api/strategies/${name}/doc?lang=${lang}`);
 
 export interface BotInfo {
   id: number;
@@ -99,7 +100,7 @@ export interface BotInfo {
   mode: string;
   params: Record<string, unknown>;
   status: string;
-  /** open-time (ms) nến đóng cuối bot nhận live; null = chưa nhận nến nào. */
+  /** open-time (ms) of the last closed candle the bot received live; null = none received yet. */
   last_candle?: number | null;
   account_id: number | null;
   sizing: Sizing | null;
@@ -225,7 +226,7 @@ export function fetchOrders(filters: Record<string, string> = {}) {
   return getJson<OrderRow[]>(`/api/orders${q ? `?${q}` : ""}`);
 }
 
-// ---- review lệnh: 1 vị thế = 1 trade (kết quả, R, MFE/MAE) ----
+// ---- trade review: 1 position = 1 trade (result, R, MFE/MAE) ----
 export interface TradeRow {
   id: number;
   bot_id: number | null;
@@ -241,13 +242,13 @@ export interface TradeRow {
   status: "OPEN" | "CLOSED";
   exit_reason: string | null; // SL | TP | SIGNAL | MANUAL | LIQUIDATION
   account_id: number | null;
-  fee: number | null; // tổng phí vào + ra (USDT)
+  fee: number | null; // total entry + exit fees (USDT)
   margin: number | null;
   strategy: string | null;
   tf: string | null;
-  params: Record<string, unknown> | null; // snapshot lúc mở lệnh
+  params: Record<string, unknown> | null; // snapshot at entry
   source: string;
-  bot_ref: number | null; // id bot gốc (vẫn còn khi bot đã bị xóa)
+  bot_ref: number | null; // original bot id (kept even after the bot is deleted)
   bot_deleted: boolean;
   opened_at: number; // ms
   closed_at: number | null;
@@ -276,8 +277,8 @@ export function fetchTrades(filters: Record<string, string> = {}) {
 }
 
 // ---- backtest (P4) ----
-// Series indicator: dạng mới {pane, data} (pane 0 = overlay giá, 1 = oscillator),
-// hoặc dạng cũ (run đã lưu trước đây) là mảng [[ts, value]] — xem là pane 0.
+// Indicator series: new form {pane, data} (pane 0 = price overlay, 1 = oscillator),
+// or the legacy form (previously saved runs) as an array [[ts, value]] — treated as pane 0.
 export type IndicatorSeries = [number, number][] | { pane?: number; data: [number, number][] };
 
 export interface BacktestTrade {
@@ -286,7 +287,7 @@ export interface BacktestTrade {
   entry: number | null;
   exit_ts: number | null;
   exit: number | null;
-  pnl_pct: number | null; // engine ACCOUNT: % equity lúc vào
+  pnl_pct: number | null; // ACCOUNT engine: % of equity at entry
   sl: number | null;
   tp: number | null;
   // engine ACCOUNT
@@ -407,7 +408,7 @@ export const runBacktest = (body: {
   compare?: (Sizing & { leverage?: number | null })[];
 }) => sendJson<BacktestResult>("POST", "/api/backtest", body);
 
-// ---- tài khoản & quản lý vốn (P9) ----
+// ---- account & money management (P9) ----
 export interface AccountSettings {
   leverage: number;
   taker_fee: number;
@@ -447,7 +448,7 @@ export interface AccountInfo {
   total_fees: number;
   n_bots: number;
   market: string;
-  is_exchange: boolean; // TESTNET/LIVE: số liệu đồng bộ từ Binance Futures
+  is_exchange: boolean; // TESTNET/LIVE: figures synced from Binance Futures
   last_sync_at: string | null;
   sync_error: string | null;
 }

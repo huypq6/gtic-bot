@@ -8,7 +8,7 @@ from app.strategy.ta import ema, rsi
 
 
 def replay(strat, closes):
-    """Phát lại chuỗi giá qua strategy như runner làm (ctx.candles lớn dần)."""
+    """Replay a price series through the strategy like the runner does (ctx.candles grows)."""
     out, candles = [], []
     for c in closes:
         candles.append({"open": c, "high": c, "low": c, "close": c, "volume": 1, "ts": 0})

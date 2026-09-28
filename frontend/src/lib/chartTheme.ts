@@ -1,4 +1,4 @@
-// Đọc màu chart từ CSS variable theme (không hardcode) → chart theo sáng/tối.
+// Reads chart colours from theme CSS variables (no hardcoding) → chart follows light/dark.
 function v(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }

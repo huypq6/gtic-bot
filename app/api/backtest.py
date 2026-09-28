@@ -1,4 +1,4 @@
-"""REST backtest: POST /backtest (chạy + lưu), GET /backtest/{id}."""
+"""Backtest REST: POST /backtest (run + save), GET /backtest/{id}."""
 
 import logging
 
@@ -15,26 +15,26 @@ from app.orders.models import BacktestRun, BacktestTrade, StrategyModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
-CHART_BARS = 5000  # = limit loadRange của BacktestChart
+CHART_BARS = 5000  # = BacktestChart's loadRange limit
 
 
 class SizingVariant(BaseModel):
     method: str = "risk_pct"
     value: float = 1.0
-    leverage: float | None = None  # None = dùng leverage của request
+    leverage: float | None = None  # None = use the request's leverage
 
 
 class BacktestReq(BaseModel):
     strategy_id: int
     symbol: str
     tf: str = "1m"
-    start: str = "7 days ago UTC"  # tải lịch sử nếu thiếu
+    start: str = "7 days ago UTC"  # download history if missing
     capital: float = 1_000.0
     market: str = "SPOT"  # SPOT | FUTURES
-    leverage: int = 1  # chỉ áp cho FUTURES
-    fee_rate: float | None = None  # None → lấy phí Binance theo market
+    leverage: int = 1  # FUTURES only
+    fee_rate: float | None = None  # None → use Binance fee for the market
     params: dict | None = None
-    # P9c — engine ACCOUNT: mô phỏng tài khoản như paper (khối lượng theo vốn, SL trong nến)
+    # P9c — ACCOUNT engine: simulates the account like paper (equity-based sizing, intrabar SL)
     engine: str = "VBT"  # VBT | ACCOUNT
     sizing: SizingVariant | None = None
     maker_fee: float | None = None
@@ -43,7 +43,7 @@ class BacktestReq(BaseModel):
     max_open_risk_pct: float | None = None
     daily_loss_pct: float | None = None
     max_dd_pct: float | None = None
-    compare: list[SizingVariant] = []  # chạy thêm các cấu hình khối lượng để so sánh
+    compare: list[SizingVariant] = []  # run additional sizing configs for comparison
 
 
 @router.post("/backtest")
@@ -54,37 +54,37 @@ async def create_backtest(
 
     strat = await session.get(StrategyModel, body.strategy_id)
     if not strat:
-        raise HTTPException(404, "strategy không tồn tại")
+        raise HTTPException(404, "strategy not found")
     params = body.params if body.params is not None else dict(strat.default_params)
 
     market = body.market.upper()
     if market not in ("SPOT", "FUTURES"):
-        raise HTTPException(400, "market phải SPOT hoặc FUTURES")
-    # phí khớp Binance theo thị trường (override được).
+        raise HTTPException(400, "market must be SPOT or FUTURES")
+    # Binance fill fee per market (overridable).
     if body.fee_rate is not None:
         fee = body.fee_rate
     else:
         fee = settings.binance_futures_fee if market == "FUTURES" else settings.binance_spot_fee
-    # đòn bẩy: chỉ Futures, kẹp 1..max.
+    # leverage: Futures only, clamped to 1..max.
     leverage = 1
     if market == "FUTURES":
         leverage = max(1, min(body.leverage, settings.futures_max_leverage))
 
-    # Lọc theo start — DB có thể chứa lịch sử dài hơn nhiều so với khoảng user chọn
-    # (nếu không lọc, "Số ngày" mất tác dụng: luôn lấy 5000 nến mới nhất).
+    # Filter by start — the DB may hold much more history than the range the user picked
+    # (without filtering, "Days" has no effect: always the latest 5000 candles).
     import dateparser
 
     start_dt = dateparser.parse(body.start, settings={"RETURN_AS_TIMEZONE_AWARE": True})
     if start_dt is None:
-        raise HTTPException(400, f"không hiểu mốc thời gian '{body.start}'")
-    # đảm bảo có dữ liệu lịch sử (chỉ tải phần còn thiếu).
+        raise HTTPException(400, f"cannot parse start time '{body.start}'")
+    # ensure historical data exists (download only the missing part).
     await ensure_history(session, body.symbol, body.tf, start_dt)
     engine = body.engine.upper()
-    # ACCOUNT nhanh (thuần Python, O(n)) → cho phép dài hơn (≈ 1 năm 15m).
+    # ACCOUNT is fast (pure Python, O(n)) → allow longer ranges (≈ 1 year of 15m).
     limit = 40_000 if engine == "ACCOUNT" else 5000
     candles = await get_klines(session, body.symbol, body.tf, start=start_dt, limit=limit)
     if len(candles) < 5:
-        raise HTTPException(400, "không đủ dữ liệu lịch sử để backtest")
+        raise HTTPException(400, "not enough historical data to backtest")
     if engine == "ACCOUNT":
         return await _account_backtest(session, body, strat, params, candles, fee, leverage)
 
@@ -96,8 +96,8 @@ async def create_backtest(
             )
         )
     except Exception as exc:  # noqa: BLE001
-        logger.exception("backtest lỗi")
-        raise HTTPException(500, f"backtest lỗi: {exc}") from exc
+        logger.exception("backtest failed")
+        raise HTTPException(500, f"backtest failed: {exc}") from exc
 
     run = BacktestRun(
         strategy_id=body.strategy_id, params=params, symbol=body.symbol, tf=body.tf,
@@ -129,7 +129,7 @@ async def _account_backtest(session, body, strat, params, candles, fee, leverage
     variants = [body.sizing or SizingVariant()] + list(body.compare[:8])
     for v in variants:
         if v.method not in SIZING_METHODS:
-            raise HTTPException(422, f"phương pháp khối lượng '{v.method}' không hợp lệ")
+            raise HTTPException(422, f"invalid sizing method '{v.method}'")
 
     def cfg_for(v: SizingVariant) -> SimConfig:
         lev = v.leverage if v.leverage is not None else leverage
@@ -154,8 +154,8 @@ async def _account_backtest(session, body, strat, params, candles, fee, leverage
     try:
         results = await to_thread.run_sync(run_all)
     except Exception as exc:  # noqa: BLE001
-        logger.exception("backtest lỗi")
-        raise HTTPException(500, f"backtest lỗi: {exc}") from exc
+        logger.exception("backtest failed")
+        raise HTTPException(500, f"backtest failed: {exc}") from exc
 
     res, main_cfg = results[0], cfg_for(variants[0])
     stat_keys = ("cagr_pct", "longest_dd_days", "calmar", "profit_factor", "avg_r", "best_r",
@@ -182,8 +182,9 @@ async def _account_backtest(session, body, strat, params, candles, fee, leverage
         "max_risk_pct": main_cfg.max_risk_pct, "max_open_risk_pct": main_cfg.max_open_risk_pct,
         "daily_loss_pct": main_cfg.daily_loss_pct, "max_dd_pct": main_cfg.max_dd_pct,
     }
-    # indicator để vẽ chart như engine VBT — chart chỉ nạp 5000 nến cuối (loadRange) →
-    # chỉ trả phần đó (1 năm 15m đủ 35k điểm/đường ≈ 3 MB JSON, trình duyệt treo).
+    # indicators for charting like the VBT engine — the chart only loads the last 5000
+    # candles (loadRange) → return only that part (1 year of 15m = 35k points/series
+    # ≈ 3 MB JSON, freezes the browser).
     indicators: dict = {}
     try:
         from app.strategy.registry import get
@@ -268,7 +269,7 @@ def _summary(r: BacktestRun) -> dict:
 async def _run_dict(session: AsyncSession, run_id: int) -> dict:
     run = await session.get(BacktestRun, run_id)
     if not run:
-        raise HTTPException(404, "không có backtest này")
+        raise HTTPException(404, "backtest not found")
     trades = (
         await session.execute(
             select(BacktestTrade).where(BacktestTrade.run_id == run_id).order_by(BacktestTrade.id)
@@ -280,7 +281,7 @@ async def _run_dict(session: AsyncSession, run_id: int) -> dict:
     out["indicators"] = run.indicators or {}
     out["from_ts"] = int(run.from_ts.timestamp() * 1000) if run.from_ts else None
     out["to_ts"] = int(run.to_ts.timestamp() * 1000) if run.to_ts else None
-    out["liquidated"] = bool(eq and eq[-1][1] <= 0)  # cháy tài khoản nếu equity về 0
+    out["liquidated"] = bool(eq and eq[-1][1] <= 0)  # account liquidated if equity hits 0
     out["settings"] = run.settings
     out["stats"] = run.stats
     out["trades"] = [

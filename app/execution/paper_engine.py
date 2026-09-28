@@ -1,18 +1,20 @@
-"""PaperEngine — matching nội bộ thuần (không async, không DB, không network).
+"""PaperEngine — pure internal matching (no async, no DB, no network).
 
-Tách riêng để test kỹ logic tiền/PnL. PaperExecutor (paper.py) bọc engine này +
-persist DB + broadcast. 1 engine = 1 bot = 1 symbol, tối đa 1 vị thế (no pyramiding).
+Kept separate so the money/PnL logic can be tested thoroughly. PaperExecutor (paper.py) wraps
+this engine + persists to DB + broadcasts. 1 engine = 1 bot = 1 symbol, at most 1 position
+(no pyramiding).
 
-Quy ước:
-  BUY  → muốn LONG   | SELL → muốn SHORT | CLOSE → đóng | CANCEL → hủy pending
-  Tín hiệu ngược chiều: ĐÓNG vị thế hiện tại (realize PnL) rồi MỞ chiều mới (flip).
-SL/TP và LIMIT kiểm qua on_price(price) mỗi tick.
+Conventions:
+  BUY  → want LONG   | SELL → want SHORT | CLOSE → close | CANCEL → cancel pending
+  Opposite signal: CLOSE the current position (realize PnL) then OPEN the new side (flip).
+SL/TP and LIMIT are checked via on_price(price) on every tick.
 
-Mô phỏng sát sàn (Binance USDT-M Futures) — bật qua tham số, mặc định TẮT (giữ hành vi cũ):
-  fee_rate = phí taker (MARKET, SL/TP/đóng) · maker_fee = phí LIMIT (mặc định = taker)
-  slippage_bps: lệnh market/stop khớp lệch bất lợi N bps
-  gap_fill: tick đã vượt SL → khớp tại giá tick (tệ hơn SL), như stop-market thật
-  leverage > 1: có giá thanh lý (mmr) → chạm là đóng LIQUIDATION
+Exchange-realistic simulation (Binance USDT-M Futures) — enabled via params, OFF by default
+(keeps legacy behaviour):
+  fee_rate = taker fee (MARKET, SL/TP/close) · maker_fee = LIMIT fee (defaults to taker)
+  slippage_bps: market/stop orders fill N bps worse
+  gap_fill: tick already past SL → fill at the tick price (worse than SL), like a real stop-market
+  leverage > 1: has a liquidation price (mmr) → hitting it closes with LIQUIDATION
 """
 
 from dataclasses import dataclass
@@ -26,7 +28,7 @@ class Fill:
     type: str  # MARKET | LIMIT
     qty: float
     price: float
-    fee: float = 0.0  # phí của lần khớp này (USDT)
+    fee: float = 0.0  # fee for this fill (USDT)
 
 
 @dataclass
@@ -35,7 +37,7 @@ class Closed:
     qty: float
     entry_price: float
     exit_price: float
-    pnl: float  # ròng = gross − phí vào − phí ra
+    pnl: float  # net = gross − entry fee − exit fee
     reason: str  # SIGNAL | SL | TP | MANUAL | LIQUIDATION
     gross: float = 0.0
     entry_fee: float = 0.0
@@ -44,7 +46,7 @@ class Closed:
 
 @dataclass
 class PendingOrder:
-    oid: int  # id nội bộ engine, để khớp với row DB
+    oid: int  # engine-internal id, to match the DB row
     side: str  # BUY | SELL
     qty: float
     price: float  # limit price
@@ -58,9 +60,9 @@ class EngineEvent:
     opened: Position | None = None
     closed: Closed | None = None
     cancelled: bool = False
-    queued: PendingOrder | None = None  # limit vào hàng chờ (persist NEW)
-    filled_pending_id: int | None = None  # pending vừa khớp (NEW→FILLED)
-    cancelled_ids: list[int] | None = None  # pending bị hủy (NEW→CANCELLED)
+    queued: PendingOrder | None = None  # limit order queued (persist NEW)
+    filled_pending_id: int | None = None  # pending order just filled (NEW→FILLED)
+    cancelled_ids: list[int] | None = None  # pending orders cancelled (NEW→CANCELLED)
 
 
 class PaperEngine:
@@ -81,7 +83,7 @@ class PaperEngine:
         self.gap_fill = gap_fill
         self.leverage = max(1.0, float(leverage))
         self.mmr = mmr
-        self.entry_fee = 0.0  # phí đã trả lúc mở vị thế hiện tại
+        self.entry_fee = 0.0  # fee paid when opening the current position
         self.liq_price: float | None = None
         self.position: Position | None = None
         self.pending: list[PendingOrder] = []
@@ -121,11 +123,11 @@ class PaperEngine:
         return events
 
     def force_close(self, price: float, reason: str = "MANUAL") -> list[EngineEvent]:
-        """Đóng vị thế hiện tại tại giá `price` (vd can thiệp tay)."""
+        """Close the current position at `price` (e.g. manual intervention)."""
         return [self._close(self._slipped_exit(price), reason)] if self.position else []
 
     def restore(self, position: Position, entry_fee: float = 0.0) -> None:
-        """Nạp lại vị thế đang mở (sau restart process) — không phát event."""
+        """Reload an open position (after a process restart) — emits no events."""
         self.position = position
         self.entry_fee = entry_fee
         self.liq_price = self._liq_price(position.side, position.entry_price)
@@ -134,9 +136,9 @@ class PaperEngine:
         p = self.position
         return p.entry_price * p.qty / self.leverage if p else 0.0
 
-    # ---------- giá khớp mô phỏng ----------
+    # ---------- simulated fill prices ----------
     def _slipped(self, side: str, price: float) -> float:
-        """Lệnh market chiều `side` (BUY/SELL) khớp lệch bất lợi."""
+        """A market order on side `side` (BUY/SELL) fills with adverse slippage."""
         return price * (1 + self.slip) if side == "BUY" else price * (1 - self.slip)
 
     def _slipped_exit(self, price: float) -> float:
@@ -147,7 +149,7 @@ class PaperEngine:
 
     def _liq_price(self, side: str, entry: float) -> float | None:
         if self.leverage <= 1:
-            return None  # 1× (không vay) → không thanh lý
+            return None  # 1× (no borrowing) → no liquidation
         if side == "LONG":
             return entry * (1 - 1 / self.leverage + self.mmr)
         return entry * (1 + 1 / self.leverage - self.mmr)
@@ -161,7 +163,7 @@ class PaperEngine:
         return None
 
     def sltp_reason(self, price: float) -> str | None:
-        """SL/TP có chạm ở `price` không (không đóng) — dùng cho testnet/live."""
+        """Whether SL/TP is hit at `price` (does not close) — used for testnet/live."""
         p = self.position
         if not p:
             return None
@@ -185,17 +187,17 @@ class PaperEngine:
             return (price - p.entry_price) * p.qty
         return (p.entry_price - price) * p.qty
 
-    # ---------- nội bộ ----------
+    # ---------- internal ----------
     def _apply_market(
         self, side: str, qty: float, price: float, sl: float | None, tp: float | None,
         order_type: str = "MARKET",
     ) -> list[EngineEvent]:
         desired = "LONG" if side == "BUY" else "SHORT"
         if self.position and self.position.side == desired:
-            return []  # cùng chiều → no-op (không pyramiding)
+            return []  # same side → no-op (no pyramiding)
         events: list[EngineEvent] = []
         fill = price if order_type == "LIMIT" else self._slipped(side, price)
-        if self.position:  # ngược chiều → đóng trước
+        if self.position:  # opposite side → close first
             events.append(self._close(fill, "SIGNAL"))
         events.append(self._open(desired, qty, fill, sl, tp, order_type))
         return events
@@ -223,7 +225,7 @@ class PaperEngine:
             if p.side == "LONG"
             else (p.entry_price - exit_price) * p.qty
         )
-        exit_fee = self.fee_rate * exit_price * p.qty  # thoát = taker (market/stop)
+        exit_fee = self.fee_rate * exit_price * p.qty  # exit = taker (market/stop)
         closed = Closed(
             p.side, p.qty, p.entry_price, exit_price, gross - self.entry_fee - exit_fee, reason,
             gross=gross, entry_fee=self.entry_fee, exit_fee=exit_fee,
@@ -250,7 +252,7 @@ class PaperEngine:
             if crosses:
                 fills = self._apply_market(o.side, o.qty, o.price, o.sl, o.tp, "LIMIT")
                 for ev in fills:
-                    if ev.opened:  # đánh dấu pending nào vừa khớp
+                    if ev.opened:  # mark which pending order just filled
                         ev.filled_pending_id = o.oid
                 events += fills
             else:
@@ -262,7 +264,7 @@ class PaperEngine:
         p = self.position
         if not p:
             return None
-        # gap_fill: tick đã vượt SL → stop-market khớp ở giá tick (tệ hơn). TP khớp tại TP.
+        # gap_fill: tick past SL → stop-market fills at the tick price (worse). TP fills at TP.
         if p.side == "LONG":
             if p.sl is not None and price <= p.sl:
                 return self._close(self._slipped_exit(price if self.gap_fill else p.sl), "SL")

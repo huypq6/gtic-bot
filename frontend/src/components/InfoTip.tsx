@@ -1,7 +1,8 @@
 import { Info } from "lucide-react";
 import { GLOSSARY } from "../lib/glossary";
+import { t } from "../lib/i18n";
 
-// Nhãn kèm icon ⓘ; hover hiện tooltip giải thích (từ glossary theo `term`, hoặc `text`).
+// Label with an ⓘ icon; hover shows an explanatory tooltip (from the glossary by `term`, or `text`).
 export default function InfoTip({
   term,
   text,
@@ -13,7 +14,7 @@ export default function InfoTip({
   children: React.ReactNode;
   align?: "center" | "left";
 }) {
-  const tip = text ?? (term ? GLOSSARY[term] : undefined);
+  const tip = text ?? (term && GLOSSARY[term] ? t(GLOSSARY[term]) : undefined);
   if (!tip) return <>{children}</>;
 
   const pos = align === "left" ? "left-0" : "left-1/2 -translate-x-1/2";

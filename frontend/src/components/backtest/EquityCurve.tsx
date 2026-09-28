@@ -37,7 +37,7 @@ export default function EquityCurve({ data }: { data: [number, number][] }) {
       chart.remove();
       chartRef.current = null;
     };
-    // theme: rebuild để áp màu mới
+    // theme: rebuild to apply new colors
   }, [data, theme]);
 
   return <div ref={ref} className="h-72 w-full" />;

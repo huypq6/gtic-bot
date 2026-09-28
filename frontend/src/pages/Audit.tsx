@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchAudit } from "../lib/api";
+import { t } from "../lib/i18n";
 
 const SOURCE_CLS: Record<string, string> = {
   BOT: "text-muted",
@@ -17,13 +18,13 @@ export default function Audit() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-faint">
-              <th className="px-3 py-2 font-medium">Thời gian</th>
-              <th className="px-3 py-2 font-medium">Nguồn</th>
+              <th className="px-3 py-2 font-medium">{t("Time")}</th>
+              <th className="px-3 py-2 font-medium">{t("Source")}</th>
               <th className="px-3 py-2 font-medium">Mode</th>
               <th className="px-3 py-2 font-medium">Bot</th>
               <th className="px-3 py-2 font-medium">Symbol</th>
-              <th className="px-3 py-2 font-medium">Hành động</th>
-              <th className="px-3 py-2 font-medium">Chi tiết</th>
+              <th className="px-3 py-2 font-medium">{t("Action")}</th>
+              <th className="px-3 py-2 font-medium">{t("Details")}</th>
             </tr>
           </thead>
           <tbody>
@@ -47,7 +48,7 @@ export default function Audit() {
             {!data?.length && (
               <tr>
                 <td colSpan={7} className="px-3 py-4 text-sm text-faint">
-                  Chưa có bản ghi.
+                  {t("No records yet.")}
                 </td>
               </tr>
             )}

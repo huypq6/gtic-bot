@@ -1,50 +1,50 @@
-# Grid — Giao dịch lưới quanh mốc tham chiếu
+# Grid — Grid trading around a reference level
 
-> Trường phái: **Mean-reversion / harvest dao động**. Khung gợi ý: 5m–1h. Hợp thị trường đi ngang.
+> Style: **Mean-reversion / harvesting oscillation**. Suggested timeframes: 5m–1h. Suits sideways markets.
 
-## Ý tưởng
+## Idea
 
-Grid trading đặt một "lưới" các mức mua/bán cách đều quanh một mốc; khi giá **dao động lên xuống**, ta liên tục **mua thấp – bán cao** để gom lợi nhuận từ biên độ, không cần đoán hướng. Hợp nhất với thị trường **sideway**.
+Grid trading places a "grid" of evenly spaced buy/sell levels around a reference; as price **oscillates up and down**, we repeatedly **buy low – sell high** to collect profit from the range, without having to predict direction. Best suited to **sideways** markets.
 
-## Lưu ý mô hình
+## Model note
 
-Engine ở đây cho **1 bot = 1 vị thế** (không nhiều lệnh lưới đồng thời như grid cổ điển). Bản này là **grid 1 nấc/1 vị thế**: vào lệnh khi giá lệch `step_pct` khỏi mốc, **chốt khi giá quay về mốc**, rồi lặp lại — vẫn nắm tinh thần "harvest dao động".
+The engine here is **1 bot = 1 position** (no multiple simultaneous grid orders like a classic grid). This version is a **1-step / 1-position grid**: enter when price deviates `step_pct` from the reference, **close when price returns to the reference**, then repeat — still capturing the "harvest the oscillation" spirit.
 
-## Công thức & quy tắc
+## Formula & rules
 
 ```
-mốc (ref) = SMA(close, period)
+reference (ref) = SMA(close, period)
 lower = ref × (1 − step_pct%)      upper = ref × (1 + step_pct%)
 ```
 
-| Trạng thái | Điều kiện | Hành động |
+| State | Condition | Action |
 |---|---|---|
-| Đang flat | giá ≤ lower | **BUY** (mua 1 nấc dưới mốc) |
-| Đang flat | giá ≥ upper | **SELL** (bán khống 1 nấc trên mốc) |
-| Đang LONG | giá ≥ ref | **CLOSE** (chốt khi về mốc) |
-| Đang SHORT | giá ≤ ref | **CLOSE** (chốt khi về mốc) |
+| Flat | price ≤ lower | **BUY** (buy 1 step below the reference) |
+| Flat | price ≥ upper | **SELL** (short 1 step above the reference) |
+| LONG | price ≥ ref | **CLOSE** (take profit on return to the reference) |
+| SHORT | price ≤ ref | **CLOSE** (take profit on return to the reference) |
 
-> Đây là strategy **đọc `ctx.position`** để quyết định chốt/mở.
+> This strategy **reads `ctx.position`** to decide whether to close or open.
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `period` | 20 | Chu kỳ SMA làm mốc tham chiếu. |
-| `step_pct` | 1.0 | Độ rộng 1 nấc lưới (% từ mốc). |
-| `size` | 0.001 | Khối lượng mỗi nấc. |
+| `period` | 20 | SMA period used as the reference level. |
+| `step_pct` | 1.0 | Width of 1 grid step (% from the reference). |
+| `size` | 0.001 | Order size per step. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Sinh lời đều trong **sideway**; không cần đoán hướng.
-- ❌ **Nguy hiểm khi trend mạnh**: giá đi một chiều xa mốc → vị thế lỗ kéo dài (không có lưới nhiều tầng để bình quân). Nên thêm SL hoặc giới hạn.
-- ❌ Bản 1-nấc đơn giản hơn grid nhiều tầng cổ điển.
+- ✅ Steady profits in **sideways** markets; no need to predict direction.
+- ❌ **Dangerous in strong trends**: price moves one way far from the reference → a losing position that drags on (no multi-level grid to average down). Consider adding an SL or a limit.
+- ❌ The 1-step version is simpler than a classic multi-level grid.
 
-## Khi nào dùng
+## When to use
 
-- Thị trường tích lũy/đi ngang, biên độ ổn định. Tránh giai đoạn xu hướng mạnh hoặc thêm rào chắn rủi ro.
+- Consolidating/sideways markets with a stable range. Avoid strong trending periods or add risk guards.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Thử `step_pct` theo biến động cặp; quá nhỏ → nhiều lệnh + phí, quá lớn → ít cơ hội.
-- Backtest cả giai đoạn trend để thấy rủi ro vị thế kẹt.
+- Tune `step_pct` to the pair's volatility; too small → many trades + fees, too large → few opportunities.
+- Also backtest trending periods to see the risk of a stuck position.

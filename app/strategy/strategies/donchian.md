@@ -1,81 +1,81 @@
-# Donchian Breakout — Phá kênh giá
+# Donchian Breakout — Price Channel Breakout
 
-> Trường phái: **Trend-following** (theo xu hướng). Khung gợi ý: 1h–1d. Cặp: thanh khoản cao.
+> School: **Trend-following**. Suggested timeframe: 1h–1d. Pairs: high liquidity.
 
-## Ý tưởng
+## Idea
 
-Donchian Channel do Richard Donchian đề xuất — một trong những hệ thống trend-following kinh điển (nền tảng của "Turtle Traders"). Giả thuyết: khi giá **phá vỡ** vùng dao động gần đây (đỉnh/đáy của N nến), nó thường **mở đầu một xu hướng mới** đủ mạnh để có lời.
+The Donchian Channel was proposed by Richard Donchian — one of the classic trend-following systems (the foundation of the "Turtle Traders"). Hypothesis: when price **breaks out** of its recent range (the high/low of N candles), it often **starts a new trend** strong enough to be profitable.
 
-## Công thức
+## Formula
 
-Với `period = N`, tại mỗi nến đã đóng:
+With `period = N`, at each closed candle:
 
-- **Đỉnh kênh** = giá cao nhất (`high`) của **N nến TRƯỚC** nến hiện tại.
-- **Đáy kênh** = giá thấp nhất (`low`) của N nến trước.
+- **Channel top** = highest price (`high`) of the **N candles BEFORE** the current candle.
+- **Channel bottom** = lowest price (`low`) of the previous N candles.
 
-> Loại nến hiện tại ra khỏi cửa sổ để **tránh lookahead** (không dùng chính nó để so sánh với nó).
+> The current candle is excluded from the window to **avoid lookahead** (it is not compared against itself).
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
-| `giá hiện tại > Đỉnh kênh` | **BUY** (vào LONG) — phá đỉnh |
-| `giá hiện tại < Đáy kênh` | **SELL** (vào SHORT) — thủng đáy |
-| Tín hiệu ngược chiều | Engine tự **đóng vị thế cũ rồi mở chiều mới** (flip) |
+| `current price > Channel top` | **BUY** (go LONG) — breaks the high |
+| `current price < Channel bottom` | **SELL** (go SHORT) — breaks the low |
+| Opposite signal | The engine automatically **closes the old position and opens the new direction** (flip) |
 
-Quản trị rủi ro tùy chọn: bật `sl_pct` / `tp_pct` (% từ giá vào) để engine tự cắt SL/TP mỗi tick.
+Optional risk management: enable `sl_pct` / `tp_pct` (% from entry price) so the engine cuts SL/TP automatically on every tick.
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `period` | 20 | Độ rộng kênh. Lớn → ít tín hiệu, bắt xu hướng dài; nhỏ → nhạy, nhiều nhiễu. |
-| `size` | 0.001 | Khối lượng (base units). |
-| `sl_pct` | 0 (tắt) | Stop-loss theo % từ giá vào. |
-| `tp_pct` | 0 (tắt) | Take-profit theo % từ giá vào. |
+| `period` | 20 | Channel width. Larger → fewer signals, catches long trends; smaller → more sensitive, more noise. |
+| `size` | 0.001 | Position size (base units). |
+| `sl_pct` | 0 (off) | Stop-loss as % from entry price. |
+| `tp_pct` | 0 (off) | Take-profit as % from entry price. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Bắt được các xu hướng lớn; quy tắc đơn giản, khách quan, dễ backtest.
-- ✅ Không phụ thuộc dự đoán đỉnh/đáy.
-- ❌ **Sideway**: nhiều breakout giả → thua liên tiếp (whipsaw).
-- ❌ Vào lệnh trễ (sau khi giá đã phá) → bỏ lỡ phần đầu sóng.
+- ✅ Catches big trends; simple, objective rules, easy to backtest.
+- ✅ Does not depend on predicting tops/bottoms.
+- ❌ **Sideways**: many false breakouts → consecutive losses (whipsaw).
+- ❌ Late entries (after price has already broken out) → misses the start of the move.
 
-## Khi nào dùng
+## When to use
 
-- Thị trường/cặp có **xu hướng rõ**, biến động đủ lớn.
-- Khung **trung–dài** (1h trở lên) để giảm breakout giả.
-- Cân nhắc thêm bộ lọc xu hướng (vd chỉ LONG khi giá > EMA dài) nếu muốn giảm nhiễu.
+- Markets/pairs with a **clear trend** and enough volatility.
+- **Medium–long** timeframes (1h and up) to reduce false breakouts.
+- Consider adding a trend filter (e.g. only LONG when price > a long EMA) to reduce noise.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Thử nhiều `period` (10/20/55) trên **nhiều cặp + nhiều giai đoạn** — tránh chọn 1 giá trị "đẹp" (overfit).
-- Tính cả **phí**; trend-following ít lệnh nên phí ảnh hưởng vừa phải, nhưng whipsaw vùng sideway có thể ăn mòn.
-- Đánh giá `max_dd` (chuỗi thua khi sideway) và độ dài thắng trung bình.
+- Try several `period` values (10/20/55) on **multiple pairs + multiple periods** — avoid picking one "pretty" value (overfitting).
+- Include **fees**; trend-following trades rarely so fees have a moderate impact, but whipsaw in sideways zones can erode it.
+- Evaluate `max_dd` (losing streaks in sideways markets) and the average length of winners.
 
-## v2 — ATR trailing + kênh-thoát + lọc ADX/cuối tuần (`donchian_v2.py`)
+## v2 — ATR trailing + exit channel + ADX/weekend filter (`donchian_v2.py`)
 
-Screening 180 ngày cho thấy v1 thô lời ở 1h (ETH +66%) nhưng **maxDD > 60%** vì chỉ thoát khi
-breakout ngược (trả lại hết lãi khi trend gãy). v2 thêm exit chủ động + bộ lọc:
+The 180-day screening showed raw v1 profitable on 1h (ETH +66%) but with **maxDD > 60%** because it only exits on
+an opposite breakout (giving back all profit when the trend breaks). v2 adds active exits + filters:
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `exit_mode` | 2 | 0 = ATR trailing (chandelier) · 1 = kênh ngược ngắn (turtle) · 2 = cả hai. |
-| `exit_period` | 10 | Kênh ngược để thoát (long thoát khi thủng đáy M nến). |
-| `atr_len` / `atr_mult` | 14 / 2.5 | Trail = cực trị close kể từ entry ∓ mult×ATR (ratchet). |
-| `adx_min` | 0 (tắt) | Chỉ vào lệnh khi ADX ≥ ngưỡng — tránh whipsaw sideway. |
-| `dow_filter` | 0 (tắt) | 1 = không entry mới Sat 00:00 → Sun 20:00 UTC (vùng chop, nghiên cứu Concretum). |
+| `exit_mode` | 2 | 0 = ATR trailing (chandelier) · 1 = short opposite channel (turtle) · 2 = both. |
+| `exit_period` | 10 | Opposite channel for exiting (long exits when breaking the M-candle low). |
+| `atr_len` / `atr_mult` | 14 / 2.5 | Trail = extreme close since entry ∓ mult×ATR (ratchet). |
+| `adx_min` | 0 (off) | Only enter when ADX ≥ threshold — avoids sideways whipsaw. |
+| `dow_filter` | 0 (off) | 1 = no new entries Sat 00:00 → Sun 20:00 UTC (chop zone, Concretum research). |
 
-Breakout ngược kênh chính vẫn **đảo chiều** vị thế như v1.
+An opposite breakout of the main channel still **reverses** the position, as in v1.
 
-### Nghiên cứu (skill strategy-research)
-- **Screening (default params, 180d × 6 thị trường)**: v1 thô ÂM 5/6 (15m chết vì phí;
-  1h lẫn lộn — ETH +66% nhưng DD 64%).
-- **Sweep v2** (`scripts/sweep_donchian_v2.py`, 36 bộ × BTC/ETH/SOL 1h 180d + BTC 15m 90d):
-  **THẤT BẠI TOÀN DIỆN** — mọi bộ đều âm TB (−12…−31%), tốt nhất chỉ 2/4 thị trường dương,
-  DD 33–70%, win 33–36%, 440–1200 lệnh. Exit chủ động (ATR trail / kênh-thoát) cắt mất
-  lệnh thắng lớn — thứ duy nhất nuôi trend-following — rồi churn phí khi re-entry.
-  Lọc ADX/cuối tuần không cứu được.
-- **Verdict: DỪNG donchian v2.** Cùng kết luận với ichimoku: trend-following khung 1h trên
-  crypto regime này không giảm được DD mà không giết PnL. Không tinh chỉnh tham số thêm
-  (trần alpha). Hướng intraday đang khả quan hơn: xem `vol_breakout.md`.
+### Research (strategy-research skill)
+- **Screening (default params, 180d × 6 markets)**: raw v1 NEGATIVE on 5/6 (15m killed by fees;
+  1h mixed — ETH +66% but DD 64%).
+- **v2 sweep** (`scripts/sweep_donchian_v2.py`, 36 configs × BTC/ETH/SOL 1h 180d + BTC 15m 90d):
+  **COMPLETE FAILURE** — every config is negative on average (−12…−31%), the best only positive on 2/4 markets,
+  DD 33–70%, win 33–36%, 440–1200 trades. Active exits (ATR trail / exit channel) cut off
+  the big winners — the only thing that feeds trend-following — and then churn fees on re-entry.
+  ADX/weekend filters do not rescue it.
+- **Verdict: STOP donchian v2.** Same conclusion as ichimoku: 1h trend-following on
+  crypto in this regime cannot reduce DD without killing PnL. No further parameter tuning
+  (alpha ceiling). The intraday direction looks more promising: see `vol_breakout.md`.

@@ -1,7 +1,7 @@
-"""Review lệnh đã/đang chạy: kết quả, R, MFE/MAE — thuần (không DB) để test.
+"""Trade review for closed/open positions: outcome, R, MFE/MAE — pure (no DB) for testing.
 
-1 "trade" = 1 row `position`. MFE/MAE (biến động có lợi/bất lợi cực đại) tính từ
-nến 1m lưu trong DB trong khoảng [mở, đóng] → xấp xỉ theo nến (không theo tick).
+1 "trade" = 1 `position` row. MFE/MAE (maximum favorable/adverse excursion) is computed from
+1m candles stored in the DB over [open, close] → candle-based approximation (not tick-based).
 """
 
 import math
@@ -10,8 +10,8 @@ from dataclasses import dataclass
 
 @dataclass
 class Excursion:
-    mfe: float | None  # giá chạy CÓ LỢI tối đa so với entry (≥ 0, đơn vị giá); None = thiếu nến
-    mae: float | None  # giá chạy BẤT LỢI tối đa so với entry (≥ 0, đơn vị giá)
+    mfe: float | None  # max FAVORABLE move vs entry (≥ 0, price units); None = missing candles
+    mae: float | None  # max ADVERSE move vs entry (≥ 0, price units)
     mfe_price: float | None
     mae_price: float | None
     mfe_ts: int | None  # ms
@@ -25,10 +25,10 @@ def excursion(
     exit_reason: str | None = None,
     exit_price: float | None = None,
 ) -> Excursion:
-    """`bars`: [{ts, high, low}] tăng dần trong thời gian giữ lệnh.
+    """`bars`: [{ts, high, low}] ascending over the holding period.
 
-    Nến chứa lúc thoát có cả giá SAU khi đóng → thoát TP thì MFE không vượt TP,
-    thoát SL thì MAE không vượt SL (lệnh đã đóng ngay khi chạm).
+    The candle containing the exit also includes prices AFTER the close → a TP exit caps MFE at TP,
+    an SL exit caps MAE at SL (the position closed as soon as it was hit).
     """
     best = worst = None
     best_ts = worst_ts = None
@@ -55,7 +55,8 @@ def excursion(
 
 
 def infer_reason(exit_price: float | None, sl: float | None, tp: float | None) -> str | None:
-    """Vị thế cũ (trước khi lưu exit_reason): engine đóng SL/TP đúng tại giá SL/TP."""
+    """Legacy position (before exit_reason was stored): the engine closed SL/TP exactly at
+    the SL/TP price."""
     if exit_price is None:
         return None
     if sl is not None and math.isclose(exit_price, sl, rel_tol=1e-9):
@@ -76,14 +77,14 @@ def summarize(
     exc: Excursion,
     mark: float | None = None,
 ) -> dict:
-    """Số liệu review: PnL tiền/%, R, kết quả, MFE/MAE theo % và R."""
+    """Review metrics: PnL in money/%, R, outcome, MFE/MAE in % and R."""
     sign = 1 if side == "LONG" else -1
     notional = entry * qty
     px = exit_price if exit_price is not None else mark
-    if pnl is None and px is not None:  # đang mở → PnL tạm tính
+    if pnl is None and px is not None:  # still open → unrealized PnL
         pnl = sign * (px - entry) * qty
     risk = abs(entry - risk_sl) if risk_sl is not None else None
-    risk = risk if risk else None  # SL = entry → không đo được R
+    risk = risk if risk else None  # SL = entry → R can't be measured
 
     def pct(v: float | None) -> float | None:
         return v / entry * 100 if v is not None and entry else None

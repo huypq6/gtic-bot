@@ -1,4 +1,4 @@
-"""Watchlist — danh sách cặp theo dõi (DB), seed từ default_symbols nếu rỗng."""
+"""Watchlist — list of watched pairs (DB), seeded from default_symbols when empty."""
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -14,7 +14,7 @@ async def get_watchlist(session: AsyncSession) -> list[str]:
 
 
 async def ensure_seeded(session_factory: async_sessionmaker, defaults: list[str]) -> list[str]:
-    """Nếu watchlist rỗng → seed bằng defaults. Trả về danh sách hiện tại."""
+    """If the watchlist is empty → seed it with the defaults. Returns the current list."""
     async with session_factory() as s:
         current = await get_watchlist(s)
         if not current:

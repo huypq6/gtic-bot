@@ -1,8 +1,9 @@
-"""Quét cặp ict_po3 v4 trên chuẩn MỚI 365 ngày (15m, params mặc định cố định).
+"""Pair scan for ict_po3 v4 on the NEW 365-day standard (15m, fixed default params).
 
-Chạy:  PYTHONPATH=. uv run python scripts/scan365_ict_po3_v4.py SYM1 SYM2 ...
-(không args = full 14 cặp). Chia nhỏ chạy song song nhiều process được.
-Tiêu chí: PnL dương, maxDD < ~10% (chừa chỗ đòn bẩy), ≥2/3 cửa sổ không âm, không tháng thảm họa.
+Run:  PYTHONPATH=. uv run python scripts/scan365_ict_po3_v4.py SYM1 SYM2 ...
+(no args = all 14 pairs). Can be split up and run in parallel across processes.
+Criteria: positive PnL, maxDD < ~10% (leaves room for leverage), ≥2/3 windows non-negative,
+no disastrous month.
 """
 
 import asyncio
@@ -41,20 +42,20 @@ async def main() -> None:
                 await s.commit()
                 candles = await get_klines(s, sym, TF, limit=40000)
             except Exception as e:  # noqa: BLE001
-                print(f"{sym}: lỗi data {e}")
+                print(f"{sym}: data error {e}")
                 continue
         try:
             r = run_backtest("ict_po3", "4", params, candles, 1000.0, FEE, TF, 1)
         except Exception as e:  # noqa: BLE001
-            print(f"{sym}: lỗi backtest {e}")
+            print(f"{sym}: backtest error {e}")
             continue
         wr = window_returns(r["equity_curve"])
         pos = sum(1 for v in wr if v > 0)
         nneg = sum(1 for v in wr if v >= -0.005)
         worst = min(wr, default=0.0)
         print(f"{sym}: pnl={r['pnl_pct']:+6.2f}% maxDD={r['max_dd']:5.2f}% win={r['winrate']}% "
-              f"n={r['n_trades']:3d} | {pos} dương/{nneg} không-âm/{len(wr)} cửa sổ, "
-              f"tệ nhất {worst:+.2f}% | " + " ".join(f"{v:+.1f}" for v in wr))
+              f"n={r['n_trades']:3d} | {pos} positive/{nneg} non-negative/{len(wr)} windows, "
+              f"worst {worst:+.2f}% | " + " ".join(f"{v:+.1f}" for v in wr))
 
 
 if __name__ == "__main__":

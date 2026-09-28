@@ -1,6 +1,6 @@
-"""Stochastic Oscillator — %K quá bán/quá mua (mean-reversion).
+"""Stochastic Oscillator — %K oversold/overbought (mean-reversion).
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
+=== EDIT THE STRATEGY HERE ===
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -12,7 +12,7 @@ from app.strategy.ta import stochastic_k, stochastic_series
 class Stochastic(Strategy):
     name = "stoch"
     version = "1"
-    description = "Stochastic — %K quá bán (BUY), quá mua (SELL)."
+    description = "Stochastic — %K oversold (BUY), overbought (SELL)."
     default_params = {"period": 14, "oversold": 20, "overbought": 80, "size": 0.001}
     param_schema = {
         "period": {"type": "int", "min": 2, "max": 100, "default": 14},
@@ -36,4 +36,4 @@ class Stochastic(Strategy):
         return {"%K": stochastic_series(candles, self.params["period"])}
 
     def plot_pane(self):
-        return {"%K": 1}  # oscillator 0–100 → pane phụ
+        return {"%K": 1}  # oscillator 0–100 → separate pane

@@ -1,8 +1,8 @@
-"""position: snapshot source/bot_ref/strategy/tf/params lúc mở lệnh
+"""position: snapshot source/bot_ref/strategy/tf/params at open time
 
-Xóa bot → bot_id của position bị NULL → review mất chiến lược, hiện nhầm MANUAL.
-Snapshot giữ nguyên thông tin. Backfill: còn bot → chép từ bot; mồ côi → khớp audit_log
-(BOT BUY/SELL cùng symbol, lệch ≤ 5s so với opened_at) để lấy lại bot gốc.
+Deleting a bot → the position's bot_id becomes NULL → review loses the strategy and wrongly shows MANUAL.
+The snapshot keeps the info. Backfill: bot still exists → copy from the bot; orphan → match audit_log
+(BOT BUY/SELL on the same symbol, within ≤ 5s of opened_at) to recover the original bot.
 
 Revision ID: b3d9f0a1c2e4
 Revises: a7c1e2d4f901

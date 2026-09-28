@@ -1,248 +1,248 @@
 # ICT Power of Three (PO3) — Session AMD
 
-> Trường phái: **Smart Money / liquidity (ICT)**. Khung gợi ý: **15m** (5m–1h chạy được). Chỉ đánh **trong ngày** (UTC), không giữ qua đêm.
+> School: **Smart Money / liquidity (ICT)**. Suggested timeframe: **15m** (5m–1h works). **Intraday** only (UTC), no overnight holds.
 
-## Phiên bản (giữ song song để so sánh)
+## Versions (kept side by side for comparison)
 
-3 phiên bản cùng `name="ict_po3"`, chọn version trên UI; VersionCompare so theo name:
+3 versions share `name="ict_po3"`; pick the version in the UI. VersionCompare compares by name:
 
-| Ver | File | Khác biệt chính |
+| Ver | File | Main difference |
 |---|---|---|
-| **v1** | `ict_po3_v1.py` | MSS **proxy** (phá đỉnh/đáy phản ứng) + bias + retest FVG/OB + tp_mode. CHƯA lọc tin. |
-| **v2** | `ict_po3_v2.py` | = v1 + **lọc tin** (NFP/khung giờ US). |
-| **v3** | `ict_po3.py` | = v2 nhưng MSS đổi sang **swing-structure (CHoCH)** + param `swing`. |
-| **v4** | `ict_po3_v4.py` | = v3 + sửa 4 **lỗi mô hình**: rejection sweep, displacement MSS, giờ-vào-cuối, min R:R. **Bản khuyến nghị.** |
+| **v1** | `ict_po3_v1.py` | **Proxy** MSS (break of reaction high/low) + bias + FVG/OB retest + tp_mode. NO news filter yet. |
+| **v2** | `ict_po3_v2.py` | = v1 + **news filter** (NFP / US hours). |
+| **v3** | `ict_po3.py` | = v2 but MSS switched to **swing-structure (CHoCH)** + `swing` param. |
+| **v4** | `ict_po3_v4.py` | = v3 + fixes for 4 **model flaws**: rejection sweep, displacement MSS, last-entry hour, min R:R. **Recommended version.** |
 
-**So sánh có kiểm soát (cùng params, chỉ khác MSS), 90–200 ngày BTC/ETH:** v2(proxy) TB +0.08% vs
-v3(swing) TB −0.60% — **v3 KHÔNG vượt v2 rõ ràng** (v3 chỉ thắng ETH 15m). Con số "+1.65% in-sample"
-của v3 trước đó là do sweep tìm được params hợp cửa-sổ (overfit), không phải swing MSS tốt hơn bản chất.
-⇒ Chưa có phiên bản nào là edge chắc chắn; dùng VersionCompare + backtest nhiều cặp để tự kiểm.
+**Controlled comparison (same params, only MSS differs), 90–200 days BTC/ETH:** v2 (proxy) avg +0.08% vs
+v3 (swing) avg −0.60% — **v3 does NOT clearly beat v2** (v3 only wins on ETH 15m). v3's earlier "+1.65% in-sample"
+figure came from the sweep finding params that suited the window (overfit), not from swing MSS being inherently better.
+⇒ No version is a proven edge yet; use VersionCompare + backtests across many pairs to check for yourself.
 
-## Ý tưởng
+## Idea
 
-ICT **Power of Three (PO3)** mô tả vòng đời mọi cây nến / mọi phiên theo 3 pha **AMD**:
+ICT **Power of Three (PO3)** describes the life cycle of every candle / every session in 3 **AMD** phases:
 
-1. **Accumulation (Tích lũy)** — giá đi ngang tạo range, gom thanh khoản.
-2. **Manipulation (Thao túng)** — giá **quét** (sweep) một phía của range để lấy thanh khoản (stop) rồi đảo chiều. Đây là "judas swing".
-3. **Distribution (Phân phối)** — cú đẩy thật theo hướng ngược với cú quét.
+1. **Accumulation** — price moves sideways building a range, pooling liquidity.
+2. **Manipulation** — price **sweeps** one side of the range to grab liquidity (stops) and then reverses. This is the "judas swing".
+3. **Distribution** — the real move in the direction opposite to the sweep.
 
-Bản này áp PO3 theo **phiên trong ngày** (Session AMD), ánh xạ sang giờ **UTC** (crypto chạy 24/7):
+This version applies PO3 to **intraday sessions** (Session AMD), mapped to **UTC** hours (crypto trades 24/7):
 
-| Phiên | Giờ UTC | Vai trò AMD |
+| Session | UTC hours | AMD role |
 |---|---|---|
-| **Asia** | 00:00–08:00 | **Accumulation** → xác định **Asia High / Asia Low** (range của ngày) |
-| **London + New York** | 08:00–21:00 | **Manipulation** (quét range Asia) → **Distribution** (cú đẩy) |
-| **Flatten** | 21:00 | Đóng hết, không giữ qua ngày. 00:00 UTC sang ngày mới → reset |
+| **Asia** | 00:00–08:00 | **Accumulation** → defines **Asia High / Asia Low** (the day's range) |
+| **London + New York** | 08:00–21:00 | **Manipulation** (sweep of the Asia range) → **Distribution** (the push) |
+| **Flatten** | 21:00 | Close everything, nothing held into the next day. 00:00 UTC new day → reset |
 
-Hướng giao dịch sinh từ cú quét, NHƯNG phải **thuận bias HTF** (theo blog ICT PO3 — xác định bias 4H/daily TRƯỚC, "long bias → tìm manipulation dưới open; short bias → trên open"):
-- Quét **dưới** Asia Low (sell-side liquidity) → đảo lên → **LONG** — chỉ khi **bias tăng**.
-- Quét **trên** Asia High (buy-side liquidity) → đảo xuống → **SHORT** — chỉ khi **bias giảm**.
+The trade direction comes from the sweep, BUT it must **agree with the HTF bias** (per the ICT PO3 blog — determine the 4H/daily bias FIRST, "long bias → look for manipulation below the open; short bias → above the open"):
+- Sweep **below** Asia Low (sell-side liquidity) → reversal up → **LONG** — only when the **bias is bullish**.
+- Sweep **above** Asia High (buy-side liquidity) → reversal down → **SHORT** — only when the **bias is bearish**.
 
-### Bias / Trend filter (mặc định BẬT)
+### Bias / Trend filter (ON by default)
 
-`bias_mode=1` (mặc định): lọc bằng **EMA dài** `bias_len` trên chính khung đang chạy (xấp xỉ trend 4H/daily). Bias **tăng** nếu `close > EMA(bias_len)`, **giảm** nếu `<`. Chỉ vào lệnh KHỚP hướng bias → bỏ các lệnh ngược trend (nguyên nhân chính gây thua khi chưa lọc). `bias_mode=0` = tắt (đánh 2 chiều theo cú quét). Đường **Bias EMA** được vẽ trên chart.
+`bias_mode=1` (default): filter using a **long EMA** `bias_len` on the running timeframe itself (approximating the 4H/daily trend). Bias is **bullish** if `close > EMA(bias_len)`, **bearish** if `<`. Only enter trades that MATCH the bias direction → drops counter-trend trades (the main source of losses without the filter). `bias_mode=0` = off (trade both directions based on the sweep). The **Bias EMA** line is drawn on the chart.
 
-## Khung kỹ thuật trong dự án
+## Technical framework in this project
 
-- Chạy chung `Strategy.on_candle` trên **1 TF được chọn**. Mọi mốc thời gian lấy từ `ts` của nến theo **UTC** — **không** dùng `ctx.now` (không được set ở backtest).
-- **Stateful**: giữ state trong instance qua các nến (range Asia, cú quét, lệnh đang mở, đã-trade-trong-ngày). Đã xác nhận runner + backtest tái dùng cùng instance.
-- Tự quản **SL/TP**: engine backtest (`vbt.Portfolio.from_signals`) **không** tự áp SL/TP — thoát lệnh bằng tín hiệu `CLOSE` (hoặc đảo chiều). Vì vậy strategy tự kiểm tra giá vs SL/TP mỗi nến và phát `CLOSE`.
-- Vào lệnh **MARKET** tại `close` của nến xác nhận. Engine fill tại close → **FVG/Order Block là bộ lọc xác nhận**, không phải lệnh LIMIT chờ (giữ hành vi nhất quán cả 4 mode).
+- Runs through the shared `Strategy.on_candle` on **1 selected TF**. All timestamps come from the candle's `ts` in **UTC** — `ctx.now` is **not** used (it is not set in backtests).
+- **Stateful**: keeps state in the instance across candles (Asia range, sweep, open trade, traded-today). Confirmed that the runner + backtest reuse the same instance.
+- Manages **SL/TP** itself: the backtest engine (`vbt.Portfolio.from_signals`) does **not** apply SL/TP on its own — trades exit via a `CLOSE` signal (or a reversal). So the strategy checks price vs SL/TP every candle and emits `CLOSE`.
+- Enters **MARKET** at the `close` of the confirming candle. The engine fills at close → **FVG/Order Block are confirmation filters**, not resting LIMIT orders (keeps behavior consistent across all 4 modes).
 
-## Logic mỗi nến (`on_candle`)
+## Per-candle logic (`on_candle`)
 
-1. **Thời gian**: tính `date` + `hour` (UTC) từ `candles[-1]["ts"]`.
-2. **Sang ngày mới** (date đổi): reset Asia range / cú quét / cờ đã-trade; nếu còn lệnh mở → `CLOSE` (chốt an toàn không qua đêm).
-3. **Dựng Asia range**: từ các nến hôm nay có `hour < asia_end_h`, lấy `asia_high = max(high)`, `asia_low = min(low)`. Chỉ giao dịch khi `hour ≥ asia_end_h` (Asia đã đóng) và range có dữ liệu.
-4. **Manipulation (sweep)** — trong cửa sổ `[asia_end_h, flatten_h)`, xét cú quét **đầu tiên** của ngày:
-   - `high > asia_high` → ghi nhận **sweep HIGH** (setup SHORT), `sweep_extreme = high`.
-   - `low < asia_low` → ghi nhận **sweep LOW** (setup LONG), `sweep_extreme = low`.
-5. **MSS = CHoCH (Change of Character)** — đảo cấu trúc THẬT bằng **swing-structure** (fractal), chỉ xét cấu trúc hình thành SAU cú quét:
-   - **Swing-high** (fractal): nến có high cao hơn `swing` nến mỗi bên; **swing-low** đối xứng. Cần `swing` nến xác nhận phía sau → có độ trễ tự nhiên.
-   - Setup LONG: vào khi `close >` **swing-high gần nhất** (lower-high của nhịp hồi) → phá cấu trúc lên (CHoCH).
-   - Setup SHORT: vào khi `close <` **swing-low gần nhất**.
-   - `mss_lookback` = debounce (tối thiểu số nến kể từ sweep mới cho MSS).
-6. **Confluence** (param `confluence`) — quyết định **CÁCH VÀO LỆNH**:
-   - `1` = **MSS-breakout**: vào MARKET ngay tại nến MSS (giá xa SL → R:R kém, TP khó chạm — xem quan sát bên dưới).
-   - `2` = **Retest FVG** (mặc định): khi MSS xảy ra + có **Fair Value Gap** cùng hướng → **VŨ TRANG** (chưa vào). Chờ giá **hồi về** mép gần FVG rồi mới vào (giá tốt hơn, **gần SL** → R:R đạt được).
-     - Bullish FVG: `low[i] > high[i-2]` → mép gần = `low[i]` (đỉnh gap); retest khi nến chạm xuống ≤ mép.
-     - Bearish FVG: `high[i] < low[i-2]` → mép gần = `high[i]`; retest khi nến chạm lên ≥ mép.
-   - `3` = **Retest FVG + Order Block**: như `2` nhưng còn yêu cầu có nến **đối màu** (gốc OB) trong cú đẩy.
-7. **Vào lệnh** (MARKET tại close):
-   - `conf=1`: vào ngay khi MSS.
-   - `conf≥2`: sau khi vũ trang, vào khi giá **retest** về FVG. Nếu giá **phá sâu hơn điểm quét** trước khi retest → **huỷ setup** (dò lại). Nếu hết `flatten_h` chưa retest → bỏ.
-   - **1 lệnh tại 1 thời điểm** (đang có lệnh thì không mở thêm); **KHÔNG giới hạn số lệnh/ngày** —
-     đóng lệnh xong sẽ dò setup mới (sweep→MSS→[retest]) cùng ngày, chỉ vào khi đủ điều kiện.
+1. **Time**: compute `date` + `hour` (UTC) from `candles[-1]["ts"]`.
+2. **New day** (date changes): reset the Asia range / sweep / traded flag; if a trade is still open → `CLOSE` (safety close, no overnight holds).
+3. **Build the Asia range**: from today's candles with `hour < asia_end_h`, take `asia_high = max(high)`, `asia_low = min(low)`. Trade only when `hour ≥ asia_end_h` (Asia has closed) and the range has data.
+4. **Manipulation (sweep)** — within the window `[asia_end_h, flatten_h)`, consider the day's **first** sweep:
+   - `high > asia_high` → record a **HIGH sweep** (SHORT setup), `sweep_extreme = high`.
+   - `low < asia_low` → record a **LOW sweep** (LONG setup), `sweep_extreme = low`.
+5. **MSS = CHoCH (Change of Character)** — a REAL structure shift using **swing structure** (fractals), only considering structure formed AFTER the sweep:
+   - **Swing-high** (fractal): a candle whose high is above `swing` candles on each side; **swing-low** is symmetric. Needs `swing` confirming candles after it → a natural lag.
+   - LONG setup: enter when `close >` the **most recent swing-high** (the lower-high of the pullback) → upward structure break (CHoCH).
+   - SHORT setup: enter when `close <` the **most recent swing-low**.
+   - `mss_lookback` = debounce (minimum candles since the sweep before MSS is allowed).
+6. **Confluence** (param `confluence`) — decides **HOW TO ENTER**:
+   - `1` = **MSS-breakout**: enter MARKET right at the MSS candle (price far from SL → poor R:R, TP hard to reach — see observations below).
+   - `2` = **FVG retest** (default): when MSS occurs + there is a **Fair Value Gap** in the same direction → **ARM** (no entry yet). Wait for price to **pull back** to the near edge of the FVG before entering (better price, **close to SL** → R:R achievable).
+     - Bullish FVG: `low[i] > high[i-2]` → near edge = `low[i]` (top of the gap); retest when a candle trades down to ≤ the edge.
+     - Bearish FVG: `high[i] < low[i-2]` → near edge = `high[i]`; retest when a candle trades up to ≥ the edge.
+   - `3` = **FVG + Order Block retest**: like `2` but also requires an **opposite-colour** candle (OB origin) within the push.
+7. **Entry** (MARKET at close):
+   - `conf=1`: enter immediately on MSS.
+   - `conf≥2`: after arming, enter when price **retests** the FVG. If price **breaks beyond the sweep point** before the retest → **cancel the setup** (look again). If `flatten_h` arrives without a retest → drop it.
+   - **1 trade at a time** (no new trade while one is open); **NO limit on trades per day** —
+     after a trade closes, it looks for a new setup (sweep→MSS→[retest]) the same day and enters only when conditions are met.
 
-## SL / TP & thoát trong ngày
+## SL / TP & intraday exit
 
-**Risk (khoảng cách SL từ entry)** theo `sl_mode`:
-- `sl_mode=0`: `risk = |entry − sweep_extreme| + buffer` (điểm quét — thường XA → TP/SL hiếm chạm, hay flatten).
-- `sl_mode=1` (mặc định): `risk = atr_mult × ATR(atr_len)` (GẦN, thích nghi biến động → TP/SL chạm được trong ngày).
+**Risk (SL distance from entry)** per `sl_mode`:
+- `sl_mode=0`: `risk = |entry − sweep_extreme| + buffer` (the sweep point — usually FAR → TP/SL rarely hit, often flattened).
+- `sl_mode=1` (default): `risk = atr_mult × ATR(atr_len)` (CLOSE, adapts to volatility → TP/SL reachable within the day).
 
-| Hướng | SL | TP |
+| Direction | SL | TP |
 |---|---|---|
-| LONG | `entry − risk` | `entry + rr_target × risk` (hoặc Asia High nếu `tp_mode=1`) |
-| SHORT | `entry + risk` | `entry − rr_target × risk` (hoặc Asia Low nếu `tp_mode=1`) |
-- Mỗi nến khi đang có lệnh, kiểm tra theo **close** (khớp cách fill của vectorbt):
-  - LONG: `close ≤ SL` (cắt lỗ) hoặc `close ≥ TP` (chốt lời) → `CLOSE`.
-  - SHORT đối xứng.
-- **Flatten cuối ngày**: `hour ≥ flatten_h` hoặc sang ngày mới và còn lệnh → `CLOSE`.
+| LONG | `entry − risk` | `entry + rr_target × risk` (or Asia High if `tp_mode=1`) |
+| SHORT | `entry + risk` | `entry − rr_target × risk` (or Asia Low if `tp_mode=1`) |
+- Every candle while in a trade, check against **close** (matching vectorbt's fill method):
+  - LONG: `close ≤ SL` (stop loss) or `close ≥ TP` (take profit) → `CLOSE`.
+  - SHORT symmetric.
+- **End-of-day flatten**: `hour ≥ flatten_h` or a new day with a trade still open → `CLOSE`.
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `bias_mode` | 1 | 0 = tắt lọc trend (2 chiều) · 1 = chỉ đánh thuận EMA trend HTF. |
-| `bias_len` | 200 | Độ dài EMA bias (số nến ~ 4H/daily; tuỳ TF). |
-| `confluence` | 2 | Cách vào: 1 = MSS-breakout (MARKET) · 2 = retest FVG · 3 = retest FVG+OB. |
-| `mss_lookback` | 2 | Debounce: tối thiểu số nến kể từ sweep mới cho MSS. |
-| `swing` | 1 | Nửa-độ-rộng fractal xác định swing high/low (MSS = phá swing). Nhỏ = nhạy/nhiều lệnh. |
-| `tp_mode` | 1 | TP: 0 = `rr_target` cố định · 1 = thanh khoản đối diện (đỉnh/đáy range Asia). |
-| `rr_target` | 2.0 | Bội số R cho TP khi `tp_mode=0` (cũng là fallback của `tp_mode=1`). |
-| `sl_mode` | 1 | SL: 0 = tại điểm quét (xa → hay flatten) · 1 = theo **ATR** (gần → TP/SL chạm được). |
-| `atr_len` / `atr_mult` | 14 / 1.0 | SL cách entry = `atr_mult × ATR(atr_len)` khi `sl_mode=1`. |
-| `sl_buffer_pct` | 0.05 | Đệm SL ngoài điểm quét, theo % giá (chỉ `sl_mode=0`). |
-| `asia_end_h` | 8 | Giờ UTC kết thúc phiên Asia (chốt range). |
-| `flatten_h` | 21 | Giờ UTC đóng hết lệnh (kết thúc NY). |
-| `news_filter` | 2 | Lọc tin: 0 = tắt · 1 = chặn vào lệnh trong khung giờ tin · 2 = + chặn ngày NFP (thứ Sáu đầu tháng). |
-| `news_start_h` / `news_end_h` | 12 / 14 | Khung giờ tin US (UTC): 8:30 ET = 12:30 (hè) / 13:30 (đông). |
-| `max_per_day` | 0 | 0 = không giới hạn (vào lại sau mỗi lần đóng) · N = tối đa N lệnh/ngày. |
-| `size` | 0.001 | Khối lượng. |
+| `bias_mode` | 1 | 0 = trend filter off (both directions) · 1 = only trade with the HTF EMA trend. |
+| `bias_len` | 200 | Bias EMA length (candles ~ 4H/daily; depends on TF). |
+| `confluence` | 2 | Entry method: 1 = MSS-breakout (MARKET) · 2 = FVG retest · 3 = FVG+OB retest. |
+| `mss_lookback` | 2 | Debounce: minimum candles since the sweep before MSS is allowed. |
+| `swing` | 1 | Fractal half-width defining swing high/low (MSS = swing break). Smaller = more sensitive/more trades. |
+| `tp_mode` | 1 | TP: 0 = fixed `rr_target` · 1 = opposite liquidity (Asia range high/low). |
+| `rr_target` | 2.0 | R multiple for TP when `tp_mode=0` (also the fallback for `tp_mode=1`). |
+| `sl_mode` | 1 | SL: 0 = at the sweep point (far → often flattened) · 1 = **ATR**-based (close → TP/SL reachable). |
+| `atr_len` / `atr_mult` | 14 / 1.0 | SL distance from entry = `atr_mult × ATR(atr_len)` when `sl_mode=1`. |
+| `sl_buffer_pct` | 0.05 | SL buffer beyond the sweep point, as % of price (only `sl_mode=0`). |
+| `asia_end_h` | 8 | UTC hour the Asia session ends (range locked). |
+| `flatten_h` | 21 | UTC hour to close all trades (end of NY). |
+| `news_filter` | 2 | News filter: 0 = off · 1 = block entries during news hours · 2 = + block NFP days (first Friday of the month). |
+| `news_start_h` / `news_end_h` | 12 / 14 | US news window (UTC): 8:30 ET = 12:30 (summer) / 13:30 (winter). |
+| `max_per_day` | 0 | 0 = unlimited (re-enter after each close) · N = max N trades/day. |
+| `size` | 0.001 | Quantity. |
 
-## Hiển thị (chart backtest)
+## Display (backtest chart)
 
-- `plot()` vẽ **Asia High** và **Asia Low** theo **từng ngày** (đường bậc thang, pane 0) — thấy rõ range bị quét trước khi đảo chiều.
-- Marker vào/ra mỗi lệnh dùng sẵn cơ chế trade của chart backtest.
+- `plot()` draws **Asia High** and **Asia Low** **per day** (step lines, pane 0) — clearly shows the range being swept before the reversal.
+- Entry/exit markers for each trade use the backtest chart's built-in trade mechanism.
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Bám logic ICT (liquidity sweep + đảo chiều), R:R cố định 2R, kỷ luật trong ngày, không rủi ro qua đêm.
-- ✅ Lọc bias HTF (chỉ đánh thuận trend); 1 lệnh/thời điểm, vào lại sau khi đóng → bám sát cấu trúc.
-- ❌ MSS dùng proxy **break N nến**, không phải swing-structure đầy đủ → có thể vào sớm/trễ so với ICT thủ công.
-- ❌ FVG/OB là **bộ lọc xác nhận** (vào MARKET tại close), không mô phỏng lệnh LIMIT chờ tại FVG → fill thực tế (paper/live) có thể khác giá tối ưu ICT.
-- ❌ Range Asia kém ý nghĩa vào ngày tin lớn/biến động bất thường (NFP/CPI…).
+- ✅ Follows ICT logic (liquidity sweep + reversal), fixed 2R R:R, intraday discipline, no overnight risk.
+- ✅ HTF bias filter (with-trend only); 1 trade at a time, re-entry after close → tracks structure closely.
+- ❌ MSS uses a **break-of-N-candles** proxy, not full swing structure → may enter earlier/later than manual ICT.
+- ❌ FVG/OB are **confirmation filters** (MARKET entry at close), not a simulation of a resting LIMIT order at the FVG → real fills (paper/live) may differ from the ICT-optimal price.
+- ❌ The Asia range means less on big-news / abnormally volatile days (NFP/CPI…).
 
-## Khi nào dùng
+## When to use
 
-- Cặp thanh khoản tốt (BTCUSDT, ETHUSDT), khung **15m**. Ngày có phiên Asia tạo range rõ rồi London/NY quét.
-- Tăng `confluence` (2→3) khi muốn ít lệnh, chất lượng cao hơn; giảm về 1 khi muốn nhiều tín hiệu để khảo sát.
+- Liquid pairs (BTCUSDT, ETHUSDT), **15m** timeframe. Days where the Asia session forms a clear range and London/NY then sweeps it.
+- Raise `confluence` (2→3) for fewer, higher-quality trades; lower it to 1 for more signals to study.
 
-## Lưu ý khi backtest
+## Backtesting notes
 
-- Cần nhiều ngày dữ liệu (đặt "số ngày" ≥ 14) để có đủ mẫu phiên. Tham số chỉnh trực tiếp trên form backtest (bias_mode, confluence, bias_len, rr_target…).
-- Quét `(bias_mode, bias_len, confluence, mss_lookback, rr_target)`; mặc định 1 / 200 / 2 / 3 / 2.0.
-- Kiểm chứng: 1 lệnh/thời điểm; có thể nhiều lệnh/ngày; không lệnh nào giữ qua 00:00 UTC.
+- Needs many days of data (set "days" ≥ 14) to get enough session samples. Parameters are edited directly on the backtest form (bias_mode, confluence, bias_len, rr_target…).
+- Sweep `(bias_mode, bias_len, confluence, mss_lookback, rr_target)`; defaults 1 / 200 / 2 / 3 / 2.0.
+- Verify: 1 trade at a time; multiple trades per day possible; no trade held past 00:00 UTC.
 
-### Quan sát thực nghiệm + quét tham số (`scripts/sweep_ict_po3.py`)
+### Empirical observations + parameter sweep (`scripts/sweep_ict_po3.py`)
 
-- **Entry retest FVG (`conf≥2`) tốt hơn hẳn breakout (`conf=1`)**: BTC 15m −1.9% vs −8.25%; làm
-  `rr_target` bắt đầu ảnh hưởng kết quả → TP đã chạm được (breakout: mọi rr y hệt vì TP không bao giờ chạm).
-- **`tp_mode=1` (TP về thanh khoản đối diện) thắng áp đảo** trong sweep (288 backtest, BTC/ETH 15m+1h):
-  chiếm toàn bộ top, winrate ~37–44%, maxDD thấp (~3%).
-- **Bộ bền nhất = mặc định hiện tại** (`conf=3, tp_mode=1, bias_len=100, mss=3`): PnL TB −0.76%,
-  lời 2/4 thị trường, win ~40%, maxDD 3.4%. Alt nhiều lệnh hơn: `conf=2` (tương tự, ~37 lệnh).
-- **Out-of-sample** (cửa sổ dài hơn + cặp chưa sweep): BTC/ETH 15m 90d ≈ −2.4…−2.7%; ETH 1h 200d **+0.88%**;
-  SOL 1h 120d −3.3%. Cùng độ lớn với in-sample → **không overfit nặng**, nhưng **chưa phải edge có lời**.
-- **Lọc tin (`news_filter`, mặc định 2)**: chặn vào lệnh khung 12–14 UTC + ngày NFP — cải thiện
-  3/4 thị trường, giảm drawdown (ETH 1h: +0.88%→+6.34%).
-- **MSS swing-structure (CHoCH) > proxy cũ**: thay đỉnh/đáy phản ứng bằng phá swing fractal làm
-  **lật in-sample sang dương**. Sweep (216 bộ) → bộ bền nhất = **mặc định hiện tại**
-  (`conf=2, tp_mode=0, rr=1.5, bias_len=200, mss=2, swing=1`): PnL TB **+1.65%**, lời **3/4** thị trường,
-  win ~38%, 57 lệnh, maxDD 5.1%. `swing=1` (nhạy) cho nhiều lệnh; `bias_len=200` ổn nhất.
-- **Out-of-sample** (cửa sổ dài hơn + SOL chưa sweep): ETH 15m **+3.14%**, SOL 1h **+0.60%**, ETH 1h +0.19%,
-  nhưng **BTC âm bền** (15m −2.6%, 1h −3.2%). Tức là **ăn ở ETH/SOL, thua ở BTC** → chưa phải edge xuyên thị trường.
-- **Lệnh hay bị flatten cuối ngày (SL/TP đặt sai) → thêm `sl_mode`**: với SL tại điểm quét (xa),
-  ~80–90% lệnh thoát bằng flatten lúc 21:00, gần như KHÔNG chạm SL/TP → TP vô nghĩa. Đổi sang **SL theo ATR**
-  (`sl_mode=1`, mặc định) làm SL/TP **chạm được trong ngày**: win lên ~45–50% (15m), SL bắt đầu cắt lỗ thật.
-  Bù lại số lệnh tăng → **phí ăn mòn** (≈0,1%/vòng × nhiều lệnh) kéo PnL về ~hòa. Khung **1h vẫn hay flatten**
-  (ít nến/ngày) — ATR SL hợp 15m hơn.
-- **Giảm tần suất KHÔNG cải thiện**: tăng `confluence`/`swing`/`mss_lookback` đẩy biến thể ít-lệnh xuống
-  hạng (cắt cả lệnh thắng → net xấu hơn). Thêm `max_per_day` rồi so 0/1/2 → **gần như y hệt** (chiến thuật
-  vốn chỉ ~1 lệnh/ngày; "100 lệnh" là cộng 4 thị trường qua 45–200 ngày). ⇒ phí KHÔNG phải nút thắt.
-- **Nút thắt là THỊ TRƯỜNG, không phải tần suất**: trên cửa sổ 60–200 ngày, ETH 15m **+1.46%**, ETH 1h
-  **+2.67%**, SOL 1h **+1.23%** (win 53–67%) — chỉ **BTC −2.66%** kéo xuống.
-- **Quét rổ cặp (`scripts/scan_pairs_ict_po3.py`, 14 cặp × 15m/1h):** yếu tố quyết định là **KHUNG TF**:
-  - **15m: 12/14 cặp DƯƠNG** (60 ngày) — DOT +5.6%, INJ +4.8%, DOGE +4.2%, AVAX +2.7%, XRP +1.7%, BTC +1.4%,
-    ETH/SOL/ADA/LTC/LINK/NEAR dương nhẹ; chỉ **BNB −1.8%, SUI −2.2%** âm.
-  - **1h: hầu hết ÂM** (chỉ SUI/ETH/DOGE dương; INJ −12.5%) → **không hợp 1h** (ít nến/ngày, hay flatten).
-  - Dương cả 2 TF: **ETH, DOGE**.
-- **Rổ cặp khuyến nghị: chạy ở 15m**, diversify nhiều cặp thanh khoản (ETH, SOL, DOT, DOGE, AVAX, XRP, LTC, ADA);
-  **tránh 1h** và tránh BNB/SUI (âm 15m). PnL từng cặp **nhạy cửa sổ** (BTC +1.4% ở đây nhưng âm ở cửa sổ khác)
-  → dựa vào diversification + walk-forward, đừng tin 1 con số.
-- **Walk-forward (`scripts/walkforward_ict_po3.py`, rổ 8 cặp 15m, 6 cửa sổ × 30 ngày, params cố định):**
-  chỉ **3/6 cửa sổ dương** — 3 kỳ đầu (Dec–Mar) ÂM, 3 kỳ cuối (Mar–Jun) dương → **edge phụ thuộc regime,
-  KHÔNG ổn định theo thời gian**. Quét rổ 60 ngày trước trông đẹp vì rơi đúng giai đoạn gần đây thuận lợi.
-  Per-cặp chỉ **DOGE 5/6, DOT 4/6, XRP 4/6** dương quá nửa; ETH 2/6, SOL 1/6 → KHÔNG ổn định.
-- **Kết luận v3**: kỷ luật tốt nhưng không có edge bền theo thời gian → dừng v3, cần sửa MÔ HÌNH.
+- **FVG-retest entry (`conf≥2`) is clearly better than breakout (`conf=1`)**: BTC 15m −1.9% vs −8.25%; it makes
+  `rr_target` start to affect results → TP is now reachable (breakout: every rr gives identical results because TP is never hit).
+- **`tp_mode=1` (TP at opposite liquidity) wins overwhelmingly** in the sweep (288 backtests, BTC/ETH 15m+1h):
+  takes the whole top, winrate ~37–44%, low maxDD (~3%).
+- **Most robust set = current defaults** (`conf=3, tp_mode=1, bias_len=100, mss=3`): avg PnL −0.76%,
+  profitable on 2/4 markets, win ~40%, maxDD 3.4%. Higher-frequency alternative: `conf=2` (similar, ~37 trades).
+- **Out-of-sample** (longer windows + pairs not swept): BTC/ETH 15m 90d ≈ −2.4…−2.7%; ETH 1h 200d **+0.88%**;
+  SOL 1h 120d −3.3%. Same magnitude as in-sample → **not heavily overfit**, but **not yet a profitable edge**.
+- **News filter (`news_filter`, default 2)**: blocks entries in the 12–14 UTC window + NFP days — improves
+  3/4 markets, reduces drawdown (ETH 1h: +0.88%→+6.34%).
+- **Swing-structure MSS (CHoCH) > old proxy**: replacing the reaction high/low with a fractal swing break
+  **flips in-sample to positive**. Sweep (216 sets) → most robust set = **current defaults**
+  (`conf=2, tp_mode=0, rr=1.5, bias_len=200, mss=2, swing=1`): avg PnL **+1.65%**, profitable on **3/4** markets,
+  win ~38%, 57 trades, maxDD 5.1%. `swing=1` (sensitive) gives more trades; `bias_len=200` is the most stable.
+- **Out-of-sample** (longer windows + SOL not swept): ETH 15m **+3.14%**, SOL 1h **+0.60%**, ETH 1h +0.19%,
+  but **BTC persistently negative** (15m −2.6%, 1h −3.2%). I.e. it **wins on ETH/SOL, loses on BTC** → not yet a cross-market edge.
+- **Trades often flattened at end of day (SL/TP misplaced) → added `sl_mode`**: with SL at the sweep point (far),
+  ~80–90% of trades exit via the 21:00 flatten, almost NEVER hitting SL/TP → TP is meaningless. Switching to an **ATR SL**
+  (`sl_mode=1`, default) makes SL/TP **reachable within the day**: win rises to ~45–50% (15m), SL starts cutting real losses.
+  In exchange the trade count rises → **fee drag** (≈0.1%/round trip × many trades) pulls PnL to ~breakeven. The **1h timeframe still often flattens**
+  (few candles/day) — the ATR SL suits 15m better.
+- **Reducing frequency does NOT help**: raising `confluence`/`swing`/`mss_lookback` pushes low-frequency variants
+  down the ranking (cuts winners too → worse net). Added `max_per_day` and compared 0/1/2 → **almost identical** (the strategy
+  already only does ~1 trade/day; "100 trades" is the sum over 4 markets across 45–200 days). ⇒ fees are NOT the bottleneck.
+- **The bottleneck is the MARKET, not the frequency**: over 60–200 day windows, ETH 15m **+1.46%**, ETH 1h
+  **+2.67%**, SOL 1h **+1.23%** (win 53–67%) — only **BTC −2.66%** drags it down.
+- **Pair-basket scan (`scripts/scan_pairs_ict_po3.py`, 14 pairs × 15m/1h):** the decisive factor is the **TIMEFRAME**:
+  - **15m: 12/14 pairs POSITIVE** (60 days) — DOT +5.6%, INJ +4.8%, DOGE +4.2%, AVAX +2.7%, XRP +1.7%, BTC +1.4%,
+    ETH/SOL/ADA/LTC/LINK/NEAR slightly positive; only **BNB −1.8%, SUI −2.2%** negative.
+  - **1h: mostly NEGATIVE** (only SUI/ETH/DOGE positive; INJ −12.5%) → **not suited to 1h** (few candles/day, often flattened).
+  - Positive on both TFs: **ETH, DOGE**.
+- **Recommended basket: run on 15m**, diversified across many liquid pairs (ETH, SOL, DOT, DOGE, AVAX, XRP, LTC, ADA);
+  **avoid 1h** and avoid BNB/SUI (negative on 15m). Per-pair PnL is **window-sensitive** (BTC +1.4% here but negative in other windows)
+  → rely on diversification + walk-forward, don't trust a single number.
+- **Walk-forward (`scripts/walkforward_ict_po3.py`, 8-pair 15m basket, 6 windows × 30 days, fixed params):**
+  only **3/6 windows positive** — the first 3 (Dec–Mar) NEGATIVE, the last 3 (Mar–Jun) positive → **the edge is regime-dependent,
+  NOT stable over time**. The 60-day basket scan looked good because it happened to fall in a recent favorable period.
+  Per pair only **DOGE 5/6, DOT 4/6, XRP 4/6** positive more than half the time; ETH 2/6, SOL 1/6 → NOT stable.
+- **v3 conclusion**: good discipline but no durable edge over time → stop v3, the MODEL needs fixing.
 
-### v4 — sửa 4 lỗi mô hình (không phải tinh chỉnh tham số)
+### v4 — fixes for 4 model flaws (not parameter tuning)
 
-Chẩn đoán dữ liệu thật (ETH 15m, 181 ngày): **54% "sweep" của v3 là nến đóng NGOÀI range** (breakout
-thật) → v3 fade trend hơn nửa số ngày. v4 sửa:
-1. `reject_sweep` — sweep chỉ hợp lệ khi nến **đóng ngược vào trong range** (rejection/SFP).
-2. `disp_mult` — MSS phải có **displacement** (thân nến ≥ k×ATR), loại MSS yếu giữa chop.
-3. `entry_cutoff_h` — không vào lệnh mới sau 15h UTC (lệnh muộn chết vì flatten 21h, không phải sai hướng).
-4. `min_rr` — (tp_mode=1) bỏ entry nếu TP đối diện gần hơn k×risk, chờ retest sâu hơn.
+Diagnosis on real data (ETH 15m, 181 days): **54% of v3 "sweeps" were candles closing OUTSIDE the range** (genuine
+breakouts) → v3 faded the trend on more than half the days. v4 fixes:
+1. `reject_sweep` — a sweep is only valid when the candle **closes back inside the range** (rejection/SFP).
+2. `disp_mult` — MSS must show **displacement** (candle body ≥ k×ATR), filtering out weak MSS in chop.
+3. `entry_cutoff_h` — no new entries after 15h UTC (late trades die from the 21h flatten, not from being wrong).
+4. `min_rr` — (tp_mode=1) skip the entry if the opposite TP is closer than k×risk, wait for a deeper retest.
 
-**Kết quả (BTCUSDT 15m, 180 ngày, params mặc định, phí 0.05%/chiều):**
-- PnL **+3.43%** · maxDD **3.31%** · win 58% · 12 lệnh.
-- Walk-forward TUẦN (`scripts/walkforward_ict_po3_v4.py`): **85% tuần không âm** (5 dương + 17 đứng + 4 âm /26),
-  tuần tệ nhất **−1.29%**; theo tháng không có tháng thảm họa (tệ nhất −1.07%) — **dương qua cả regime
-  Dec–Mar nơi v3 âm nặng**.
-- **Lân cận tham số đều dương** (8/8 biến thể +1.3…+3.4%, DD <4%) → cao nguyên ổn định, không phải đỉnh may mắn.
-- Đối chứng cùng-params: v4-fix cải thiện 3/4 thị trường so với hành-vi-v3 (vd ETH 5m −1.35%→+1.48%).
-- ETH 15m/BTC 5m vẫn âm nhẹ qua 180/60 ngày → **chỉ khuyến nghị BTC 15m** (đúng mục tiêu "ổn định ≥1 cặp×1 TF").
+**Results (BTCUSDT 15m, 180 days, default params, fee 0.05%/side):**
+- PnL **+3.43%** · maxDD **3.31%** · win 58% · 12 trades.
+- WEEKLY walk-forward (`scripts/walkforward_ict_po3_v4.py`): **85% of weeks non-negative** (5 positive + 17 flat + 4 negative /26),
+  worst week **−1.29%**; monthly there is no disastrous month (worst −1.07%) — **positive even through the
+  Dec–Mar regime where v3 lost heavily**.
+- **Parameter neighbourhood all positive** (8/8 variants +1.3…+3.4%, DD <4%) → a stable plateau, not a lucky peak.
+- Same-params control: the v4 fixes improve 3/4 markets vs v3 behavior (e.g. ETH 5m −1.35%→+1.48%).
+- ETH 15m/BTC 5m still slightly negative over 180/60 days → **only BTC 15m is recommended** (meets the goal "stable on ≥1 pair×1 TF").
 
-**Quét cặp v4 (`scripts/scan_pairs_ict_po3_v4.py`, 14 cặp × 15m/5m, xếp theo %tuần-không-âm):**
-- **15m**: BTC và SUI nổi trội; XRP/DOGE đẹp trên 120d nhưng **rụng khi kiểm 180d** (XRP +2.32% → +0.01%
-  = window-luck). Kiểm chứng 180d: **SUI +9.42%, DD 2.75%, win 69%, 88% tuần không âm** (tốt nhất chương
-  trình); **BTC +3.43%, DD 3.31%, 85%**. Tuần tệ nhất cả hai ~−1.2%.
-- **5m**: không cặp nào đủ bền (INJ/BNB/ETH dương nhưng mẫu nhỏ 45 ngày, 67–83% tuần) → **chưa dùng 5m**.
-- **Rổ khuyến nghị: BTC + SUI, 15m** (trung bình ~+6.4%/180d, DD ≤3.3%, đa dạng hoá 2 cặp).
+**v4 pair scan (`scripts/scan_pairs_ict_po3_v4.py`, 14 pairs × 15m/5m, ranked by % non-negative weeks):**
+- **15m**: BTC and SUI stand out; XRP/DOGE look good over 120d but **fall apart when checked over 180d** (XRP +2.32% → +0.01%
+  = window luck). 180d validation: **SUI +9.42%, DD 2.75%, win 69%, 88% non-negative weeks** (best in the
+  program); **BTC +3.43%, DD 3.31%, 85%**. Worst week for both ~−1.2%.
+- **5m**: no pair is robust enough (INJ/BNB/ETH positive but small 45-day sample, 67–83% of weeks) → **don't use 5m yet**.
+- **Recommended basket: BTC + SUI, 15m** (average ~+6.4%/180d, DD ≤3.3%, diversified over 2 pairs).
 
-**Verdict v4 (theo mục tiêu)**: maxDD ✅ (3.3% < 10%) · ổn định ✅ (robust lân cận + không sập theo regime)
-· "luôn dương mỗi tuần" ⚠️ gần đạt (85% tuần không âm, 4 tuần âm nhỏ /26 — không chiến thuật nào đạt 100% theo
-nghĩa đen). Lưu ý: **12 lệnh/180 ngày** = tần suất thấp, PnL khiêm tốn (~7%/năm chưa đòn bẩy), nhiều tuần đứng
-do không có lệnh. Đề xuất: **paper-trade BTC 15m bằng v4** để xác nhận forward, CHƯA tiền thật.
+**v4 verdict (against the goals)**: maxDD ✅ (3.3% < 10%) · stability ✅ (robust neighbourhood + doesn't collapse across regimes)
+· "always positive every week" ⚠️ nearly met (85% of weeks non-negative, 4 small negative weeks /26 — no strategy achieves 100% in the
+literal sense). Note: **12 trades/180 days** = low frequency, modest PnL (~7%/year unleveraged), many flat weeks
+because there were no trades. Recommendation: **paper-trade BTC 15m with v4** to confirm forward, NOT real money yet.
 
-**Đối chứng 365 ngày (2026-06-13, `scripts/walkforward_365_ict_po3_v4.py`)**: BTC 15m
-**+3.88%, maxDD 3.31%, 18 lệnh**; SUI **+2.81%, DD 6.22%, 21 lệnh**; cửa sổ 30d tệ nhất chỉ
-−2.0% — v4 **sống qua cả regime nghịch Nov–Dec 2025** (nơi vol_breakout danh mục −26.8%/tháng).
-Củng cố verdict "ổn định + DD thấp"; cái giá là lợi nhuận mỏng ~3–4%/năm chưa đòn bẩy.
+**365-day check (2026-06-13, `scripts/walkforward_365_ict_po3_v4.py`)**: BTC 15m
+**+3.88%, maxDD 3.31%, 18 trades**; SUI **+2.81%, DD 6.22%, 21 trades**; worst 30d window only
+−2.0% — v4 **survives the adverse Nov–Dec 2025 regime** (where the vol_breakout portfolio lost −26.8%/month).
+Reinforces the "stable + low DD" verdict; the price is a thin return of ~3–4%/year unleveraged.
 
-**Đòn bẩy (2026-06-13, `scripts/leverage_ict_po3_v4.py`, 365d)**: DD scale ~tuyến tính,
-không cú cháy. **BTC ×3: +13.77%/năm, maxDD 9.67% (vẫn <10%), tháng tệ nhất −6.87%**;
-×2: +9.17%, DD 6.53% (an toàn hơn). SUI chỉ chịu ×1 (×2 → DD 12.16% vượt mục tiêu).
-⇒ Cách "tăng lợi nhuận" đúng kỷ luật nhất hiện có: **paper BTC 15m ×2–3 + SUI 15m ×1**.
-Lưu ý: engine scale phí theo notional nhưng CHƯA mô phỏng funding perp (giữ lệnh intraday
-vài giờ, ~22 lệnh/năm → ảnh hưởng nhỏ); liquidation ×3 cách rất xa với DD này.
+**Leverage (2026-06-13, `scripts/leverage_ict_po3_v4.py`, 365d)**: DD scales ~linearly,
+no blow-ups. **BTC ×3: +13.77%/year, maxDD 9.67% (still <10%), worst month −6.87%**;
+×2: +9.17%, DD 6.53% (safer). SUI only tolerates ×1 (×2 → DD 12.16% exceeds the target).
+⇒ The most disciplined way currently available to "increase profit": **paper BTC 15m ×2–3 + SUI 15m ×1**.
+Note: the engine scales fees by notional but does NOT yet simulate perp funding (intraday trades held
+a few hours, ~22 trades/year → small impact); liquidation at ×3 is very far away with this DD.
 
-**Quét rổ 14 cặp trên chuẩn 365 ngày (2026-06-13, `scripts/scan365_ict_po3_v4.py`)**: chỉ
-**3 cặp dương** — BTC +4.58% (DD 3.31%), **DOGE +3.96% (DD 1.70%, thấp nhất rổ, win 54.5%,
-tháng tệ nhất −1.31%, 10/13 cửa sổ không âm)**, SUI +2.81% (DD 6.22%). 11 cặp còn lại đều ÂM
-(ETH −1.1%, SOL −5.5%, XRP −6.1%, ADA −7.9%, INJ −9.0%…) — xác nhận lại "đẹp 120/180d ≠ bền"
-(XRP/DOGE từng lập lờ ở 180d; 365d mới phân thắng bại). **Đòn bẩy DOGE**: ×3 → +11.80%
-DD 5.04%; ×5 vẫn DD 8.30% nhưng KHUYẾN NGHỊ TRẦN ×3 — DOGE được chọn từ 12 ứng viên
-(multiple-comparison risk) và mẫu chỉ 11 lệnh/năm.
+**14-pair basket scan on the 365-day standard (2026-06-13, `scripts/scan365_ict_po3_v4.py`)**: only
+**3 pairs positive** — BTC +4.58% (DD 3.31%), **DOGE +3.96% (DD 1.70%, lowest in the basket, win 54.5%,
+worst month −1.31%, 10/13 windows non-negative)**, SUI +2.81% (DD 6.22%). The other 11 pairs are all NEGATIVE
+(ETH −1.1%, SOL −5.5%, XRP −6.1%, ADA −7.9%, INJ −9.0%…) — re-confirming "good over 120/180d ≠ durable"
+(XRP/DOGE were borderline at 180d; only 365d separates winners from losers). **DOGE leverage**: ×3 → +11.80%
+DD 5.04%; ×5 still DD 8.30% but the RECOMMENDED CAP is ×3 — DOGE was picked from 12 candidates
+(multiple-comparison risk) and the sample is only 11 trades/year.
 
-**Rổ paper khuyến nghị (cập nhật)**: **BTC ×2–3 + DOGE ×3 + SUI ×1**, 15m, chia vốn đều
-→ kỳ vọng ~+8–9%/năm, DD danh mục ước <7% (3 cặp ít tương quan về thời điểm lệnh).
+**Recommended paper basket (updated)**: **BTC ×2–3 + DOGE ×3 + SUI ×1**, 15m, capital split equally
+→ expected ~+8–9%/year, estimated portfolio DD <7% (3 pairs with low correlation in trade timing).
 
-## Giới hạn đã biết (tóm tắt cho người đọc code)
+## Known limitations (summary for code readers)
 
-1. MSS = phá **swing fractal** (CHoCH) hình thành sau sweep; cần `swing` nến xác nhận → vào trễ `swing` nến. Đơn giản hơn CHoCH đa-khung của ICT thủ công.
-2. `conf≥2`: vào tại **retest FVG** nhưng fill ở **close** của nến chạm vùng (engine không mô phỏng LIMIT/intrabar) → giá vào xấp xỉ, không chính xác mép FVG.
-3. SL/TP kiểm theo `close` (không peek intrabar high/low) để khớp fill close của vectorbt.
-4. Phiên cố định theo UTC; chưa xử lý DST của London/NY (crypto dùng UTC nên chấp nhận được).
-5. **Khởi động giữa ngày**: range Asia chỉ gom từ nến live đầu tiên của ngày → bot start/restart sau 08:00 UTC bỏ lỡ setup hôm đó (từ hôm sau mới đủ range).
+1. MSS = break of a **swing fractal** (CHoCH) formed after the sweep; needs `swing` confirming candles → entry lags by `swing` candles. Simpler than the multi-timeframe CHoCH of manual ICT.
+2. `conf≥2`: enters on the **FVG retest** but fills at the **close** of the candle touching the zone (the engine does not simulate LIMIT/intrabar) → entry price is approximate, not exactly the FVG edge.
+3. SL/TP are checked on `close` (no intrabar high/low peeking) to match vectorbt's close fills.
+4. Sessions are fixed in UTC; London/NY DST is not handled (acceptable since crypto uses UTC).
+5. **Mid-day startup**: the Asia range is only built from the day's first live candle → a bot started/restarted after 08:00 UTC misses that day's setup (the range is complete from the next day).
 
-### Sửa lỗi live 2026-09-23 — trước đó live KHÔNG BAO GIỜ vào lệnh
+### Live bug fix 2026-09-23 — before this, live NEVER entered a trade
 
-- v3/v4 neo nến sweep theo **index tuyệt đối** (`_sweep_i`). Backtest đưa list tăng dần nên đúng;
-  runner live đưa **cửa sổ trượt** (deque) → index lệch mỗi nến → không bao giờ thấy swing/MSS.
-  Đo trên 92 ngày thật (BTC/DOGE/SUI/INJ 15m): backtest 17 lệnh, live cũ **0 lệnh**.
-- Sửa: neo theo `ts` nến sweep (`_sweep_ts` + `_index_of`). Backtest **không đổi** (kiểm bằng so khớp
-  tín hiệu cũ/mới), live ≡ backtest khi runner lookback = 1000 (EMA100/ATR đệ quy hội tụ).
+- v3/v4 anchored the sweep candle by **absolute index** (`_sweep_i`). Backtest passes a growing list so it was correct;
+  the live runner passes a **sliding window** (deque) → the index shifts every candle → it never saw a swing/MSS.
+  Measured on 92 real days (BTC/DOGE/SUI/INJ 15m): backtest 17 trades, old live **0 trades**.
+- Fix: anchor by the sweep candle's `ts` (`_sweep_ts` + `_index_of`). Backtest is **unchanged** (verified by matching
+  old/new signals), live ≡ backtest when runner lookback = 1000 (recursive EMA100/ATR converge).
   Regression: `tests/test_ict_po3_v4.py::test_sliding_window_matches_growing_list`.
-- Kèm lỗi hạ tầng cùng lúc: feed chỉ stream `default_tf` (1m) nên bot 15m không nhận nến nào (xem commit `b9c0e77`).
+- Plus a simultaneous infrastructure bug: the feed only streamed `default_tf` (1m), so the 15m bot received no candles at all (see commit `b9c0e77`).

@@ -1,6 +1,6 @@
-"""Client sàn dùng chung theo mode (1 cặp key/mode trong .env) — executor + đồng bộ số dư.
+"""Shared exchange clients per mode (one key pair per mode in .env) — executor + balance sync.
 
-Rào chắn LIVE nằm ở đây (1 chỗ): không ENABLE_LIVE → không bao giờ tạo client live.
+The LIVE guard lives here (one place): without ENABLE_LIVE a live client is never created.
 """
 
 import asyncio
@@ -19,21 +19,21 @@ def keys_for(mode: str, s: Settings = settings) -> tuple[str, str]:
         return s.binance_testnet_key, s.binance_testnet_secret
     if mode == "LIVE":
         return s.binance_key, s.binance_secret
-    raise ValueError(f"mode {mode} không dùng sàn")
+    raise ValueError(f"mode {mode} does not use the exchange")
 
 
 def check_mode(mode: str, s: Settings = settings) -> None:
-    """Raise ValueError (thông báo cho người dùng) nếu mode chưa dùng được."""
+    """Raise ValueError (a user-facing message) if the mode cannot be used yet."""
     if mode == "LIVE" and not s.enable_live:
-        raise ValueError("mode LIVE bị khóa — cần ENABLE_LIVE=1 trong .env")
+        raise ValueError("LIVE mode is locked — requires ENABLE_LIVE=1 in .env")
     k, sec = keys_for(mode, s)
     if not k or not sec:
         env = "BINANCE_TESTNET_KEY/SECRET" if mode == "TESTNET" else "BINANCE_KEY/SECRET"
-        raise ValueError(f"cần {env} trong .env để dùng mode {mode}")
+        raise ValueError(f"{env} is required in .env to use {mode} mode")
 
 
 async def exchange_client(mode: str, s: Settings = settings):
-    """Client Binance USDⓈ-M Futures cho mode (tạo 1 lần, dùng lại)."""
+    """Binance USDⓈ-M Futures client for the mode (created once, reused)."""
     check_mode(mode, s)
     async with _lock:
         if mode not in _clients:
@@ -42,12 +42,12 @@ async def exchange_client(mode: str, s: Settings = settings):
             k, sec = keys_for(mode, s)
             _clients[mode] = await BinanceFuturesClient.create(k, sec, testnet=mode == "TESTNET")
             if mode == "LIVE":
-                logger.warning("⚠️  ĐÃ TẠO CLIENT BINANCE LIVE (TIỀN THẬT)")
+                logger.warning("⚠️  BINANCE LIVE CLIENT CREATED (REAL MONEY)")
         return _clients[mode]
 
 
 def set_client(mode: str, client) -> None:
-    """Test: gắn client giả."""
+    """Test: attach a fake client."""
     _clients[mode] = client
 
 
@@ -56,5 +56,5 @@ async def close_all() -> None:
         try:
             await c.close()
         except Exception:  # noqa: BLE001
-            logger.exception("đóng client sàn lỗi")
+            logger.exception("failed to close exchange client")
     _clients.clear()

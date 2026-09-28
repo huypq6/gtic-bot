@@ -1,4 +1,4 @@
-"""Test config — không kết nối Binance WS trong test/CI."""
+"""Test config — do not connect to Binance WS in tests/CI."""
 
 from app.config import settings
 

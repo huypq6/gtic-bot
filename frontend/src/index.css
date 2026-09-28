@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Semantic theme tokens — KHÔNG hardcode màu trong component.
-   Component dùng: bg-bg, bg-surface, bg-surface-2, border-border,
+   Semantic theme tokens — do NOT hardcode colors in components.
+   Components use: bg-bg, bg-surface, bg-surface-2, border-border,
    text-text, text-muted, text-faint, bg-primary, bg-accent,
    text-up/text-down, text-warn...
-   Đổi sáng/tối bằng cách thêm/bỏ class `.dark` trên <html> (xem lib/theme.ts).
-   Palette phái sinh từ docs/logo.png (slate-violet + teal).
+   Light/dark is toggled by adding/removing the `.dark` class on <html> (see lib/theme.ts).
+   Palette derived from docs/logo.png (slate-violet + teal).
    ============================================================ */
 @theme inline {
   --color-bg: var(--bg);
@@ -24,7 +24,7 @@
   --color-warn: var(--warn);
 }
 
-/* LIGHT (mặc định — user prefer sáng) */
+/* LIGHT (default) */
 :root {
   --bg: #f3f5f8;
   --surface: #ffffff;
@@ -33,8 +33,8 @@
   --text: #1a1d28;
   --muted: #5d6474;
   --faint: #9aa0ad;
-  --primary: #4f5269; /* slate-violet — selected/nhấn (chữ trắng) */
-  --accent: #1f9e8a; /* teal — hành động */
+  --primary: #4f5269; /* slate-violet — selected/emphasis (white text) */
+  --accent: #1f9e8a; /* teal — actions */
   --accent-strong: #17806f;
   --up: #1f9e8a;
   --down: #d83d42;

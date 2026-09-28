@@ -1,4 +1,4 @@
-"""Adapter Binance Futures (mock AsyncClient): quy tắc sàn, tham số lệnh, SL/TP trên sàn."""
+"""Binance Futures adapter (mock AsyncClient): exchange rules, order params, exchange SL/TP."""
 
 import pytest
 
@@ -69,9 +69,9 @@ class FakeRaw:
 def test_rules_round_and_check():
     r = parse_rules(INFO)["BTCUSDT"]
     assert r == SymbolRules(step=0.001, min_qty=0.001, tick=0.1, min_notional=100)
-    assert r.qty(0.0129) == 0.012  # làm tròn XUỐNG theo bước
+    assert r.qty(0.0129) == 0.012  # rounds DOWN to the step
     assert r.price(84123.26) == 84123.3
-    with pytest.raises(ExchangeReject, match="tối thiểu"):
+    with pytest.raises(ExchangeReject, match="minimum"):
         r.check(0.001, 84000)  # 84 USDT < 100
     with pytest.raises(ExchangeReject):
         r.check(0.0, 84000)

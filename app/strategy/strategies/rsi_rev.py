@@ -1,6 +1,6 @@
-"""RSI reversal — RSI < oversold → BUY (bắt đáy), RSI > overbought → SELL.
+"""RSI reversal — RSI < oversold → BUY (catch the bottom), RSI > overbought → SELL.
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
+=== EDIT THE STRATEGY HERE ===
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -12,7 +12,7 @@ from app.strategy.ta import pad_left, rsi
 class RsiReversal(Strategy):
     name = "rsi_rev"
     version = "1"
-    description = "Đảo chiều theo RSI — mean-reversion: quá bán (BUY), quá mua (SELL)."
+    description = "RSI reversal — mean-reversion: oversold (BUY), overbought (SELL)."
     default_params = {"period": 14, "oversold": 30, "overbought": 70, "size": 0.001}
     param_schema = {
         "period": {"type": "int", "min": 2, "max": 100, "default": 14},
@@ -39,4 +39,4 @@ class RsiReversal(Strategy):
         return {"RSI": pad_left(rsi(closes, self.params["period"]), len(candles))}
 
     def plot_pane(self):
-        return {"RSI": 1}  # oscillator 0–100 → pane phụ
+        return {"RSI": 1}  # oscillator 0–100 → separate pane

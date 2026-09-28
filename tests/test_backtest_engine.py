@@ -1,7 +1,7 @@
-"""Backtest engine — dùng chung on_candle, metrics qua vectorbt.
+"""Backtest engine — shares on_candle, metrics via vectorbt.
 
-Skip nếu chưa cài extra backtest (vectorbt). Strategy 'always buy first candle'
-để có trade xác định.
+Skipped if the backtest extra (vectorbt) is not installed. Strategy 'always buy first candle'
+to get a deterministic trade.
 """
 
 import pytest
@@ -19,7 +19,7 @@ def _candles(prices):
 
 
 def test_ema_cross_backtest_runs_and_returns_metrics():
-    # giá có xu hướng lên rồi xuống → có giao cắt EMA → có trade
+    # price trends up then down → EMA crossover → trades
     prices = [10, 10, 10, 10, 9, 8, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 13, 12, 11, 10]
     res = run_backtest(
         "ema_cross", "1", {"fast": 3, "slow": 6, "size": 1},
@@ -43,7 +43,7 @@ def test_plot_returns_aligned_overlay():
     candles = _candles([float(c) for c in range(1, 40)])
     plot = EmaCross({"fast": 3, "slow": 6}).plot(candles)
     assert "EMA 3" in plot and "EMA 6" in plot
-    assert len(plot["EMA 3"]) == len(candles)  # căn đủ độ dài (None ở warmup)
+    assert len(plot["EMA 3"]) == len(candles)  # fully length-aligned (None during warmup)
     assert plot["EMA 3"][0] is None and plot["EMA 3"][-1] is not None
 
 
@@ -65,6 +65,6 @@ def test_leverage_scales_pnl_and_reports():
                        _candles(prices), capital=1000, fee_rate=0.0005, tf="1m", leverage=5)
     assert base["leverage"] == 1 and lev["leverage"] == 5
     assert "liquidated" in lev
-    # mỗi trade pnl_pct ở x5 = pnl_pct x1 × 5
+    # each trade's pnl_pct at x5 = pnl_pct at x1 × 5
     if base["trades"] and lev["trades"]:
         assert abs(lev["trades"][0]["pnl_pct"] - base["trades"][0]["pnl_pct"] * 5) < 1e-6

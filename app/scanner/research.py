@@ -1,8 +1,8 @@
-"""Scanner — quét cặp định kỳ, chấm điểm + đề xuất tín hiệu (US-22).
+"""Scanner — periodically scans pairs, scores them + suggests signals (US-22).
 
-`score_symbol` thuần (testable): RSI + momentum → (score, signal, reason).
-Task nền `run_scanner` chạy mỗi `scan_interval_sec`: sync nến → chấm → lưu
-`scan_result` → publish topic `scan` lên bus (WSGateway forward xuống UI).
+`score_symbol` is pure (testable): RSI + momentum → (score, signal, reason).
+The background task `run_scanner` runs every `scan_interval_sec`: sync candles → score → save
+`scan_result` → publish the `scan` topic on the bus (the WSGateway forwards it to the UI).
 """
 
 import asyncio
@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
 
 
 def score_symbol(closes: list[float], rsi_period: int = 14) -> tuple[float, str, str]:
-    """Chấm điểm 1 cặp từ chuỗi close. score 0..100 (độ mạnh tín hiệu)."""
+    """Score 1 pair from its close series. score 0..100 (signal strength)."""
     if len(closes) < rsi_period + 2:
-        return 0.0, "NEUTRAL", "thiếu dữ liệu"
+        return 0.0, "NEUTRAL", "insufficient data"
     r = rsi(closes, rsi_period)
     last_rsi = r[-1] if r else 50.0
-    # momentum: % thay đổi 10 nến gần nhất.
+    # momentum: % change over the last 10 candles.
     lookback = min(10, len(closes) - 1)
     mom = (closes[-1] - closes[-1 - lookback]) / closes[-1 - lookback] * 100
 
@@ -43,7 +43,7 @@ def score_symbol(closes: list[float], rsi_period: int = 14) -> tuple[float, str,
 
 
 def analyze_symbol(candles: list[dict], rsi_period: int = 14) -> dict:
-    """Chấm điểm + đề xuất entry/SL/TP (theo ATR) cho 1 cặp."""
+    """Score + suggest entry/SL/TP (ATR-based) for 1 pair."""
     closes = [c["close"] for c in candles]
     score, signal, reason = score_symbol(closes, rsi_period)
     entry = closes[-1] if closes else None
@@ -65,7 +65,7 @@ def analyze_symbol(candles: list[dict], rsi_period: int = 14) -> dict:
 
 
 async def scan_once(session_factory: async_sessionmaker) -> list[dict]:
-    """Quét 1 lượt các symbol cấu hình → lưu scan_result, trả về list kết quả."""
+    """Scan the configured symbols once → save scan_result, return the list of results."""
     results: list[dict] = []
     async with session_factory() as session:
         for symbol in settings.scan_symbols:
@@ -80,15 +80,15 @@ async def scan_once(session_factory: async_sessionmaker) -> list[dict]:
                     )
                 )
                 results.append({"symbol": symbol, **a})
-            except Exception:  # noqa: BLE001 — 1 symbol lỗi không chặn cả lượt
-                logger.exception("scan %s lỗi", symbol)
+            except Exception:  # noqa: BLE001 — one failing symbol must not block the whole pass
+                logger.exception("scan %s failed", symbol)
         await session.commit()
     results.sort(key=lambda r: r["score"], reverse=True)
     return results
 
 
 async def run_scanner(bus: EventBus, session_factory: async_sessionmaker) -> None:
-    """Task nền: quét định kỳ + publish 'scan'. Hủy qua CancelledError."""
+    """Background task: periodic scan + publish 'scan'. Cancelled via CancelledError."""
     while True:
         try:
             results = await scan_once(session_factory)
@@ -96,5 +96,5 @@ async def run_scanner(bus: EventBus, session_factory: async_sessionmaker) -> Non
         except asyncio.CancelledError:
             raise
         except Exception:  # noqa: BLE001
-            logger.exception("vòng quét scanner lỗi")
+            logger.exception("scanner pass failed")
         await asyncio.sleep(settings.scan_interval_sec)

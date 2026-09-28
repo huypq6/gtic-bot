@@ -1,6 +1,6 @@
-"""Parabolic SAR — trailing stop & reverse theo xu hướng (Wilder).
+"""Parabolic SAR — trend-following trailing stop & reverse (Wilder).
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
+=== EDIT THE STRATEGY HERE ===
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -12,7 +12,7 @@ from app.strategy.ta import psar, psar_line
 class ParabolicSar(Strategy):
     name = "psar"
     version = "1"
-    description = "Parabolic SAR — SAR đảo lên (BUY), đảo xuống (SELL)."
+    description = "Parabolic SAR — SAR flips up (BUY), flips down (SELL)."
     default_params = {"step": 0.02, "max_af": 0.2, "size": 0.001}
     param_schema = {
         "step": {"type": "float", "min": 0.001, "max": 0.5, "default": 0.02},

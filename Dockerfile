@@ -8,8 +8,8 @@ RUN npm install
 COPY frontend/ ./
 RUN npm run build
 
-# ---- Stage 1b: đọc phiên bản từ git → VERSION.json (web hiện ở header) ----
-# .git chỉ vào stage này; image cuối chỉ nhận file JSON. Không có .git → JSON rỗng (app ghi "dev").
+# ---- Stage 1b: read the version from git → VERSION.json (shown in the web header) ----
+# .git only goes into this stage; the final image only gets the JSON file. No .git → empty JSON (app shows "dev").
 FROM alpine:3.20 AS version
 RUN apk add --no-cache git jq
 WORKDIR /src
@@ -33,19 +33,19 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     PATH="/app/.venv/bin:$PATH"
 
-# Cài deps trước (tận dụng cache layer); không cài dev/backtest cho prod.
+# Install deps first (leverages layer cache); no dev/backtest extras for prod.
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project --extra backtest
 
-# Mã nguồn backend + migration
+# Backend source + migrations
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
 
-# Frontend đã build → FastAPI serve static tại "/"
+# Built frontend → FastAPI serves static files at "/"
 COPY --from=frontend-build /build/dist ./frontend/dist
 COPY --from=version /VERSION.json ./VERSION.json
 
 EXPOSE 8000
-# Prod: chạy migration rồi serve (UI + API) trên 1 cổng 8000.
+# Prod: run migrations then serve (UI + API) on a single port 8000.
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

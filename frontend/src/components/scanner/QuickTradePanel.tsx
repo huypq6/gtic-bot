@@ -3,8 +3,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { manualOrder } from "../../lib/api";
 import { useWsStore } from "../../lib/ws";
 import type { ScanRow } from "../../lib/ws";
+import { t } from "../../lib/i18n";
 
-// "Đánh theo recommend": panel đặt 1 lệnh tay, prefilled symbol/side/SL/TP từ scan.
+// "Trade the recommendation": panel that places 1 manual order, prefilled with symbol/side/SL/TP from the scan.
 export default function QuickTradePanel({
   rec,
   onClose,
@@ -50,7 +51,7 @@ export default function QuickTradePanel({
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">
-            Đánh {rec.symbol}{" "}
+            {t("Trade {symbol}", { symbol: rec.symbol })}{" "}
             <span className={side === "BUY" ? "text-up" : "text-down"}>{side}</span>
           </h2>
           <span className="text-xs text-faint">{rec.reason}</span>
@@ -77,25 +78,25 @@ export default function QuickTradePanel({
               <input value={price} onChange={(e) => setPrice(e.target.value)} className={inp} />
             </L>
           ) : (
-            <L label="Giá hiện tại">
+            <L label={t("Current price")}>
               <input value={mark?.toFixed(2) ?? "—"} disabled className={`${inp} opacity-60`} />
             </L>
           )}
-          <L label="SL (đề xuất ATR)">
+          <L label={t("SL (ATR suggestion)")}>
             <input value={sl} onChange={(e) => setSl(e.target.value)} className={inp} />
           </L>
-          <L label="TP (đề xuất ATR)">
+          <L label={t("TP (ATR suggestion)")}>
             <input value={tp} onChange={(e) => setTp(e.target.value)} className={inp} />
           </L>
         </div>
 
         {submit.isError && (
-          <p className="mt-2 text-sm text-down">Lỗi: {String(submit.error)}</p>
+          <p className="mt-2 text-sm text-down">{t("Error: {msg}", { msg: String(submit.error) })}</p>
         )}
 
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-muted hover:bg-surface-2">
-            Hủy
+            {t("Cancel")}
           </button>
           <button
             onClick={() => submit.mutate()}
@@ -104,7 +105,7 @@ export default function QuickTradePanel({
               side === "BUY" ? "bg-up hover:bg-up/90" : "bg-down hover:bg-down/90"
             }`}
           >
-            {submit.isPending ? "Đang đặt…" : `Đặt lệnh ${side}`}
+            {submit.isPending ? t("Placing…") : t("Place {side} order", { side })}
           </button>
         </div>
       </div>

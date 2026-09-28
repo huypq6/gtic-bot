@@ -1,20 +1,20 @@
-"""ExchangeExecutor — đặt lệnh THẬT trên sàn (Binance testnet HOẶC live), cùng
-interface Executor. Dùng chung TESTNET + LIVE (chỉ khác client + mode); factory +
-rào chắn ở testnet.py / live.py.
+"""ExchangeExecutor — places REAL orders on the exchange (Binance testnet OR live), with the same
+Executor interface. Shared by TESTNET + LIVE (only the client + mode differ); factory +
+guards live in testnet.py / live.py.
 
-Tái dùng **PaperEngine** cho state vị thế + PnL + kiểm SL/TP (nhất quán paper/live),
-nhưng MỌI fill vào/ra là lệnh thật gửi sàn (lưu `ext_id`). SL/TP quản client-side:
-on_price phát hiện chạm → gửi lệnh market đóng thật. LIMIT đặt trên sàn + auto-cancel
-theo `timeout` (NFR US-26).
+Reuses **PaperEngine** for position state + PnL + SL/TP checks (consistent paper/live),
+but EVERY entry/exit fill is a real order sent to the exchange (stored in `ext_id`). SL/TP is
+managed client-side: on_price detects a hit → sends a real market close. LIMIT orders are placed
+on the exchange + auto-cancelled per `timeout` (NFR US-26).
 
-`client` inject được (BinanceFuturesClient hoặc fake) để test không cần key.
+`client` is injectable (BinanceFuturesClient or a fake) so tests don't need keys.
 
-P9b — client Futures (có `protect`): SL/TP đặt TRÊN SÀN (STOP/TAKE_PROFIT_MARKET
-closePosition) thay vì chỉ client-side → app chết vị thế vẫn được bảo vệ. Đảo chiều =
-đóng (reduceOnly) rồi mở mới (one-way mode không tự flip). Định kỳ đối chiếu vị thế sàn:
-sàn đã đóng (SL/TP/thanh lý/đóng tay trên app Binance) → ghi đóng theo fill thật.
-Sổ cái tiền của tài khoản sàn KHÔNG ghi ở đây (tránh trùng) — AccountService nhập từ
-income history của sàn.
+P9b — Futures client (has `protect`): SL/TP placed ON THE EXCHANGE (STOP/TAKE_PROFIT_MARKET
+closePosition) instead of only client-side → positions stay protected if the app dies. Reversal =
+close (reduceOnly) then open new (one-way mode doesn't flip by itself). Periodically reconciles
+the exchange position: closed on the exchange (SL/TP/liquidation/manual close in the Binance app)
+→ record the close from the real fill. The exchange account's cash ledger is NOT written here
+(avoids duplicates) — AccountService imports it from the exchange's income history.
 """
 
 import asyncio
@@ -60,15 +60,16 @@ class ExchangeExecutor(Executor):
         self._cancel_tasks: dict[str, asyncio.Task] = {}
         # P9b
         self._futures = hasattr(client, "protect")
-        self._protect: dict = {}  # {"sl": algoId, "tp": algoId} đang đặt trên sàn
+        self._protect: dict = {}  # {"sl": algoId, "tp": algoId} currently placed on the exchange
         self._opened_ms: int | None = None
         self._last_reconcile = 0.0
-        self.reconcile_every = 5.0  # giây giữa 2 lần hỏi vị thế sàn
+        self.reconcile_every = 5.0  # seconds between exchange position polls
         self.account_id: int | None = None
         self._accounts = None
 
     def attach_account(self, account, service) -> None:
-        """Gắn tài khoản sàn: đòn bẩy đặt trên sàn trước lệnh + phí ước tính cho PnL tạm."""
+        """Attach the exchange account: set leverage on the exchange before orders + estimated
+        fee for unrealized PnL."""
         self.account_id = account.id
         self._accounts = service
         self.engine.leverage = max(1.0, float(account.leverage))
@@ -90,9 +91,9 @@ class ExchangeExecutor(Executor):
         desired = "LONG" if a == "BUY" else "SHORT"
         pos = self.engine.position
         if pos and pos.side == desired:
-            return  # cùng chiều → không pyramiding
+            return  # same side → no pyramiding
         if pos and self._futures:
-            await self._market_close("SIGNAL")  # one-way mode: đóng hẳn rồi mở chiều mới
+            await self._market_close("SIGNAL")  # one-way mode: fully close, then open the new side
         if self._futures:
             await self._client.ensure_leverage(self.symbol, self.engine.leverage)
 
@@ -108,7 +109,7 @@ class ExchangeExecutor(Executor):
         else:
             resp = await self._client.market_order(self.symbol, a, signal.size)
             fill = resp["price"] or self._last_price
-            qty = resp.get("qty") or signal.size  # sàn làm tròn theo stepSize
+            qty = resp.get("qty") or signal.size  # exchange rounds to stepSize
             ext = resp["orderId"]
             await self._apply_fill(a, qty, fill, ext, signal.sl, signal.tp)
 
@@ -121,14 +122,15 @@ class ExchangeExecutor(Executor):
             if now - self._last_reconcile >= self.reconcile_every:
                 self._last_reconcile = now
                 await self.reconcile()
-        # SL/TP client-side chỉ là DỰ PHÒNG cho chân chưa đặt được trên sàn.
+        # Client-side SL/TP is only a FALLBACK for legs not yet placed on the exchange.
         reason = self.engine.sltp_reason(price)
         if reason and not self._protect.get(reason.lower()):
             await self._market_close(reason)
         await self._broadcast_position(price)
 
     async def reconcile(self) -> None:
-        """Vị thế sàn đã về 0 trong khi app còn giữ → SL/TP/thanh lý đã khớp trên sàn."""
+        """Exchange position went to 0 while the app still holds it → SL/TP/liquidation was
+        filled on the exchange."""
         p = self.engine.position
         if not p:
             return
@@ -137,8 +139,8 @@ class ExchangeExecutor(Executor):
             if abs(ex["amt"]) > 0:
                 return
             fill = await self._client.last_close_fill(self.symbol, self._opened_ms or 0)
-        except Exception:  # noqa: BLE001 — mạng chập chờn: lần sau thử lại
-            logger.warning("đối chiếu vị thế %s lỗi", self.symbol, exc_info=True)
+        except Exception:  # noqa: BLE001 — flaky network: retry next time
+            logger.warning("position reconciliation %s failed", self.symbol, exc_info=True)
             return
         price = (fill or {}).get("price") or self._last_price
         reason = "EXTERNAL"
@@ -149,15 +151,16 @@ class ExchangeExecutor(Executor):
         self._protect = {}
         for e in self.engine.force_close(price, reason):
             if e.closed:
-                if fill:  # số liệu thật của sàn thay cho ước tính
+                if fill:  # real exchange figures replace the estimate
                     e.closed.gross = fill["realized"]
                     e.closed.exit_fee = fill["fee"]
                     e.closed.pnl = fill["realized"] - fill["fee"] - e.closed.entry_fee
                 await self._persist_close(e.closed, (fill or {}).get("orderId", ""))
-        logger.info("vị thế %s đã đóng trên sàn (%s) @ %s", self.symbol, reason, price)
+        logger.info("position %s closed on the exchange (%s) @ %s", self.symbol, reason, price)
 
     async def restore_open(self) -> bool:
-        """Sau restart: nạp lại vị thế OPEN của bot; sàn đã đóng → ghi đóng theo sàn."""
+        """After restart: reload the bot's OPEN position; if the exchange already closed it →
+        record the close from the exchange."""
         q = select(PositionModel).where(
             PositionModel.status == "OPEN", PositionModel.mode == self.mode,
             PositionModel.symbol == self.symbol,
@@ -184,11 +187,11 @@ class ExchangeExecutor(Executor):
         self._protect = dict(row.ext_protect or {})
         self._opened_ms = int(row.opened_at.timestamp() * 1000) if row.opened_at else None
         if self._futures:
-            await self.reconcile()  # đóng trong lúc app tắt?
+            await self.reconcile()  # closed while the app was down?
         return self.engine.position is not None
 
     async def cancel(self, order_id: str | None = None) -> None:
-        # order_id = ext_id của lệnh chờ.
+        # order_id = ext_id of the pending order.
         if not order_id:
             return
         await self._client.cancel(self.symbol, order_id)
@@ -202,7 +205,7 @@ class ExchangeExecutor(Executor):
         if not p:
             return
         p.sl, p.tp = sl, tp
-        if self._futures:  # thay lệnh bảo vệ trên sàn
+        if self._futures:  # replace protective orders on the exchange
             await self._client.cancel_protection(self.symbol, self._protect)
             self._protect = await self._safe_protect(p)
         if self._pos_db_id is not None:
@@ -218,12 +221,12 @@ class ExchangeExecutor(Executor):
     async def close(self, reason: str = "MANUAL") -> None:
         await self._market_close(reason)
 
-    # ---------- nội bộ ----------
+    # ---------- internal ----------
     async def _apply_fill(
         self, side: str, qty: float, price: float, ext: str,
         sl: float | None, tp: float | None,
     ) -> None:
-        """Đăng ký fill thật vào engine (mở/flip) + persist + broadcast."""
+        """Register a real fill into the engine (open/flip) + persist + broadcast."""
         events = self.engine.submit(
             Signal(side, self.symbol, qty, "MARKET", sl=sl, tp=tp), price
         )
@@ -239,16 +242,17 @@ class ExchangeExecutor(Executor):
         await self._broadcast_order(side, "MARKET", qty, price, "FILLED")
 
     async def _safe_protect(self, p) -> dict:
-        """Đặt SL/TP trên sàn; lỗi → cảnh báo + dựa vào SL/TP client-side (on_price)."""
+        """Place SL/TP on the exchange; on error → warn + rely on client-side SL/TP (on_price)."""
         if p.sl is None and p.tp is None:
             return {}
         try:
             return await self._client.protect(self.symbol, p.side, p.sl, p.tp)
         except Exception as e:  # noqa: BLE001
-            logger.exception("đặt SL/TP trên sàn %s lỗi", self.symbol)
+            logger.exception("placing SL/TP on the exchange failed for %s", self.symbol)
             await self._bus.publish(
                 "risk", {"type": "risk", "bot_id": self.bot_id, "symbol": self.symbol,
-                         "reason": f"không đặt được SL/TP trên sàn ({e}) — app tự cắt thay"},
+                         "reason": f"could not place SL/TP on the exchange ({e}) — "
+                                   "the app will close it instead"},
             )
             return {}
 
@@ -281,11 +285,11 @@ class ExchangeExecutor(Executor):
                 {"type": "order", "bot_id": self.bot_id, "symbol": self.symbol,
                  "status": "CANCELLED", "ext_id": ext, "reason": "TIMEOUT"},
             )
-            logger.info("auto-cancel limit %s sau %.0fs", ext, self._timeout)
+            logger.info("auto-cancel limit %s after %.0fs", ext, self._timeout)
         except asyncio.CancelledError:
             raise
         except Exception:  # noqa: BLE001
-            logger.exception("auto-cancel %s lỗi", ext)
+            logger.exception("auto-cancel %s failed", ext)
         finally:
             self._cancel_tasks.pop(ext, None)
 

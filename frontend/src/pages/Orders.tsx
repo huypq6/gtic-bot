@@ -5,6 +5,7 @@ import { fetchBots, fetchOrders, type OrderRow } from "../lib/api";
 import ModeBadge from "../components/ModeBadge";
 import PositionsTable from "../components/orders/PositionsTable";
 import TradesTable from "../components/orders/TradesTable";
+import { t } from "../lib/i18n";
 
 const STATUS_CLS: Record<string, string> = {
   FILLED: "text-up",
@@ -58,22 +59,22 @@ export default function Orders() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-      {/* Monitor — vị thế đang mở (bot tự cắt SL/TP) */}
+      {/* Monitor — open positions (the bot closes them at SL/TP) */}
       <section className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Đang theo dõi (vị thế mở · realtime)</h2>
+        <h2 className="mb-3 text-sm font-semibold">{t("Monitoring (open positions · realtime)")}</h2>
         <PositionsTable />
       </section>
 
-      {/* Kết quả từng lệnh (1 vị thế = 1 lệnh) — bấm dòng để xem biểu đồ review */}
+      {/* Per-trade results (1 position = 1 trade) — click a row to see the review chart */}
       <section className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Kết quả giao dịch (bấm 1 lệnh để review biểu đồ)</h2>
+        <h2 className="mb-3 text-sm font-semibold">{t("Trade results (click a trade to review its chart)")}</h2>
         <TradesTable />
       </section>
 
-      {/* Lịch sử lệnh khớp (từng order) */}
+      {/* Fill history (per order) */}
       <section className="rounded-xl border border-border bg-surface p-4">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-          <h2 className="text-sm font-semibold">Lịch sử khớp lệnh (từng order)</h2>
+          <h2 className="text-sm font-semibold">{t("Fill history (per order)")}</h2>
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <Sel label="Mode" value={mode} onChange={setMode} opts={["PAPER", "TESTNET", "LIVE"]} />
             <Sel label="Source" value={source} onChange={setSource} opts={["BOT", "MANUAL", "SYSTEM"]} />
@@ -88,7 +89,7 @@ export default function Orders() {
               <input
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                placeholder="vd BTCUSDT"
+                placeholder={t("e.g. BTCUSDT")}
                 className="w-28 rounded-md border border-border bg-surface-2 px-2 py-1.5"
               />
             </label>
@@ -105,15 +106,15 @@ export default function Orders() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-faint">
-                <th className="px-2 py-1.5 font-medium">Thời gian</th>
+                <th className="px-2 py-1.5 font-medium">{t("Time")}</th>
                 <th className="px-2 py-1.5 font-medium">Mode</th>
-                <th className="px-2 py-1.5 font-medium">Nguồn</th>
-                <th className="px-2 py-1.5 font-medium">Bot / chiến lược</th>
+                <th className="px-2 py-1.5 font-medium">{t("Source")}</th>
+                <th className="px-2 py-1.5 font-medium">{t("Bot / strategy")}</th>
                 <th className="px-2 py-1.5 font-medium">Symbol</th>
                 <th className="px-2 py-1.5 font-medium">Side</th>
                 <th className="px-2 py-1.5 font-medium">Type</th>
                 <th className="px-2 py-1.5 text-right font-medium">Qty</th>
-                <th className="px-2 py-1.5 text-right font-medium">Giá</th>
+                <th className="px-2 py-1.5 text-right font-medium">{t("Price")}</th>
                 <th className="px-2 py-1.5 text-right font-medium">SL / TP</th>
                 <th className="px-2 py-1.5 font-medium">Status</th>
                 <th className="px-2 py-1.5 font-medium">ext_id</th>
@@ -149,7 +150,7 @@ export default function Orders() {
               {!orders?.length && (
                 <tr>
                   <td colSpan={12} className="px-2 py-4 text-sm text-faint">
-                    Chưa có lệnh nào (theo bộ lọc).
+                    {t("No orders (matching filters).")}
                   </td>
                 </tr>
               )}
@@ -180,7 +181,7 @@ function Sel({
         onChange={(e) => onChange(e.target.value)}
         className="rounded-md border border-border bg-surface-2 px-2 py-1.5"
       >
-        <option value="">Tất cả</option>
+        <option value="">{t("All")}</option>
         {opts.map((o) => (
           <option key={o}>{o}</option>
         ))}

@@ -22,12 +22,12 @@ export default function Dashboard() {
       setTf(config.default_tf);
     }
   }, [config, symbol, urlSymbol]);
-  // đổi symbol khi đến từ scanner (?symbol=).
+  // switch symbol when coming from the scanner (?symbol=).
   useEffect(() => {
     if (urlSymbol) setSymbol(urlSymbol);
   }, [urlSymbol]);
 
-  // watchlist gồm config + symbol từ scanner (nếu khác).
+  // watchlist = config symbols + the scanner symbol (if different).
   const watchSymbols =
     config && urlSymbol && !config.symbols.includes(urlSymbol)
       ? [urlSymbol, ...config.symbols]

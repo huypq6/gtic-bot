@@ -17,6 +17,7 @@ import { loadRange } from "../../lib/datafeed";
 import { chartColors } from "../../lib/chartTheme";
 import { useTheme } from "../../lib/theme";
 import type { BacktestTrade } from "../../lib/api";
+import { t } from "../../lib/i18n";
 
 const TF_MS: Record<string, number> = {
   "1m": 60_000,
@@ -27,7 +28,7 @@ const TF_MS: Record<string, number> = {
   "1d": 86_400_000,
 };
 
-// Giá: đủ chữ số có nghĩa cho cả BTC (84559.32) lẫn DOGE (0.09428).
+// Price: enough significant digits for both BTC (84559.32) and DOGE (0.09428).
 export const fmtPrice = (n: number | null | undefined) =>
   n == null ? "—" : n.toLocaleString("en-US", { maximumSignificantDigits: 7 });
 
@@ -43,13 +44,13 @@ interface Props {
   index: number;
   trade: BacktestTrade;
   onClose: () => void;
-  title?: ReactNode; // thay tiêu đề mặc định "Lệnh #n"
-  info?: ReactNode; // thay lưới thông tin mặc định
-  extraLines?: ExtraLine[]; // vd MFE/MAE
-  tfChoices?: string[]; // cho đổi khung nến khi review
+  title?: ReactNode; // replaces the default "Trade #n" title
+  info?: ReactNode; // replaces the default info grid
+  extraLines?: ExtraLine[]; // e.g. MFE/MAE
+  tfChoices?: string[]; // allow switching timeframe during review
 }
 
-// Chi tiết 1 lệnh + MÔ PHỎNG THỜI GIAN: kéo thanh / play để xem nến lớn dần từ vào → ra.
+// Single-trade detail + TIME REPLAY: drag the slider / play to watch candles build up from entry → exit.
 export default function TradeDetail({
   symbol,
   tf: tf0,
@@ -70,12 +71,12 @@ export default function TradeDetail({
   const barsRef = useRef<CandlestickData[]>([]);
   const theme = useTheme((s) => s.theme);
   const [tf, setTf] = useState(tf0);
-  const [n, setN] = useState(0); // số nến đang hiển thị
-  const [pos, setPos] = useState(0); // vị trí thanh (index nến)
+  const [n, setN] = useState(0); // number of candles loaded
+  const [pos, setPos] = useState(0); // slider position (candle index)
   const [playing, setPlaying] = useState(false);
   const win = (trade.pnl_pct ?? 0) >= 0;
 
-  // tạo chart + nạp nến quanh lệnh.
+  // create chart + load candles around the trade.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -104,7 +105,7 @@ export default function TradeDetail({
     linesRef.current = [];
 
     const ms = TF_MS[tf] ?? 60_000;
-    const bar = (ts: number) => (Math.floor(ts / ms) * ms) / 1000; // ms → time nến chứa ts
+    const bar = (ts: number) => (Math.floor(ts / ms) * ms) / 1000; // ms → time of the candle containing ts
     const from = (trade.entry_ts ?? 0) - 40 * ms;
     const to = (trade.exit_ts ?? Date.now()) + 15 * ms;
     let cancelled = false;
@@ -115,7 +116,7 @@ export default function TradeDetail({
       setN(bars.length);
       setPos(bars.length - 1);
       chart.timeScale().fitContent();
-      // đường giá vào/ra/SL/TP (+ MFE/MAE nếu có)
+      // entry/exit/SL/TP price lines (+ MFE/MAE if provided)
       const mk = (price: number | null, color: string, title: string, dashed = false) =>
         price != null &&
         linesRef.current.push(
@@ -128,14 +129,14 @@ export default function TradeDetail({
             title,
           }),
         );
-      mk(trade.entry, c.text, "vào");
-      mk(trade.exit, win ? c.up : c.down, "ra", true);
+      mk(trade.entry, c.text, t("entry"));
+      mk(trade.exit, win ? c.up : c.down, t("exit"), true);
       mk(trade.sl, c.down, "SL", true);
       mk(trade.tp, c.up, "TP", true);
       for (const l of extraLines ?? [])
         mk(l.price, l.tone === "up" ? c.up : l.tone === "down" ? c.down : c.text, l.title, true);
 
-      // marker vào/ra tại nến tương ứng
+      // entry/exit markers on the corresponding candles
       const long = trade.side.toLowerCase() === "long";
       const m: SeriesMarker<Time>[] = [];
       if (trade.entry_ts)
@@ -144,7 +145,7 @@ export default function TradeDetail({
           position: long ? "belowBar" : "aboveBar",
           color: long ? c.up : c.down,
           shape: long ? "arrowUp" : "arrowDown",
-          text: "vào",
+          text: t("entry"),
         });
       if (trade.exit_ts)
         m.push({
@@ -152,7 +153,7 @@ export default function TradeDetail({
           position: long ? "aboveBar" : "belowBar",
           color: win ? c.up : c.down,
           shape: "circle",
-          text: "ra",
+          text: t("exit"),
         });
       markersRef.current = m;
       markersApiRef.current = createSeriesMarkers(candle, m);
@@ -167,7 +168,7 @@ export default function TradeDetail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, tf, index, theme]);
 
-  // kéo thanh / play → hiển thị nến tới vị trí pos (mô phỏng thời gian).
+  // slider / play → show candles up to pos (time replay).
   useEffect(() => {
     if (!candleRef.current || !barsRef.current.length) return;
     const shown = barsRef.current.slice(0, pos + 1);
@@ -201,7 +202,7 @@ export default function TradeDetail({
           <h2 className="text-sm font-semibold">
             {title ?? (
               <>
-                Lệnh #{index + 1} · {symbol} ·{" "}
+                {t("Trade #{n}", { n: index + 1 })} · {symbol} ·{" "}
                 <span className={trade.side === "Long" ? "text-up" : "text-down"}>{trade.side}</span>{" "}
                 <span className={win ? "text-up" : "text-down"}>
                   {win ? "+" : ""}
@@ -235,8 +236,8 @@ export default function TradeDetail({
 
         {info ?? (
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted md:grid-cols-4">
-            <span>Vào: {trade.entry_ts ? new Date(trade.entry_ts).toLocaleString() : "—"}</span>
-            <span>Ra: {trade.exit_ts ? new Date(trade.exit_ts).toLocaleString() : "—"}</span>
+            <span>{t("Opened:")} {trade.entry_ts ? new Date(trade.entry_ts).toLocaleString() : "—"}</span>
+            <span>{t("Closed:")} {trade.exit_ts ? new Date(trade.exit_ts).toLocaleString() : "—"}</span>
             <span>Entry: {fmtPrice(trade.entry)}</span>
             <span>Exit: {fmtPrice(trade.exit)}</span>
             <span>SL: {fmtPrice(trade.sl)}</span>
@@ -246,7 +247,7 @@ export default function TradeDetail({
 
         <div ref={ref} className="mt-3 h-80 w-full shrink-0" />
 
-        {/* mô phỏng thời gian */}
+        {/* time replay */}
         <div className="mt-3 flex items-center gap-3">
           <button
             onClick={() => {
@@ -254,7 +255,7 @@ export default function TradeDetail({
               setPlaying((p) => !p);
             }}
             className="rounded-md bg-accent px-2.5 py-1.5 text-white hover:bg-accent-strong"
-            title="Phát mô phỏng"
+            title={t("Play replay")}
           >
             {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           </button>
@@ -274,8 +275,7 @@ export default function TradeDetail({
           </span>
         </div>
         <p className="mt-1 text-xs text-faint">
-          Kéo thanh hoặc bấm ▶ để xem biểu đồ biến đổi theo thời gian từ trước khi vào → đến khi ra
-          lệnh.
+          {t("Drag the slider or press ▶ to watch the chart evolve over time, from before entry → until exit.")}
         </p>
       </div>
     </div>

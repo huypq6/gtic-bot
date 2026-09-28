@@ -1,6 +1,6 @@
-"""Cấu hình ứng dụng — đọc từ .env qua pydantic-settings.
+"""Application settings — read from .env via pydantic-settings.
 
-KHÔNG hardcode secret. Mọi key/biến môi trường khai báo ở đây, đọc từ .env.
+NEVER hardcode secrets. Every key/environment variable is declared here and read from .env.
 """
 
 from functools import lru_cache
@@ -22,35 +22,35 @@ class Settings(BaseSettings):
     binance_testnet_key: str = ""
     binance_testnet_secret: str = ""
 
-    # --- Binance Live (chỉ dùng khi ENABLE_LIVE=1) ---
+    # --- Binance Live (only used when ENABLE_LIVE=1) ---
     binance_key: str = ""
     binance_secret: str = ""
 
-    # --- An toàn Live: phải =True mới cho phép mode LIVE ---
+    # --- Live safety: must be True to allow LIVE mode ---
     enable_live: bool = False
 
     # --- App ---
     app_host: str = "0.0.0.0"
     app_port: int = 8000
-    # CORS: origin được phép gọi API (single-user self-hosted → mặc định mọi origin).
-    # Đặt CORS_ORIGINS="http://tsp32:8000,http://192.168.1.x" để giới hạn.
+    # CORS: origins allowed to call the API (single-user self-hosted → all origins by default).
+    # Set CORS_ORIGINS="http://tsp32:8000,http://192.168.1.x" to restrict.
     cors_origins: list[str] = ["*"]
 
-    # --- Market feed (P1+): danh sách symbol/tf theo dõi mặc định ---
+    # --- Market feed (P1+): default watched symbols/timeframes ---
     default_symbols: list[str] = ["BTCUSDT", "ETHUSDT"]
     default_tf: str = "1m"
-    # Tắt để không kết nối Binance WS khi chạy test/CI.
+    # Disable to avoid connecting to Binance WS during tests/CI.
     feed_autostart: bool = True
 
     # --- Scanner (P7) ---
     scan_symbols: list[str] = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
     scan_tf: str = "15m"
     scan_interval_sec: int = 60
-    # SL/TP đề xuất theo ATR: SL = entry ∓ sl×ATR, TP = entry ± tp×ATR.
+    # ATR-based suggested SL/TP: SL = entry ∓ sl×ATR, TP = entry ± tp×ATR.
     scan_sl_atr: float = 1.5
     scan_tp_atr: float = 2.0
 
-    # --- Phí Binance (taker, VIP 0) — dùng cho backtest ---
+    # --- Binance fees (taker, VIP 0) — used for backtests ---
     binance_spot_fee: float = 0.001  # Spot 0.10%
     binance_futures_fee: float = 0.0005  # Futures (USDⓈ-M) 0.05%
     futures_max_leverage: int = 50

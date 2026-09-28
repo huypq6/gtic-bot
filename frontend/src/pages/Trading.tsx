@@ -20,6 +20,7 @@ import ManualOrderForm from "../components/orders/ManualOrderForm";
 import ParamsForm from "../components/strategy/ParamsForm";
 import EnableLiveModal from "../components/live/EnableLiveModal";
 import SizingInput, { sizingText } from "../components/account/SizingInput";
+import { t } from "../lib/i18n";
 
 export default function Trading() {
   const qc = useQueryClient();
@@ -41,13 +42,13 @@ export default function Trading() {
   const [sizing, setSizing] = useState<Sizing>({ method: "risk_pct", value: 1 });
   const modeAccounts = (accounts ?? []).filter((a) => a.mode === mode);
   useEffect(() => {
-    // đổi mode → chọn tài khoản đầu tiên cùng mode (hoặc bỏ trống nếu chưa có)
+    // on mode change → pick the first account of that mode (or leave empty if there is none)
     if (!modeAccounts.some((a) => a.id === accountId))
       setAccountId(modeAccounts.length ? modeAccounts[0].id : "");
   }, [modeAccounts, accountId]);
 
   const selectedStrat = strategies?.find((s) => s.id === stratId);
-  // symbol từ scanner (?symbol=) có thể ngoài watchlist → thêm vào options.
+  // symbol from the scanner (?symbol=) may be outside the watchlist → add it to the options.
   const symbolOptions =
     config && urlSymbol && !config.symbols.includes(urlSymbol)
       ? [urlSymbol, ...config.symbols]
@@ -59,7 +60,7 @@ export default function Trading() {
   useEffect(() => {
     if (urlSymbol) setSymbol(urlSymbol);
   }, [urlSymbol]);
-  // reset params về default khi đổi strategy/version.
+  // reset params to defaults when the strategy/version changes.
   useEffect(() => {
     if (selectedStrat) setParams({ ...selectedStrat.default_params });
   }, [selectedStrat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -105,9 +106,9 @@ export default function Trading() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-      {/* Tạo bot */}
+      {/* Create bot */}
       <section className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Tạo bot</h2>
+        <h2 className="mb-3 text-sm font-semibold">{t("Create bot")}</h2>
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Strategy">
             <select
@@ -157,7 +158,7 @@ export default function Trading() {
           </Field>
           {modeAccounts.length > 0 && (
             <>
-              <Field label="Tài khoản">
+              <Field label={t("Account")}>
                 <select
                   value={accountId}
                   onChange={(e) => setAccountId(Number(e.target.value))}
@@ -182,12 +183,12 @@ export default function Trading() {
                 : "bg-accent text-white hover:bg-accent-strong"
             }`}
           >
-            {create.isPending ? "Đang tạo…" : mode === "LIVE" ? "Tạo (LIVE)" : "Tạo & chạy"}
+            {create.isPending ? t("Creating…") : mode === "LIVE" ? t("Create (LIVE)") : t("Create & run")}
           </button>
         </div>
         {selectedStrat && Object.keys(selectedStrat.param_schema ?? {}).length > 0 && (
           <div className="mt-3 border-t border-border pt-3">
-            <p className="mb-2 text-xs text-faint">Params (chỉnh không cần sửa code)</p>
+            <p className="mb-2 text-xs text-faint">{t("Params (tune without editing code)")}</p>
             <ParamsForm
               schema={selectedStrat.param_schema as Record<string, never>}
               values={params}
@@ -195,14 +196,14 @@ export default function Trading() {
             />
           </div>
         )}
-        {create.isError && <p className="mt-2 text-sm text-down">Lỗi: {(create.error as Error).message}</p>}
+        {create.isError && <p className="mt-2 text-sm text-down">{t("Error: {msg}", { msg: (create.error as Error).message })}</p>}
       </section>
 
       {/* Bots */}
       <section className="rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">Bots</h2>
         {!bots?.length ? (
-          <p className="text-sm text-faint">Chưa có bot.</p>
+          <p className="text-sm text-faint">{t("No bots yet.")}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {bots.map((b) => (
@@ -220,11 +221,11 @@ export default function Trading() {
                   <BotSizing bot={b} methods={methods} accountName={accounts?.find((a) => a.id === b.account_id)?.name} onSaved={refresh} />
                   <span
                     className="text-xs text-faint"
-                    title="Nến đóng cuối cùng bot nhận được (UTC)"
+                    title={t("Last closed candle received by the bot (UTC)")}
                   >
                     {b.last_candle
-                      ? `nến cuối ${new Date(b.last_candle).toISOString().slice(5, 16).replace("T", " ")}`
-                      : "chưa nhận nến"}
+                      ? t("last candle {time}", { time: new Date(b.last_candle).toISOString().slice(5, 16).replace("T", " ") })
+                      : t("no candles yet")}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -259,22 +260,22 @@ export default function Trading() {
         />
       )}
 
-      {/* Lệnh tay */}
+      {/* Manual order */}
       <section className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Đặt lệnh tay</h2>
+        <h2 className="mb-3 text-sm font-semibold">{t("Place manual order")}</h2>
         <ManualOrderForm />
       </section>
 
       {/* Positions realtime */}
       <section className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Vị thế mở (realtime PnL)</h2>
+        <h2 className="mb-3 text-sm font-semibold">{t("Open positions (realtime PnL)")}</h2>
         <PositionsTable />
       </section>
     </div>
   );
 }
 
-// Hiện + sửa nhanh cách tính khối lượng của bot (áp cho lệnh kế tiếp, không cần restart).
+// Show + quick-edit the bot's position sizing (applies to the next order, no restart needed).
 function BotSizing({
   bot,
   methods,
@@ -288,16 +289,16 @@ function BotSizing({
 }) {
   const [edit, setEdit] = useState<Sizing | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  if (bot.account_id == null) return <span className="text-xs text-faint">không gắn tài khoản · size theo strategy</span>;
+  if (bot.account_id == null) return <span className="text-xs text-faint">{t("no account linked · strategy sizing")}</span>;
   const cur = bot.sizing ?? { method: "fixed_qty", value: 0 };
   if (!edit)
     return (
       <button
         onClick={() => setEdit(cur)}
-        title="Sửa khối lượng lệnh"
+        title={t("Edit order size")}
         className="rounded border border-border px-1.5 py-0.5 text-xs text-muted hover:bg-surface"
       >
-        {accountName ?? `TK #${bot.account_id}`} · {sizingText(cur)}
+        {accountName ?? t("Account #{id}", { id: bot.account_id })} · {sizingText(cur)}
       </button>
     );
   return (
@@ -316,10 +317,10 @@ function BotSizing({
         }}
         className="rounded bg-accent px-2 py-1.5 text-xs font-medium text-white"
       >
-        Lưu
+        {t("Save")}
       </button>
       <button onClick={() => setEdit(null)} className="px-1.5 py-1.5 text-xs text-muted">
-        Hủy
+        {t("Cancel")}
       </button>
       {err && <span className="w-full text-xs text-down">{err}</span>}
     </span>

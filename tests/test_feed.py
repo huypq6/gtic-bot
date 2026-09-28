@@ -79,7 +79,7 @@ async def test_handle_raw_publishes_to_bus():
 
 
 async def test_run_reconnects_and_emits_feed_status():
-    """Mô phỏng WS rớt 1 lần → feed phát RECONNECTING rồi OK lại."""
+    """Simulate the WS dropping once → feed emits RECONNECTING then OK again."""
     bus = EventBus()
     feed_events = bus.subscribe("feed")
     attempts = {"n": 0}
@@ -101,7 +101,7 @@ async def test_run_reconnects_and_emits_feed_status():
             attempts["n"] += 1
             if self._fail:
                 raise ConnectionError("dropped")
-            # lần 2: gửi 1 message rồi dừng feed
+            # 2nd time: send 1 message then stop the feed
             feed.stop()
             raise StopAsyncIteration
 
@@ -135,7 +135,7 @@ class _CtrlWS:
 async def test_add_symbol_subscribes_runtime():
     feed = MarketFeed(EventBus(), symbols=["BTCUSDT"], tf="1m")
     ws = _CtrlWS()
-    feed._ws = ws  # giả lập đang kết nối
+    feed._ws = ws  # pretend we are connected
     await feed.add_symbol("ethusdt")
     assert "ETHUSDT" in feed._symbols
     assert "ethusdt@kline_1m" in feed.stream_url()
@@ -155,17 +155,17 @@ async def test_remove_symbol_unsubscribes_runtime():
 async def test_add_duplicate_noop():
     feed = MarketFeed(EventBus(), symbols=["BTCUSDT"], tf="1m")
     feed._ws = _CtrlWS()
-    await feed.add_symbol("BTCUSDT")  # đã có
+    await feed.add_symbol("BTCUSDT")  # already present
     assert feed._symbols == ["BTCUSDT"]
     assert feed._ws.sent == []
 
 
-# --- stream kline theo bot (symbol, tf) — bug: bot 15m không nhận nến khi feed tf=1m ---
+# --- per-bot kline streams (symbol, tf) — bug: a 15m bot got no candles when the feed tf=1m ---
 
 
 async def test_ensure_kline_adds_bot_tf_to_url():
     feed = MarketFeed(EventBus(), symbols=["BTCUSDT"], tf="1m")
-    await feed.ensure_kline("dogeusdt", "15m")  # chưa nối WS → chỉ vào URL
+    await feed.ensure_kline("dogeusdt", "15m")  # WS not connected → only added to the URL
     url = feed.stream_url()
     assert "dogeusdt@kline_15m" in url
     assert "btcusdt@kline_1m" in url
@@ -183,7 +183,7 @@ async def test_ensure_kline_subscribes_runtime_once():
 async def test_ensure_kline_default_tf_no_duplicate_stream():
     feed = MarketFeed(EventBus(), symbols=["BTCUSDT"], tf="1m")
     feed._ws = _CtrlWS()
-    await feed.ensure_kline("BTCUSDT", "1m")  # đã có trong stream mặc định
+    await feed.ensure_kline("BTCUSDT", "1m")  # already in the default streams
     assert feed._ws.sent == []
     assert feed.stream_url().count("btcusdt@kline_1m") == 1
 
@@ -198,7 +198,7 @@ async def test_remove_symbol_keeps_bot_stream():
 
 
 async def test_run_subscribes_streams_added_during_handshake():
-    """ensure_kline gọi khi đang connect (URL đã dựng, _ws None) → phải SUBSCRIBE bù."""
+    """ensure_kline called while connecting (URL built, _ws None) → must SUBSCRIBE to catch up."""
     bus = EventBus()
     sent = []
 
@@ -220,7 +220,7 @@ async def test_run_subscribes_streams_added_during_handshake():
             raise StopAsyncIteration
 
     def fake_connect(url, **kw):
-        # mô phỏng bot đăng ký stream trong lúc bắt tay
+        # simulate a bot registering a stream during the handshake
         feed._bot_klines.add(("DOGEUSDT", "15m"))
         return FakeWS()
 

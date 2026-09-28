@@ -16,13 +16,14 @@ import TradeDetail, { fmtPrice } from "../components/backtest/TradeDetail";
 import VersionCompare from "../components/strategy/VersionCompare";
 import ParamsForm from "../components/strategy/ParamsForm";
 import InfoTip from "../components/InfoTip";
+import { t } from "../lib/i18n";
 
 export default function Backtest() {
   const qc = useQueryClient();
   const { data: strategies } = useQuery({ queryKey: ["strategies"], queryFn: fetchStrategies });
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: fetchConfig });
 
-  // Phí Binance taker (VIP0): Spot 0.10%, Futures 0.05%.
+  // Binance taker fee (VIP0): Spot 0.10%, Futures 0.05%.
   const FEE_PRESET: Record<string, string> = { SPOT: "0.001", FUTURES: "0.0005" };
   const [stratId, setStratId] = useState<number | "">("");
   const [symbol, setSymbol] = useState("");
@@ -35,7 +36,7 @@ export default function Backtest() {
   const [feeEdited, setFeeEdited] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [params, setParams] = useState<Record<string, unknown>>({});
-  // P9c — engine mô phỏng tài khoản (mặc định): khối lượng theo vốn, SL trong nến, như paper.
+  // P9c — account simulation engine (default): equity-based sizing, intra-candle SL, same as paper.
   const { data: methods } = useQuery({ queryKey: ["sizing-methods"], queryFn: fetchSizingMethods });
   const [engine, setEngine] = useState<"ACCOUNT" | "VBT">("ACCOUNT");
   const [sizing, setSizing] = useState<Sizing>({ method: "risk_pct", value: 1 });
@@ -50,7 +51,7 @@ export default function Backtest() {
   useEffect(() => {
     if (strategies?.length && stratId === "") setStratId(strategies[0].id);
   }, [strategies, stratId]);
-  // đổi strategy → nạp lại params mặc định của strategy đó (để chỉnh trước khi chạy).
+  // strategy changed → reload that strategy's default params (to tweak before running).
   useEffect(() => {
     if (selectedStrat) setParams({ ...selectedStrat.default_params });
   }, [selectedStrat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -60,7 +61,7 @@ export default function Backtest() {
       setTf(config.default_tf);
     }
   }, [config, symbol]);
-  // đổi thị trường → tự áp phí Binance (nếu chưa sửa tay).
+  // market changed → apply the Binance fee automatically (unless edited by hand).
   useEffect(() => {
     if (!feeEdited) setFee(FEE_PRESET[market]);
     if (market === "SPOT") setLeverage("1");
@@ -78,7 +79,7 @@ export default function Backtest() {
         market,
         leverage: Number(leverage),
         fee_rate: Number(fee),
-        // gộp lên default_params + ép số; "" → bỏ qua (dùng mặc định backend).
+        // merge over default_params + coerce numbers; "" → skipped (backend default is used).
         params: cleanParams({ ...selectedStrat?.default_params, ...params }),
         ...(engine === "ACCOUNT"
           ? {
@@ -109,8 +110,8 @@ export default function Backtest() {
           <div className="flex rounded-md border border-border text-xs">
             {(
               [
-                ["ACCOUNT", "Mô phỏng tài khoản (như paper)"],
-                ["VBT", "Nhanh — vectorbt (100% vốn, khớp giá đóng)"],
+                ["ACCOUNT", t("Account simulation (like paper)")],
+                ["VBT", t("Fast — vectorbt (100% equity, fills at close)")],
               ] as const
             ).map(([k, l]) => (
               <button
@@ -143,24 +144,24 @@ export default function Backtest() {
               {config?.timeframes.map((t) => <option key={t}>{t}</option>)}
             </select>
           </F>
-          <F label="Số ngày">
+          <F label={t("Days")}>
             <input value={days} onChange={(e) => setDays(e.target.value)} className={inp} />
           </F>
-          <F label="Thị trường">
+          <F label={t("Market")}>
             <select value={market} onChange={(e) => setMarket(e.target.value)} className={sel}>
               <option value="SPOT">Spot</option>
               <option value="FUTURES">Futures</option>
             </select>
           </F>
           {market === "FUTURES" && (
-            <F label="Đòn bẩy ×">
+            <F label={t("Leverage ×")}>
               <input value={leverage} onChange={(e) => setLeverage(e.target.value)} className={inp} />
             </F>
           )}
-          <F label="Vốn (USDT)">
+          <F label={t("Capital (USDT)")}>
             <input value={capital} onChange={(e) => setCapital(e.target.value)} className={inp} />
           </F>
-          <F label="Phí 1 chiều">
+          <F label={t("Fee per side")}>
             <input
               value={fee}
               onChange={(e) => {
@@ -173,17 +174,17 @@ export default function Backtest() {
           {engine === "ACCOUNT" && (
             <>
               <SizingInput value={sizing} onChange={setSizing} methods={methods} />
-              <F label="Trượt giá (bps)">
+              <F label={t("Slippage (bps)")}>
                 <input value={slip} onChange={(e) => setSlip(e.target.value)} className={inp} />
               </F>
-              <F label="Trần rủi ro/lệnh %">
-                <input value={maxRisk} placeholder="tắt" onChange={(e) => setMaxRisk(e.target.value)} className={inp} />
+              <F label={t("Max risk/trade %")}>
+                <input value={maxRisk} placeholder={t("off")} onChange={(e) => setMaxRisk(e.target.value)} className={inp} />
               </F>
-              <F label="Lỗ ngày tối đa %">
-                <input value={dailyLoss} placeholder="tắt" onChange={(e) => setDailyLoss(e.target.value)} className={inp} />
+              <F label={t("Max daily loss %")}>
+                <input value={dailyLoss} placeholder={t("off")} onChange={(e) => setDailyLoss(e.target.value)} className={inp} />
               </F>
-              <F label="Sụt vốn tối đa %">
-                <input value={maxDd} placeholder="tắt" onChange={(e) => setMaxDd(e.target.value)} className={inp} />
+              <F label={t("Max drawdown %")}>
+                <input value={maxDd} placeholder={t("off")} onChange={(e) => setMaxDd(e.target.value)} className={inp} />
               </F>
             </>
           )}
@@ -192,12 +193,12 @@ export default function Backtest() {
             disabled={run.isPending || stratId === ""}
             className="rounded-md bg-accent px-3 py-1.5 font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
           >
-            {run.isPending ? "Đang chạy…" : "Chạy backtest"}
+            {run.isPending ? t("Running…") : t("Run backtest")}
           </button>
         </div>
         {engine === "ACCOUNT" && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-faint">So sánh thêm (cùng dữ liệu):</span>
+            <span className="text-faint">{t("Also compare (same data):")}</span>
             {CMP_PRESETS.map(([k, l]) => (
               <button
                 key={k}
@@ -214,7 +215,7 @@ export default function Backtest() {
         {selectedStrat && Object.keys(selectedStrat.param_schema ?? {}).length > 0 && (
           <div className="mt-3 border-t border-border pt-3">
             <p className="mb-2 text-xs text-faint">
-              Tham số chiến lược (chỉnh trước khi chạy — không cần sửa code)
+              {t("Strategy parameters (tweak before running — no code changes needed)")}
             </p>
             <ParamsForm
               schema={selectedStrat.param_schema as Record<string, never>}
@@ -224,17 +225,19 @@ export default function Backtest() {
           </div>
         )}
         <p className="mt-2 text-xs text-faint">
-          Phí Binance taker (VIP0): Spot {(+FEE_PRESET.SPOT * 100).toFixed(2)}% · Futures{" "}
-          {(+FEE_PRESET.FUTURES * 100).toFixed(3)}% (mỗi chiều). Futures cho đòn bẩy — hợp vốn nhỏ
-          nhưng rủi ro cháy tài khoản cao.
+          {t(
+            "Binance taker fee (VIP0): Spot {spot}% · Futures {fut}% (per side). Futures allow leverage — suits small capital but carries a high risk of liquidation.",
+            { spot: (+FEE_PRESET.SPOT * 100).toFixed(2), fut: (+FEE_PRESET.FUTURES * 100).toFixed(3) },
+          )}
         </p>
         {engine === "ACCOUNT" && (
           <p className="mt-1 text-xs text-faint">
-            Mô phỏng tài khoản dùng CHUNG code với paper: khối lượng theo vốn (lãi kép), phí maker/taker, trượt
-            giá, SL/TP khớp trong nến (O→H/L→C), rào chắn lỗ ngày/sụt vốn. Chạy được tới ~40.000 nến (≈ 1 năm 15m).
+            {t(
+              "Account simulation shares the SAME code as paper: equity-based sizing (compounding), maker/taker fees, slippage, SL/TP filled within the candle (O→H/L→C), daily-loss/drawdown guards. Handles up to ~40,000 candles (≈ 1 year of 15m).",
+            )}
           </p>
         )}
-        {run.isError && <p className="mt-2 text-sm text-down">Lỗi: {(run.error as Error).message}</p>}
+        {run.isError && <p className="mt-2 text-sm text-down">{t("Error:")} {(run.error as Error).message}</p>}
       </section>
 
       {res && (
@@ -248,15 +251,14 @@ export default function Backtest() {
             </span>
             <span className="rounded border border-border px-2 py-0.5">
               <InfoTip term="fee" align="left">
-                phí {((res.fee_rate ?? 0) * 100).toFixed(3)}%/chiều
+                {t("fee {pct}%/side", { pct: ((res.fee_rate ?? 0) * 100).toFixed(3) })}
               </InfoTip>
             </span>
-            <span>vốn {res.capital} USDT</span>
+            <span>{t("capital {cap} USDT", { cap: res.capital ?? "" })}</span>
           </div>
           {res.liquidated && (
             <div className="rounded-lg border border-down/40 bg-down/10 px-3 py-2 text-sm text-down">
-              ⚠️ Cháy tài khoản (liquidated): equity về 0 do đòn bẩy ×{res.leverage}. Giảm đòn bẩy
-              hoặc dùng SL.
+              ⚠️ {t("Account liquidated: equity went to 0 due to ×{lev} leverage. Lower the leverage or use an SL.", { lev: res.leverage ?? "" })}
             </div>
           )}
           {res.engine === "ACCOUNT" ? (
@@ -267,14 +269,14 @@ export default function Backtest() {
               <Metric label="Win rate" term="winrate" value={res.winrate} suffix="%" />
               <Metric label="Max DD" term="max_dd" value={res.max_dd} suffix="%" good={false} />
               <Metric label="Sharpe" term="sharpe" value={res.sharpe} />
-              <Metric label="Số lệnh" term="n_trades" value={res.n_trades} />
+              <Metric label={t("Trades")} term="n_trades" value={res.n_trades} />
             </section>
           )}
 
           {res.from_ts && res.to_ts && (
             <section className="rounded-xl border border-border bg-surface p-4">
               <h3 className="mb-2 text-sm font-semibold">
-                Chart backtest — nến + đường chiến lược + marker vào/ra
+                {t("Backtest chart — candles + strategy lines + entry/exit markers")}
               </h3>
               <BacktestChart
                 symbol={res.symbol}
@@ -289,7 +291,7 @@ export default function Backtest() {
 
           <section className="rounded-xl border border-border bg-surface p-4">
             <h3 className="mb-2 text-sm font-semibold">
-              Trades ({res.trades.length}) — bấm 1 lệnh để xem chi tiết + mô phỏng thời gian
+              {t("Trades ({n}) — click a trade for details + time replay", { n: res.trades.length })}
             </h3>
             <div className="max-h-80 overflow-auto">
               <table className="w-full text-sm">
@@ -297,17 +299,17 @@ export default function Backtest() {
                   <tr className="text-left text-xs uppercase tracking-wide text-faint">
                     <th className="px-2 py-1.5">#</th>
                     <th className="px-2 py-1.5">Side</th>
-                    <th className="px-2 py-1.5">Vào lúc</th>
-                    <th className="px-2 py-1.5">Ra lúc</th>
+                    <th className="px-2 py-1.5">{t("Entry time")}</th>
+                    <th className="px-2 py-1.5">{t("Exit time")}</th>
                     <th className="px-2 py-1.5 text-right">Entry</th>
                     <th className="px-2 py-1.5 text-right">Exit</th>
-                    <th className="px-2 py-1.5 text-right">{acct ? "% vốn" : "PnL %"}</th>
+                    <th className="px-2 py-1.5 text-right">{acct ? t("% equity") : "PnL %"}</th>
                     {acct && (
                       <>
                         <th className="px-2 py-1.5 text-right">PnL (USDT)</th>
                         <th className="px-2 py-1.5 text-right">R</th>
-                        <th className="px-2 py-1.5 text-right">Phí</th>
-                        <th className="px-2 py-1.5">Thoát</th>
+                        <th className="px-2 py-1.5 text-right">{t("Fee")}</th>
+                        <th className="px-2 py-1.5">{t("Exit reason")}</th>
                       </>
                     )}
                   </tr>
@@ -357,11 +359,11 @@ export default function Backtest() {
           </section>
 
           <section className="rounded-xl border border-border bg-surface p-4">
-            <h3 className="mb-2 text-sm font-semibold">{acct ? "Diễn biến vốn (USDT)" : "Equity curve"}</h3>
+            <h3 className="mb-2 text-sm font-semibold">{acct ? t("Equity history (USDT)") : "Equity curve"}</h3>
             {res.equity_curve.length > 1 ? (
               <EquityCurve data={res.equity_curve} />
             ) : (
-              <p className="text-sm text-faint">Không đủ dữ liệu vẽ equity.</p>
+              <p className="text-sm text-faint">{t("Not enough data to plot equity.")}</p>
             )}
           </section>
 
@@ -379,7 +381,7 @@ export default function Backtest() {
 
       {stratName && (
         <section className="rounded-xl border border-border bg-surface p-4">
-          <h3 className="mb-2 text-sm font-semibold">So sánh version — {stratName}</h3>
+          <h3 className="mb-2 text-sm font-semibold">{t("Version comparison — {name}", { name: stratName })}</h3>
           <VersionCompare name={stratName} />
         </section>
       )}
@@ -388,23 +390,23 @@ export default function Backtest() {
 }
 
 const CMP_PRESETS: [string, string][] = [
-  ["risk_pct:0.5", "rủi ro 0.5%"],
-  ["risk_pct:1", "rủi ro 1%"],
-  ["risk_pct:2", "rủi ro 2%"],
-  ["risk_pct:3", "rủi ro 3%"],
-  ["notional_pct:100:1", "100% vốn 1× (như vectorbt)"],
-  ["notional_pct:50:1", "50% vốn 1×"],
+  ["risk_pct:0.5", t("risk {pct}%", { pct: "0.5" })],
+  ["risk_pct:1", t("risk {pct}%", { pct: "1" })],
+  ["risk_pct:2", t("risk {pct}%", { pct: "2" })],
+  ["risk_pct:3", t("risk {pct}%", { pct: "3" })],
+  ["notional_pct:100:1", t("100% equity 1× (like vectorbt)")],
+  ["notional_pct:50:1", t("50% equity 1×")],
 ];
 
 const EXIT: Record<string, string> = {
-  SL: "Chạm SL",
-  TP: "Chạm TP",
-  SIGNAL: "Tín hiệu",
-  LIQUIDATION: "Thanh lý",
-  END: "Hết dữ liệu",
+  SL: t("SL hit"),
+  TP: t("TP hit"),
+  SIGNAL: t("Signal"),
+  LIQUIDATION: t("Liquidation"),
+  END: t("End of data"),
 };
 
-// Bỏ field rỗng ("" do xoá input) → backend dùng mặc định cho field đó.
+// Drop empty fields ("" from a cleared input) → the backend uses the default for that field.
 function cleanParams(p: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(p).filter(([, v]) => v !== "" && v != null));
 }

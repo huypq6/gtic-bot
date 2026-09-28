@@ -1,4 +1,4 @@
-"""position: exit_reason + init_sl (review lệnh: lý do thoát, R theo SL ban đầu)
+"""position: exit_reason + init_sl (trade review: exit reason, R based on the initial SL)
 
 Revision ID: a7c1e2d4f901
 Revises: 3ca6a8351dba
@@ -19,7 +19,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.add_column('position', sa.Column('exit_reason', sa.String(), nullable=True))
     op.add_column('position', sa.Column('init_sl', sa.Numeric(), nullable=True))
-    # vị thế cũ: SL ban đầu ≈ SL hiện có (chưa ai sửa tay trong paper).
+    # existing positions: initial SL ≈ current SL (nobody edits it manually in paper).
     op.execute("UPDATE position SET init_sl = sl WHERE init_sl IS NULL")
 
 

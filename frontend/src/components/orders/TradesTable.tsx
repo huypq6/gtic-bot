@@ -5,26 +5,27 @@ import { fetchTrades, type TradeRow } from "../../lib/api";
 import ModeBadge from "../ModeBadge";
 import InfoTip from "../InfoTip";
 import TradeDetail, { fmtPrice } from "../backtest/TradeDetail";
+import { t } from "../../lib/i18n";
 
 const RESULT: Record<TradeRow["result"], { label: string; cls: string }> = {
-  WIN: { label: "THẮNG", cls: "bg-up/15 text-up" },
-  LOSS: { label: "THUA", cls: "bg-down/15 text-down" },
-  BE: { label: "HÒA", cls: "bg-surface-2 text-muted" },
-  OPEN: { label: "ĐANG MỞ", cls: "bg-warn/15 text-warn" },
+  WIN: { label: t("WIN"), cls: "bg-up/15 text-up" },
+  LOSS: { label: t("LOSS"), cls: "bg-down/15 text-down" },
+  BE: { label: t("BREAKEVEN"), cls: "bg-surface-2 text-muted" },
+  OPEN: { label: t("OPEN"), cls: "bg-warn/15 text-warn" },
 };
 
 const REASON: Record<string, string> = {
-  SL: "Chạm SL",
-  TP: "Chạm TP",
-  SIGNAL: "Tín hiệu đóng",
-  MANUAL: "Đóng tay",
-  LIQUIDATION: "Bị thanh lý",
+  SL: t("SL hit"),
+  TP: t("TP hit"),
+  SIGNAL: t("Exit signal"),
+  MANUAL: t("Manual close"),
+  LIQUIDATION: t("Liquidated"),
 };
 
 const signed = (n: number | null, d = 2, suffix = "") =>
   n == null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(d)}${suffix}`;
 
-// Tiền (USDT): số nhỏ (paper size bé) vẫn hiện được chữ số có nghĩa.
+// Money (USDT): small amounts (tiny paper sizes) still show significant digits.
 const money = (n: number | null) =>
   n == null
     ? "—"
@@ -34,15 +35,20 @@ const money = (n: number | null) =>
 
 const tone = (n: number | null) => (n == null ? "" : n >= 0 ? "text-up" : "text-down");
 
-// "ict_po3 v4" | "Bot #5 (đã xóa)" | "Lệnh tay"
-const stratLabel = (t: TradeRow) =>
-  t.strategy ?? (t.source === "BOT" ? `Bot${t.bot_ref != null ? ` #${t.bot_ref}` : ""} (đã xóa)` : "Lệnh tay");
+// "ict_po3 v4" | "Bot #5 (deleted)" | "Manual order"
+const stratLabel = (tr: TradeRow) =>
+  tr.strategy ??
+  (tr.source === "BOT"
+    ? tr.bot_ref != null
+      ? t("Bot #{id} (deleted)", { id: tr.bot_ref })
+      : t("Bot (deleted)")
+    : t("Manual order"));
 
-const botLabel = (t: TradeRow) =>
-  t.bot_ref != null ? `bot #${t.bot_ref}${t.bot_deleted ? " (đã xóa)" : ""}` : "tay";
+const botLabel = (tr: TradeRow) =>
+  tr.bot_ref != null ? `bot #${tr.bot_ref}${tr.bot_deleted ? ` ${t("(deleted)")}` : ""}` : t("manual");
 
-// Quy đổi: lot paper bé → PnL thật ~0. Đặt "1R = X USDT" (rủi ro mỗi lệnh) → PnL quy đổi = R × X,
-// so được giữa các cặp và ra con số dễ hình dung. Lưu theo trình duyệt.
+// Normalization: tiny paper lots → real PnL ~0. Set "1R = X USDT" (risk per trade) → normalized PnL = R × X,
+// comparable across pairs and easy to picture. Stored per browser.
 const RISK_KEY = "gtic.riskPerR";
 const loadRisk = () => {
   try {
@@ -57,9 +63,9 @@ const usd = (n: number | null) =>
 
 function duration(from: number, to: number | null) {
   const m = Math.round(((to ?? Date.now()) - from) / 60_000);
-  if (m < 60) return `${m}p`;
+  if (m < 60) return t("{n}m", { n: m });
   const h = Math.floor(m / 60);
-  return h < 24 ? `${h}h${m % 60 ? `${m % 60}p` : ""}` : `${Math.floor(h / 24)}d${h % 24}h`;
+  return h < 24 ? `${h}h${m % 60 ? t("{n}m", { n: m % 60 }) : ""}` : `${Math.floor(h / 24)}d${h % 24}h`;
 }
 
 export default function TradesTable() {
@@ -70,7 +76,7 @@ export default function TradesTable() {
     try {
       if (v > 0) localStorage.setItem(RISK_KEY, String(v));
     } catch {
-      /* private mode — bỏ qua */
+      /* private mode — ignore */
     }
   };
   const [symbol, setSymbol] = useState("");
@@ -81,39 +87,39 @@ export default function TradesTable() {
     refetchInterval: 10_000,
   });
 
-  const closed = (trades ?? []).filter((t) => t.status === "CLOSED");
-  const wins = closed.filter((t) => t.result === "WIN").length;
-  const sumPnl = closed.reduce((a, t) => a + (t.pnl ?? 0), 0);
-  const rs = closed.filter((t) => t.r != null);
-  const sumR = rs.reduce((a, t) => a + (t.r ?? 0), 0);
+  const closed = (trades ?? []).filter((tr) => tr.status === "CLOSED");
+  const wins = closed.filter((tr) => tr.result === "WIN").length;
+  const sumPnl = closed.reduce((a, tr) => a + (tr.pnl ?? 0), 0);
+  const rs = closed.filter((tr) => tr.r != null);
+  const sumR = rs.reduce((a, tr) => a + (tr.r ?? 0), 0);
 
   return (
     <>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div className="flex flex-wrap gap-2 text-xs">
-          <Stat label="Lệnh đã đóng" value={`${closed.length}`} />
+          <Stat label={t("Closed trades")} value={`${closed.length}`} />
           <Stat
-            label="Thắng / Thua"
+            label={t("Wins / Losses")}
             value={`${wins} / ${closed.length - wins}`}
             sub={closed.length ? `${((wins / closed.length) * 100).toFixed(0)}% winrate` : undefined}
           />
           <Stat
-            label={`PnL quy đổi (1R = $${risk})`}
+            label={t("Normalized PnL (1R = ${risk})", { risk })}
             value={usd(sumR * risk)}
             cls={tone(sumR)}
-            sub={`thực tế ${money(sumPnl)} USDT`}
+            sub={t("actual {v} USDT", { v: money(sumPnl) })}
           />
           <Stat
-            label="Tổng R"
+            label={t("Total R")}
             value={signed(sumR, 2, "R")}
             cls={tone(sumR)}
-            sub={rs.length ? `TB ${signed(sumR / rs.length, 2, "R")}/lệnh` : undefined}
+            sub={rs.length ? t("avg {v}/trade", { v: signed(sumR / rs.length, 2, "R") }) : undefined}
           />
         </div>
         <div className="flex items-end gap-2 text-sm">
           <label className="flex flex-col gap-1">
             <span className="text-xs text-faint">
-              <InfoTip text="Số tiền chấp nhận mất mỗi lệnh (1R) để quy đổi PnL. Lot paper nhỏ nên PnL thật gần 0 — quy đổi = R × số này, so được giữa các cặp.">
+              <InfoTip text={t("Amount you accept to lose per trade (1R), used to normalize PnL. Paper lots are tiny so real PnL is near 0 — normalized = R × this amount, comparable across pairs.")}>
                 1R = USDT
               </InfoTip>
             </span>
@@ -133,7 +139,7 @@ export default function TradesTable() {
               onChange={(e) => setMode(e.target.value)}
               className="rounded-md border border-border bg-surface-2 px-2 py-1.5"
             >
-              <option value="">Tất cả</option>
+              <option value="">{t("All")}</option>
               {["PAPER", "TESTNET", "LIVE"].map((o) => (
                 <option key={o}>{o}</option>
               ))}
@@ -144,7 +150,7 @@ export default function TradesTable() {
             <input
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-              placeholder="vd BTCUSDT"
+              placeholder={t("e.g. BTCUSDT")}
               className="w-28 rounded-md border border-border bg-surface-2 px-2 py-1.5"
             />
           </label>
@@ -155,13 +161,13 @@ export default function TradesTable() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-faint">
-              <th className="px-2 py-1.5 font-medium">Vào lúc</th>
-              <th className="px-2 py-1.5 font-medium">Chiến lược</th>
+              <th className="px-2 py-1.5 font-medium">{t("Opened")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("Strategy")}</th>
               <th className="px-2 py-1.5 font-medium">Symbol</th>
               <th className="px-2 py-1.5 font-medium">Side</th>
               <th className="px-2 py-1.5 text-right font-medium">Entry → Exit</th>
-              <th className="px-2 py-1.5 font-medium">Kết quả</th>
-              <th className="px-2 py-1.5 text-right font-medium">PnL quy đổi</th>
+              <th className="px-2 py-1.5 font-medium">{t("Result")}</th>
+              <th className="px-2 py-1.5 text-right font-medium">{t("Normalized PnL")}</th>
               <th className="px-2 py-1.5 text-right font-medium">
                 <InfoTip term="r">R</InfoTip>
               </th>
@@ -171,73 +177,73 @@ export default function TradesTable() {
               <th className="px-2 py-1.5 text-right font-medium">
                 <InfoTip term="mae">MAE</InfoTip>
               </th>
-              <th className="px-2 py-1.5 text-right font-medium">Giữ</th>
+              <th className="px-2 py-1.5 text-right font-medium">{t("Held")}</th>
               <th className="px-2 py-1.5" />
             </tr>
           </thead>
           <tbody>
-            {(trades ?? []).map((t) => (
+            {(trades ?? []).map((tr) => (
               <tr
-                key={t.id}
-                onClick={() => setSel(t)}
+                key={tr.id}
+                onClick={() => setSel(tr)}
                 className="cursor-pointer border-t border-border hover:bg-surface-2"
               >
                 <td className="px-2 py-1.5 text-xs tabular-nums text-muted">
-                  {new Date(t.opened_at).toLocaleString()}
+                  {new Date(tr.opened_at).toLocaleString()}
                   <div className="mt-0.5">
-                    <ModeBadge mode={t.mode} />
+                    <ModeBadge mode={tr.mode} />
                   </div>
                 </td>
                 <td className="px-2 py-1.5">
-                  <div className="font-medium">{stratLabel(t)}</div>
+                  <div className="font-medium">{stratLabel(tr)}</div>
                   <div className="text-xs text-faint">
-                    {botLabel(t)}
-                    {t.tf ? ` · ${t.tf}` : ""}
+                    {botLabel(tr)}
+                    {tr.tf ? ` · ${tr.tf}` : ""}
                   </div>
                 </td>
-                <td className="px-2 py-1.5 font-medium">{t.symbol}</td>
-                <td className={`px-2 py-1.5 font-medium ${t.side === "LONG" ? "text-up" : "text-down"}`}>
-                  {t.side}
+                <td className="px-2 py-1.5 font-medium">{tr.symbol}</td>
+                <td className={`px-2 py-1.5 font-medium ${tr.side === "LONG" ? "text-up" : "text-down"}`}>
+                  {tr.side}
                 </td>
                 <td className="px-2 py-1.5 text-right text-xs tabular-nums">
-                  {fmtPrice(t.entry_price)} → {fmtPrice(t.exit_price)}
-                  <div className="text-faint">{t.exit_reason ? REASON[t.exit_reason] ?? t.exit_reason : ""}</div>
+                  {fmtPrice(tr.entry_price)} → {fmtPrice(tr.exit_price)}
+                  <div className="text-faint">{tr.exit_reason ? REASON[tr.exit_reason] ?? tr.exit_reason : ""}</div>
                 </td>
                 <td className="px-2 py-1.5">
-                  <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${RESULT[t.result].cls}`}>
-                    {RESULT[t.result].label}
+                  <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${RESULT[tr.result].cls}`}>
+                    {RESULT[tr.result].label}
                   </span>
                 </td>
-                <td className={`px-2 py-1.5 text-right tabular-nums ${tone(t.r ?? t.pnl)}`}>
-                  <span className="font-medium">{usd(t.r != null ? t.r * risk : null)}</span>
-                  <div className="text-xs">{signed(t.pnl_pct, 2, "%")}</div>
-                  <div className="text-[11px] text-faint" title="PnL thật theo khối lượng bot đã đặt">
-                    thật {money(t.pnl)}
+                <td className={`px-2 py-1.5 text-right tabular-nums ${tone(tr.r ?? tr.pnl)}`}>
+                  <span className="font-medium">{usd(tr.r != null ? tr.r * risk : null)}</span>
+                  <div className="text-xs">{signed(tr.pnl_pct, 2, "%")}</div>
+                  <div className="text-[11px] text-faint" title={t("Real PnL based on the size the bot placed")}>
+                    {t("real {v}", { v: money(tr.pnl) })}
                   </div>
                 </td>
-                <td className={`px-2 py-1.5 text-right font-medium tabular-nums ${tone(t.r)}`}>
-                  {signed(t.r, 2, "R")}
+                <td className={`px-2 py-1.5 text-right font-medium tabular-nums ${tone(tr.r)}`}>
+                  {signed(tr.r, 2, "R")}
                 </td>
                 <td className="px-2 py-1.5 text-right text-xs tabular-nums text-up">
-                  {signed(t.mfe_pct, 2, "%")}
-                  <div>{t.mfe_r != null ? signed(t.mfe_r, 2, "R") : ""}</div>
+                  {signed(tr.mfe_pct, 2, "%")}
+                  <div>{tr.mfe_r != null ? signed(tr.mfe_r, 2, "R") : ""}</div>
                 </td>
                 <td className="px-2 py-1.5 text-right text-xs tabular-nums text-down">
-                  {t.mae_pct != null ? signed(-t.mae_pct, 2, "%") : "—"}
-                  <div>{t.mae_r != null ? signed(-t.mae_r, 2, "R") : ""}</div>
+                  {tr.mae_pct != null ? signed(-tr.mae_pct, 2, "%") : "—"}
+                  <div>{tr.mae_r != null ? signed(-tr.mae_r, 2, "R") : ""}</div>
                 </td>
                 <td className="px-2 py-1.5 text-right text-xs tabular-nums text-muted">
-                  {duration(t.opened_at, t.closed_at)}
+                  {duration(tr.opened_at, tr.closed_at)}
                 </td>
                 <td className="px-2 py-1.5 text-right">
-                  <LineChart className="inline h-4 w-4 text-muted" aria-label="Xem biểu đồ" />
+                  <LineChart className="inline h-4 w-4 text-muted" aria-label={t("View chart")} />
                 </td>
               </tr>
             ))}
             {!trades?.length && (
               <tr>
                 <td colSpan={12} className="px-2 py-4 text-sm text-faint">
-                  Chưa có lệnh nào.
+                  {t("No trades yet.")}
                 </td>
               </tr>
             )}
@@ -260,9 +266,9 @@ function Stat({ label, value, sub, cls = "" }: { label: string; value: string; s
   );
 }
 
-// Modal review 1 lệnh: số liệu + biểu đồ nến quanh lệnh (vào/ra/SL/TP/MFE/MAE) + phát lại.
-function TradeReview({ t, risk, onClose }: { t: TradeRow; risk: number; onClose: () => void }) {
-  const r = RESULT[t.result];
+// Single-trade review modal: stats + candle chart around the trade (entry/exit/SL/TP/MFE/MAE) + replay.
+function TradeReview({ t: tr, risk, onClose }: { t: TradeRow; risk: number; onClose: () => void }) {
+  const r = RESULT[tr.result];
   const time = (ms: number | null) => (ms ? new Date(ms).toLocaleString() : "—");
   const Item = ({ k, v, cls = "" }: { k: string; v: string; cls?: string }) => (
     <div className="flex justify-between gap-2">
@@ -272,76 +278,76 @@ function TradeReview({ t, risk, onClose }: { t: TradeRow; risk: number; onClose:
   );
   return (
     <TradeDetail
-      symbol={t.symbol}
-      tf={t.tf ?? "1m"}
-      index={t.id}
-      tfChoices={[...new Set(["1m", t.tf ?? "1m"])]} // server chỉ lưu 1m + tf của bot
+      symbol={tr.symbol}
+      tf={tr.tf ?? "1m"}
+      index={tr.id}
+      tfChoices={[...new Set(["1m", tr.tf ?? "1m"])]} // server only stores 1m + the bot's tf
       trade={{
-        side: t.side === "LONG" ? "Long" : "Short",
-        entry_ts: t.opened_at,
-        entry: t.entry_price,
-        exit_ts: t.closed_at,
-        exit: t.exit_price,
-        pnl_pct: t.pnl_pct,
-        sl: t.init_sl ?? t.sl,
-        tp: t.tp,
+        side: tr.side === "LONG" ? "Long" : "Short",
+        entry_ts: tr.opened_at,
+        entry: tr.entry_price,
+        exit_ts: tr.closed_at,
+        exit: tr.exit_price,
+        pnl_pct: tr.pnl_pct,
+        sl: tr.init_sl ?? tr.sl,
+        tp: tr.tp,
       }}
       extraLines={[
-        ...(t.mfe_price != null ? [{ price: t.mfe_price, title: "MFE", tone: "up" as const }] : []),
-        ...(t.mae_price != null ? [{ price: t.mae_price, title: "MAE", tone: "down" as const }] : []),
+        ...(tr.mfe_price != null ? [{ price: tr.mfe_price, title: "MFE", tone: "up" as const }] : []),
+        ...(tr.mae_price != null ? [{ price: tr.mae_price, title: "MAE", tone: "down" as const }] : []),
       ]}
       onClose={onClose}
       title={
         <span className="flex flex-wrap items-center gap-2">
           <span>
-            Lệnh #{t.id} · {t.symbol} ·{" "}
-            <span className={t.side === "LONG" ? "text-up" : "text-down"}>{t.side}</span>
+            {t("Trade #{id}", { id: tr.id })} · {tr.symbol} ·{" "}
+            <span className={tr.side === "LONG" ? "text-up" : "text-down"}>{tr.side}</span>
           </span>
           <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${r.cls}`}>{r.label}</span>
-          <span className={tone(t.pnl)}>
-            {signed(t.r, 2, "R")} ≈ {usd(t.r != null ? t.r * risk : null)}
+          <span className={tone(tr.pnl)}>
+            {signed(tr.r, 2, "R")} ≈ {usd(tr.r != null ? tr.r * risk : null)}
           </span>
         </span>
       }
       info={
         <div className="grid grid-cols-1 gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
           <div className="space-y-1">
-            <Item k="Chiến lược" v={stratLabel(t)} />
-            <Item k="Bot / khung" v={`${botLabel(t)} · ${t.tf ?? "—"}`} />
-            <Item k="Vào lúc" v={time(t.opened_at)} />
-            <Item k="Ra lúc" v={time(t.closed_at)} />
-            <Item k="Thời gian giữ" v={duration(t.opened_at, t.closed_at)} />
+            <Item k={t("Strategy")} v={stratLabel(tr)} />
+            <Item k={t("Bot / timeframe")} v={`${botLabel(tr)} · ${tr.tf ?? "—"}`} />
+            <Item k={t("Opened")} v={time(tr.opened_at)} />
+            <Item k={t("Closed")} v={time(tr.closed_at)} />
+            <Item k={t("Holding time")} v={duration(tr.opened_at, tr.closed_at)} />
           </div>
           <div className="space-y-1">
-            <Item k="Entry" v={fmtPrice(t.entry_price)} />
-            <Item k="Exit" v={`${fmtPrice(t.exit_price)}${t.exit_reason ? ` (${REASON[t.exit_reason] ?? t.exit_reason})` : ""}`} />
-            <Item k="SL ban đầu / TP" v={`${fmtPrice(t.init_sl ?? t.sl)} / ${fmtPrice(t.tp)}`} />
-            <Item k="Khối lượng" v={`${t.qty} (${t.notional.toLocaleString("en-US", { maximumSignificantDigits: 4 })} USDT)`} />
-            <Item k="Rủi ro 1R (thật)" v={t.risk_amount != null ? `${money(t.risk_amount).replace("+", "")} USDT` : "—"} />
+            <Item k="Entry" v={fmtPrice(tr.entry_price)} />
+            <Item k="Exit" v={`${fmtPrice(tr.exit_price)}${tr.exit_reason ? ` (${REASON[tr.exit_reason] ?? tr.exit_reason})` : ""}`} />
+            <Item k={t("Initial SL / TP")} v={`${fmtPrice(tr.init_sl ?? tr.sl)} / ${fmtPrice(tr.tp)}`} />
+            <Item k={t("Size")} v={`${tr.qty} (${tr.notional.toLocaleString("en-US", { maximumSignificantDigits: 4 })} USDT)`} />
+            <Item k={t("1R risk (real)")} v={tr.risk_amount != null ? `${money(tr.risk_amount).replace("+", "")} USDT` : "—"} />
           </div>
           <div className="space-y-1">
-            <Item k={`PnL quy đổi (1R = $${risk})`} v={usd(t.r != null ? t.r * risk : null)} cls={tone(t.r)} />
-            <Item k="PnL thật" v={`${money(t.pnl)} USDT (${signed(t.pnl_pct, 2, "%")})`} cls={tone(t.pnl)} />
-            {t.fee != null && <Item k="Phí (vào + ra)" v={`${money(-t.fee)} USDT`} cls="text-down" />}
-            {t.margin != null && <Item k="Ký quỹ đã khóa" v={`${money(t.margin).replace("+", "")} USDT`} />}
-            <Item k="R thực hiện" v={signed(t.r, 2, "R")} cls={tone(t.r)} />
+            <Item k={t("Normalized PnL (1R = ${risk})", { risk })} v={usd(tr.r != null ? tr.r * risk : null)} cls={tone(tr.r)} />
+            <Item k={t("Real PnL")} v={`${money(tr.pnl)} USDT (${signed(tr.pnl_pct, 2, "%")})`} cls={tone(tr.pnl)} />
+            {tr.fee != null && <Item k={t("Fees (entry + exit)")} v={`${money(-tr.fee)} USDT`} cls="text-down" />}
+            {tr.margin != null && <Item k={t("Locked margin")} v={`${money(tr.margin).replace("+", "")} USDT`} />}
+            <Item k={t("Realized R")} v={signed(tr.r, 2, "R")} cls={tone(tr.r)} />
             <Item
-              k="MFE (lời tối đa)"
-              v={`${signed(t.mfe_pct, 2, "%")}${t.mfe_r != null ? ` · ${signed(t.mfe_r, 2, "R")} ≈ ${usd(t.mfe_r * risk)}` : ""} @ ${fmtPrice(t.mfe_price)}`}
+              k={t("MFE (max favorable excursion)")}
+              v={`${signed(tr.mfe_pct, 2, "%")}${tr.mfe_r != null ? ` · ${signed(tr.mfe_r, 2, "R")} ≈ ${usd(tr.mfe_r * risk)}` : ""} @ ${fmtPrice(tr.mfe_price)}`}
               cls="text-up"
             />
             <Item
-              k="MAE (lỗ tối đa)"
-              v={`${t.mae_pct != null ? signed(-t.mae_pct, 2, "%") : "—"}${t.mae_r != null ? ` · ${signed(-t.mae_r, 2, "R")} ≈ ${usd(-t.mae_r * risk)}` : ""} @ ${fmtPrice(t.mae_price)}`}
+              k={t("MAE (max adverse excursion)")}
+              v={`${tr.mae_pct != null ? signed(-tr.mae_pct, 2, "%") : "—"}${tr.mae_r != null ? ` · ${signed(-tr.mae_r, 2, "R")} ≈ ${usd(-tr.mae_r * risk)}` : ""} @ ${fmtPrice(tr.mae_price)}`}
               cls="text-down"
             />
-            <Item k="Lúc MFE / MAE" v={`${t.mfe_ts ? new Date(t.mfe_ts).toLocaleTimeString() : "—"} / ${t.mae_ts ? new Date(t.mae_ts).toLocaleTimeString() : "—"}`} />
+            <Item k={t("MFE / MAE time")} v={`${tr.mfe_ts ? new Date(tr.mfe_ts).toLocaleTimeString() : "—"} / ${tr.mae_ts ? new Date(tr.mae_ts).toLocaleTimeString() : "—"}`} />
           </div>
-          {t.params && (
+          {tr.params && (
             <details className="sm:col-span-3">
-              <summary className="cursor-pointer text-faint">Tham số bot lúc vào lệnh</summary>
+              <summary className="cursor-pointer text-faint">{t("Bot params at entry")}</summary>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px] text-muted">
-                {Object.entries(t.params).map(([k, v]) => (
+                {Object.entries(tr.params).map(([k, v]) => (
                   <span key={k}>
                     {k}={String(v)}
                   </span>

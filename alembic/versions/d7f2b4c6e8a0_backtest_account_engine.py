@@ -1,4 +1,4 @@
-"""backtest: engine mô phỏng tài khoản (P9c) — cột sizing/settings/stats + trade USDT/R
+"""backtest: account-simulation engine (P9c) — sizing/settings/stats columns + trade USDT/R
 
 Revision ID: d7f2b4c6e8a0
 Revises: c5e1a2b3d4f6

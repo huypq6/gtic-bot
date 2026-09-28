@@ -54,9 +54,9 @@ def test_v2_gap_filter_blocks_tiny_cross():
     from app.strategy.base import Context
     from app.strategy.strategies.ema_cross import EmaCrossV2
 
-    strat = EmaCrossV2({"fast": 3, "slow": 6, "size": 1, "gap_pct": 50})  # gap 50% rất khó đạt
+    strat = EmaCrossV2({"fast": 3, "slow": 6, "size": 1, "gap_pct": 50})  # 50% gap: hard to reach
     candles, sigs = [], []
     for c in [10, 10, 10, 10, 9, 8, 7, 8, 9, 10, 11, 12, 13, 14, 15]:
         candles.append({"close": c})
         sigs += strat.on_candle(Context("X", c, list(candles), None))
-    assert sigs == []  # gap quá lớn → không vào lệnh
+    assert sigs == []  # gap too large → no entry

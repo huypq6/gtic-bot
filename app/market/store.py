@@ -1,9 +1,9 @@
-"""Lưu/đọc kline trong Postgres + sync lịch sử từ Binance REST.
+"""Store/read klines in Postgres + sync history from Binance REST.
 
-- `upsert_klines`: ghi (idempotent) các nến đã đóng.
-- `get_klines`: đọc cho chart load ban đầu.
-- `sync_historical`: tải lịch sử qua python-binance REST → upsert.
-- `persist_closed_klines`: task nền, subscribe firehose bus, ghi nến `closed=True`.
+- `upsert_klines`: write (idempotently) closed candles.
+- `get_klines`: read for the chart's initial load.
+- `sync_historical`: download history via python-binance REST → upsert.
+- `persist_closed_klines`: background task, subscribes to the bus firehose, writes closed candles.
 """
 
 import logging
@@ -33,12 +33,12 @@ def _row_from_payload(p: dict) -> dict:
     }
 
 
-# asyncpg giới hạn 32767 bind params/query; 8 cột/dòng → batch an toàn ~4000 dòng.
+# asyncpg limits 32767 bind params/query; 8 columns/row → safe batch of ~4000 rows.
 _UPSERT_BATCH = 2000
 
 
 async def upsert_klines(session: AsyncSession, rows: list[dict]) -> int:
-    """Upsert theo PK (symbol, tf, ts), chia batch để không vượt giới hạn params."""
+    """Upsert by PK (symbol, tf, ts), batched to stay under the params limit."""
     if not rows:
         return 0
     for i in range(0, len(rows), _UPSERT_BATCH):
@@ -68,7 +68,7 @@ async def get_klines(
         q = q.where(Kline.ts <= end)
     q = q.order_by(Kline.ts.desc()).limit(limit)
     rows = (await session.execute(q)).scalars().all()
-    rows = list(reversed(rows))  # trả về theo thời gian tăng dần
+    rows = list(reversed(rows))  # return in ascending time order
     return [
         {
             "ts": int(k.ts.timestamp() * 1000),
@@ -86,8 +86,8 @@ async def sync_historical(
     session: AsyncSession, symbol: str, tf: str, start_str: str | int,
     end_str: str | None = None,
 ) -> int:
-    """Tải lịch sử từ Binance REST (public, không cần key) → upsert. start: chuỗi
-    python-binance hiểu ("7 days ago UTC") hoặc ms (int)."""
+    """Download history from Binance REST (public, no key needed) → upsert. start: a string
+    python-binance understands ("7 days ago UTC") or ms (int)."""
     client = await AsyncClient.create()
     try:
         raw = await client.get_historical_klines(symbol, tf, start_str, end_str)
@@ -116,11 +116,11 @@ _TF_MS = {"1m": 60_000, "3m": 180_000, "5m": 300_000, "15m": 900_000, "30m": 1_8
 async def ensure_history(
     session: AsyncSession, symbol: str, tf: str, start: datetime
 ) -> int:
-    """Đảm bảo DB có nến liền mạch từ `start` tới hiện tại — chỉ tải PHẦN THIẾU.
+    """Ensure the DB has contiguous candles from `start` to now — download only the MISSING PART.
 
-    DB đã phủ từ `start` và không thủng (đếm ≥ 99% số nến kỳ vọng) → chỉ tải từ nến
-    cuối; ngược lại tải lại cả khoảng (vá lỗ). Tránh mỗi lần backtest 1 năm lại gọi
-    Binance ~35 request.
+    If the DB already covers from `start` with no gaps (count ≥ 99% of expected candles) → only
+    download from the last candle; otherwise re-download the whole range (fill gaps). Avoids
+    ~35 Binance requests on every 1-year backtest.
     """
     from sqlalchemy import func
 
@@ -139,7 +139,7 @@ async def ensure_history(
 
 
 async def persist_closed_klines(bus: EventBus, session_factory: async_sessionmaker) -> None:
-    """Task nền: ghi mỗi nến đã đóng vào DB. Hủy qua CancelledError."""
+    """Background task: write each closed candle to the DB. Cancelled via CancelledError."""
     sub = bus.subscribe("*")
     while True:
         msg = await sub.get()
@@ -148,5 +148,5 @@ async def persist_closed_klines(bus: EventBus, session_factory: async_sessionmak
         try:
             async with session_factory() as session:
                 await upsert_klines(session, [_row_from_payload(msg)])
-        except Exception:  # noqa: BLE001 — không để persistence làm chết feed loop
-            logger.exception("persist kline thất bại")
+        except Exception:  # noqa: BLE001 — never let persistence kill the feed loop
+            logger.exception("persisting kline failed")

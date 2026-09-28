@@ -1,4 +1,4 @@
-// Badge mode nổi bật (US-15). Màu theo ma trận an toàn: paper=teal, testnet=amber, live=đỏ.
+// Prominent mode badge (US-15). Colours follow the safety matrix: paper=teal, testnet=amber, live=red.
 const STYLES: Record<string, string> = {
   PAPER: "bg-accent/15 text-accent border-accent/30",
   TESTNET: "bg-warn/15 text-warn border-warn/30",

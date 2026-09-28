@@ -1,6 +1,6 @@
-"""Keltner Channel Breakout — vượt dải EMA ± ATR (trend/momentum).
+"""Keltner Channel Breakout — break out of the EMA ± ATR bands (trend/momentum).
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
+=== EDIT THE STRATEGY HERE ===
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -12,7 +12,7 @@ from app.strategy.ta import atr, ema, keltner_bands
 class KeltnerBreakout(Strategy):
     name = "keltner"
     version = "1"
-    description = "Keltner breakout — vượt dải trên (BUY), thủng dải dưới (SELL)."
+    description = "Keltner breakout — break above upper band (BUY), break below lower band (SELL)."
     default_params = {"period": 20, "mult": 2.0, "size": 0.001}
     param_schema = {
         "period": {"type": "int", "min": 5, "max": 200, "default": 20},
@@ -30,9 +30,9 @@ class KeltnerBreakout(Strategy):
         mid = mid_series[-1]
         upper, lower = mid + mult * a, mid - mult * a
         if ctx.price > upper:
-            return [Signal("BUY", ctx.symbol, size)]   # bứt phá lên
+            return [Signal("BUY", ctx.symbol, size)]   # upside breakout
         if ctx.price < lower:
-            return [Signal("SELL", ctx.symbol, size)]  # bứt phá xuống
+            return [Signal("SELL", ctx.symbol, size)]  # downside breakout
         return []
 
     def plot(self, candles):

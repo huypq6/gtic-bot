@@ -1,12 +1,12 @@
-"""EventBus — pub/sub in-memory trên asyncio.Queue (single process).
+"""EventBus — in-memory pub/sub on asyncio.Queue (single process).
 
-Topic dạng chuỗi: `kline.{symbol}.{tf}`, `ticker.{symbol}`, `signal`,
-`order.update`, `scan`, `feed`. Subscriber đăng ký 1 topic → nhận Queue riêng.
-Topic đặc biệt `"*"` = firehose, nhận MỌI message (dùng cho WSGateway forward).
+String topics: `kline.{symbol}.{tf}`, `ticker.{symbol}`, `signal`,
+`order.update`, `scan`, `feed`. A subscriber registers for 1 topic → gets its own Queue.
+The special topic `"*"` = firehose, receives EVERY message (used by the WSGateway to forward).
 
-Đủ cho single-user; chừa cửa thay bằng Redis pub/sub nếu cần scale.
-Backpressure: queue đầy → DROP message mới (không block publisher) để feed
-realtime không bị một subscriber chậm làm nghẽn.
+Good enough for single-user; leaves room to swap in Redis pub/sub if scaling is needed.
+Backpressure: queue full → DROP the new message (never block the publisher) so the realtime
+feed is not stalled by one slow subscriber.
 """
 
 import asyncio
@@ -24,7 +24,7 @@ class EventBus:
         self._subs: dict[str, set[asyncio.Queue]] = {}
 
     def subscribe(self, topic: str, maxsize: int | None = None) -> asyncio.Queue:
-        """Đăng ký 1 topic, trả về Queue nhận message của topic đó."""
+        """Subscribe to 1 topic; returns a Queue receiving that topic's messages."""
         q: asyncio.Queue = asyncio.Queue(
             maxsize=self._default_maxsize if maxsize is None else maxsize
         )
@@ -39,7 +39,7 @@ class EventBus:
                 del self._subs[topic]
 
     async def publish(self, topic: str, message: Any) -> None:
-        """Gửi message tới subscriber của `topic` và của firehose `"*"`."""
+        """Send a message to subscribers of `topic` and of the `"*"` firehose."""
         for t in (topic, WILDCARD):
             for q in self._subs.get(t, ()):
                 _offer(q, message, topic)

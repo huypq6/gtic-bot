@@ -1,53 +1,53 @@
-# RSI Reversal — Đảo chiều theo RSI
+# RSI Reversal — RSI-based reversal
 
-> Trường phái: **Mean-reversion** (hồi quy về trung bình). Khung gợi ý: 15m–4h. Hợp thị trường dao động trong biên.
+> Style: **Mean-reversion** (reverting to the mean). Suggested timeframes: 15m–4h. Suits range-bound markets.
 
-## Ý tưởng
+## Idea
 
-RSI (Relative Strength Index, Welles Wilder) đo **tốc độ & độ lớn** biến động giá, dao động 0–100. Giả thuyết mean-reversion: khi giá bị đẩy **quá xa** một chiều (quá bán/quá mua), nó có xu hướng **bật ngược** về vùng cân bằng.
+RSI (Relative Strength Index, Welles Wilder) measures the **speed & magnitude** of price moves, oscillating between 0–100. Mean-reversion hypothesis: when price is pushed **too far** in one direction (oversold/overbought), it tends to **bounce back** toward equilibrium.
 
-## Công thức
+## Formula
 
 ```
-RS = trung bình tăng (gains) / trung bình giảm (losses)   — làm mượt Wilder
+RS = average gain / average loss   — Wilder smoothing
 RSI = 100 − 100 / (1 + RS)
 ```
 
-- `RSI < 30` → **quá bán** (oversold).
-- `RSI > 70` → **quá mua** (overbought).
+- `RSI < 30` → **oversold**.
+- `RSI > 70` → **overbought**.
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động | Logic |
+| Condition | Action | Logic |
 |---|---|---|
-| `RSI < oversold` | **BUY** (LONG) | bắt đáy, kỳ vọng bật lên |
-| `RSI > overbought` | **SELL** (SHORT) | bắt đỉnh, kỳ vọng rơi xuống |
+| `RSI < oversold` | **BUY** (LONG) | catch the bottom, expect a bounce up |
+| `RSI > overbought` | **SELL** (SHORT) | catch the top, expect a drop |
 
-> Đây là chiến thuật **ngược xu hướng** — cần cẩn trọng (xem Nhược điểm).
+> This is a **counter-trend** strategy — use with caution (see Cons).
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `period` | 14 | Chu kỳ RSI. |
-| `oversold` | 30 | Ngưỡng quá bán → BUY. |
-| `overbought` | 70 | Ngưỡng quá mua → SELL. |
-| `size` | 0.001 | Khối lượng. |
+| `period` | 14 | RSI period. |
+| `oversold` | 30 | Oversold threshold → BUY. |
+| `overbought` | 70 | Overbought threshold → SELL. |
+| `size` | 0.001 | Order size. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Hiệu quả trong **sideway** / biên dao động — mua thấp bán cao.
-- ✅ Tín hiệu rõ ràng, dễ hiểu.
-- ❌ **Nguy hiểm trong xu hướng mạnh**: RSI có thể "quá mua/bán" kéo dài → bắt dao rơi ngược xu hướng dễ lỗ nặng.
-- ❌ Không có SL thì rủi ro đuôi lớn.
+- ✅ Effective in **sideways** / range-bound markets — buy low, sell high.
+- ✅ Clear, easy-to-understand signals.
+- ❌ **Dangerous in strong trends**: RSI can stay "overbought/oversold" for a long time → catching a falling knife against the trend can lead to heavy losses.
+- ❌ Without an SL, tail risk is large.
 
-## Khi nào dùng
+## When to use
 
-- Thị trường **đi ngang**, biên dao động ổn định.
-- Nên kết hợp **lọc xu hướng** (vd chỉ BUY khi giá còn trên EMA dài) hoặc bật SL để tránh kẹt khi thị trường breakout.
+- **Sideways** markets with a stable range.
+- Combine with a **trend filter** (e.g. only BUY while price is above a long EMA) or enable an SL to avoid getting stuck when the market breaks out.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Thử các ngưỡng (20/80, 30/70) và `period`.
-- Backtest qua cả giai đoạn **trending** lẫn **sideway** để thấy điểm yếu khi có xu hướng.
-- Để ngược-xu-hướng an toàn hơn: cân nhắc chỉ vào khi RSI **thoát** khỏi vùng cực (cross back) thay vì khi đang ở trong.
+- Try different thresholds (20/80, 30/70) and `period` values.
+- Backtest across both **trending** and **sideways** periods to see the weakness during trends.
+- To make counter-trend trading safer: consider entering only when RSI **exits** the extreme zone (cross back) rather than while it is inside it.

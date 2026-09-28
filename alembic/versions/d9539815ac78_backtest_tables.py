@@ -52,7 +52,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['run_id'], ['backtest_run.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    # NOTE: bỏ drop 'kline_ts_idx' — index do Timescale hypertable quản lý.
+    # NOTE: dropping 'kline_ts_idx' skipped — the index is managed by the Timescale hypertable.
     # ### end Alembic commands ###
 
 

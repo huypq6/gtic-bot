@@ -1,11 +1,14 @@
-"""Danh mục equal-weight vol_breakout (k0.6 sl0) trên rổ cặp 15m — DD/tuần ở mức DANH MỤC.
+"""Equal-weight vol_breakout portfolio (k0.6 sl0) on a 15m pair basket.
 
-Chạy:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/portfolio_vol_breakout.py
-Xấp xỉ: equity danh mục = trung bình các equity curve chuẩn hóa (chia vốn đều, không rebalance chéo).
+Measures DD/week at the PORTFOLIO level.
+
+Run:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/portfolio_vol_breakout.py
+Approximation: portfolio equity = mean of normalized equity curves
+(equal capital split, no cross-rebalancing).
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.backtest.engine import run_backtest
 from app.db import async_session
@@ -22,7 +25,7 @@ FEE = 0.0005
 def weekly_returns(eq: dict[int, float]) -> list[tuple[str, float]]:
     weeks: dict = {}
     for ts in sorted(eq):
-        d = datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
+        d = datetime.fromtimestamp(ts / 1000, tz=UTC)
         key = f"{d.isocalendar().year}-W{d.isocalendar().week:02d}"
         weeks.setdefault(key, [eq[ts], eq[ts]])[1] = eq[ts]
     return [(k, (w[1] / w[0] - 1) * 100) for k, w in weeks.items() if w[0] > 0]
@@ -35,7 +38,7 @@ async def main() -> None:
             await sync_historical(s, sym, TF, START)
             await s.commit()
             data[sym] = await get_klines(s, sym, TF, limit=20000)
-            print(f"  data {sym}: {len(data[sym])} nến")
+            print(f"  data {sym}: {len(data[sym])} candles")
     print()
 
     curves = {}
@@ -43,12 +46,13 @@ async def main() -> None:
         try:
             r = run_backtest("vol_breakout", "1", PARAMS, candles, 1000.0, FEE, TF, 1)
         except Exception as e:  # noqa: BLE001
-            print(f"  {sym}: lỗi {e}")
+            print(f"  {sym}: error {e}")
             continue
-        curves[sym] = {ts: v / 1000.0 for ts, v in r["equity_curve"]}  # chuẩn hóa về 1.0
+        curves[sym] = {ts: v / 1000.0 for ts, v in r["equity_curve"]}  # normalize to 1.0
         print(f"  {sym}: pnl={r['pnl_pct']:+.2f}% maxDD={r['max_dd']:.2f}% n={r['n_trades']}")
 
-    # equity curve downsample lệch ts giữa các cặp → gom bin 6h (giá trị cuối bin) + forward-fill
+    # downsampled equity curves have misaligned ts across pairs → 6h bins (last value in bin) +
+    # forward-fill
     BIN = 6 * 3600 * 1000
     binned = {}
     for sym, c in curves.items():
@@ -77,16 +81,17 @@ async def main() -> None:
         npos = sum(1 for _, v in wk if v > 0)
         worst = min((v for _, v in wk), default=0.0)
         total = (vals[-1] / vals[0] - 1) * 100
-        print(f"\nDANH MỤC {label} ({len(sel)} cặp, {TF}, 180d):")
-        print(f"  PnL tổng {total:+.2f}% · maxDD {max_dd*100:.2f}% · "
-              f"tuần: {npos}/{len(wk)} dương ({100*npos/max(len(wk),1):.0f}%), tệ nhất {worst:+.2f}%")
+        print(f"\nPORTFOLIO {label} ({len(sel)} pairs, {TF}, 180d):")
+        print(f"  Total PnL {total:+.2f}% · maxDD {max_dd*100:.2f}% · "
+              f"weeks: {npos}/{len(wk)} positive ({100*npos/max(len(wk),1):.0f}%), worst "
+              f"{worst:+.2f}%")
         neg = [f"{k}:{v:+.1f}%" for k, v in wk if v <= -2]
-        print(f"  Tuần âm ≤−2%: {', '.join(neg) if neg else 'không có'}")
+        print(f"  Negative weeks ≤−2%: {', '.join(neg) if neg else 'none'}")
 
-    report("đủ 6 cặp (không chọn lọc)", SYMBOLS)
-    report("3 cặp chuẩn (BTC/ETH/SOL — chọn TRƯỚC khi quét, không bias)",
+    report("all 6 pairs (no selection)", SYMBOLS)
+    report("3 standard pairs (BTC/ETH/SOL — chosen BEFORE the scan, no bias)",
            ["BTCUSDT", "ETHUSDT", "SOLUSDT"])
-    report("4 cặp dương (BTC/ETH/SOL/XRP — ⚠️ chọn sau khi nhìn kết quả = selection bias)",
+    report("4 positive pairs (BTC/ETH/SOL/XRP — ⚠️ chosen after seeing results = selection bias)",
            ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"])
 
 

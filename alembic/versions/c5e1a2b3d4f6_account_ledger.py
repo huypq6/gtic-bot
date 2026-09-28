@@ -1,7 +1,7 @@
-"""account + account_txn (sổ cái) + bot.account_id/sizing + position.account_id/fee/margin/risk
+"""account + account_txn (ledger) + bot.account_id/sizing + position.account_id/fee/margin/risk
 
-Tạo sẵn tài khoản "Paper chính" 1.000 USDT; gán mọi bot PAPER vào đó, quản lý vốn
-mặc định rủi ro 1%/lệnh.
+Creates a default paper account with 1,000 USDT; assigns every PAPER bot to it, money management
+defaults to 1% risk per trade.
 
 Revision ID: c5e1a2b3d4f6
 Revises: b3d9f0a1c2e4
@@ -73,10 +73,10 @@ def upgrade() -> None:
         WITH a AS (
             INSERT INTO account (name, balance, peak_equity, max_risk_pct, max_open_risk_pct,
                                  daily_loss_pct, max_dd_pct)
-            VALUES ('Paper chính', 1000, 1000, 2, 6, 3, 15) RETURNING id
+            VALUES ('Main paper', 1000, 1000, 2, 6, 3, 15) RETURNING id
         ), t AS (
             INSERT INTO account_txn (account_id, type, amount, balance_after, note)
-            SELECT id, 'DEPOSIT', 1000, 1000, 'Vốn ban đầu' FROM a
+            SELECT id, 'DEPOSIT', 1000, 1000, 'Initial capital' FROM a
         )
         UPDATE bot SET account_id = (SELECT id FROM a),
                        sizing = '{"method": "risk_pct", "value": 1}'::jsonb

@@ -1,9 +1,10 @@
-"""Quét tham số ict_po3 trên dữ liệu thật (in-process, không ghi DB).
+"""Parameter sweep for ict_po3 on real data (in-process, no DB writes).
 
-Chạy:  uv run python scripts/sweep_ict_po3.py
+Run:  uv run python scripts/sweep_ict_po3.py
 
-Xếp hạng theo ĐỘ BỀN (số thị trường có lời) rồi tới PnL trung bình — ưu tiên bộ tham số
-chạy ổn trên NHIỀU cặp/khung hơn là đỉnh cục bộ 1 thị trường (giảm overfit).
+Ranked by ROBUSTNESS (number of profitable markets), then average PnL — favours parameter sets
+that work consistently across MANY pairs/timeframes over a local peak on 1 market
+(reduces overfitting).
 """
 
 import asyncio
@@ -12,20 +13,21 @@ from app.backtest.engine import run_backtest
 from app.db import async_session
 from app.market.store import get_klines, sync_historical
 
-# (symbol, tf, cửa sổ lịch sử)
+# (symbol, tf, history window)
 MARKETS = [
     ("BTCUSDT", "15m", "45 days ago UTC"),
     ("ETHUSDT", "15m", "45 days ago UTC"),
     ("BTCUSDT", "1h", "120 days ago UTC"),
     ("ETHUSDT", "1h", "120 days ago UTC"),
 ]
-FEE = 0.0005          # taker Futures (1 chiều)
-MIN_TOTAL_TRADES = 20  # bộ nào quá ít lệnh → loại (không đủ mẫu)
+FEE = 0.0005          # Futures taker (one side)
+MIN_TOTAL_TRADES = 20  # sets with too few trades → dropped (sample too small)
 
 
 def build_grid() -> list[dict]:
-    # Giữ SL theo ATR (sl_mode=1, đã chứng minh tốt). Quét các knob GIẢM TẦN SUẤT để bớt phí:
-    # confluence (3=+OB chặt hơn), swing (rộng→ít MSS), mss_lookback (debounce dài hơn).
+    # Keep the ATR-based SL (sl_mode=1, proven good). Sweep the FREQUENCY-REDUCING knobs to cut
+    # fees:
+    # confluence (3=+OB, stricter), swing (wider→fewer MSS), mss_lookback (longer debounce).
     grid = []
     for conf in (2, 3):
         for swing in (1, 2, 3):
@@ -51,14 +53,14 @@ async def load_data() -> dict:
             await s.commit()
             candles = await get_klines(s, sym, tf, limit=20000)
             data[(sym, tf)] = candles
-            print(f"  data {sym} {tf}: {len(candles)} nến")
+            print(f"  data {sym} {tf}: {len(candles)} candles")
     return data
 
 
 def evaluate(params: dict, data: dict) -> dict:
     pnls, wins, trades, worst_dd = [], [], 0, 0.0
     pos = 0
-    for (sym, tf), candles in data.items():
+    for (_sym, tf), candles in data.items():
         try:
             r = run_backtest("ict_po3", "3", params, candles, 1000.0, FEE, tf, 1)
         except Exception:  # noqa: BLE001
@@ -76,7 +78,7 @@ def evaluate(params: dict, data: dict) -> dict:
         "params": params,
         "mean_pnl": sum(pnls) / len(pnls),
         "worst_pnl": min(pnls),
-        "pos": pos,                       # số thị trường có lời
+        "pos": pos,                       # number of profitable markets
         "mean_win": sum(wins) / len(wins) if wins else 0.0,
         "trades": trades,
         "max_dd": worst_dd,
@@ -90,10 +92,11 @@ def fmt(p: dict) -> str:
 
 
 async def main() -> None:
-    print("Nạp dữ liệu (sync Binance nếu thiếu)…")
+    print("Loading data (syncing from Binance if missing)…")
     data = await load_data()
     grid = build_grid()
-    print(f"\nQuét {len(grid)} bộ tham số × {len(MARKETS)} thị trường = {len(grid) * len(MARKETS)} backtest…\n")
+    print(f"\nSweeping {len(grid)} parameter sets × {len(MARKETS)} markets = "
+          f"{len(grid) * len(MARKETS)} backtests…\n")
 
     results = []
     for i, params in enumerate(grid, 1):
@@ -104,28 +107,33 @@ async def main() -> None:
             print(f"  …{i}/{len(grid)}")
 
     elig = [r for r in results if r["trades"] >= MIN_TOTAL_TRADES]
-    # bền trước (nhiều thị trường lời), rồi PnL trung bình, rồi worst-case đỡ tệ.
+    # robustness first (more profitable markets), then avg PnL, then the least-bad worst case.
     elig.sort(key=lambda r: (r["pos"], r["mean_pnl"], r["worst_pnl"]), reverse=True)
 
-    print(f"\n{'='*92}\nTOP 15 (lọc ≥{MIN_TOTAL_TRADES} lệnh; xếp theo #thị-trường-lời, rồi PnL TB):")
-    print(f"{'#thị-trường-lời':>15} {'PnL_TB%':>9} {'worst%':>8} {'win%':>6} {'lệnh':>5} {'maxDD%':>7}  params")
+    print(f"\n{'='*92}\nTOP 15 (filtered ≥{MIN_TOTAL_TRADES} trades; ranked by "
+          "#profitable-markets, then avg PnL):")
+    print(f"{'#profitable-mkts':>15} {'avgPnL%':>9} {'worst%':>8} {'win%':>6} {'trades':>6} "
+          f"{'maxDD%':>7}  params")
     for r in elig[:15]:
         print(f"{r['pos']:>13}/4 {r['mean_pnl']:>9.2f} {r['worst_pnl']:>8.2f} "
               f"{r['mean_win']:>6.1f} {r['trades']:>5} {r['max_dd']:>7.2f}  {fmt(r['params'])}")
 
     if elig:
         best = elig[0]
-        print(f"\n{'='*92}\nĐỀ XUẤT (bền nhất): {fmt(best['params'])}")
-        print(f"  PnL TB {best['mean_pnl']:.2f}% · lời {best['pos']}/4 thị trường · "
-              f"win {best['mean_win']:.1f}% · {best['trades']} lệnh · maxDD {best['max_dd']:.2f}%")
+        print(f"\n{'='*92}\nRECOMMENDED (most robust): {fmt(best['params'])}")
+        print(f"  avg PnL {best['mean_pnl']:.2f}% · profitable on {best['pos']}/4 markets · "
+              f"win {best['mean_win']:.1f}% · {best['trades']} trades · "
+              f"maxDD {best['max_dd']:.2f}%")
         print(f"  params = {best['params']}")
         best_pnl = max(elig, key=lambda r: r["mean_pnl"])
         if best_pnl is not best:
-            print(f"\nPnL TB cao nhất (có thể kém bền): {fmt(best_pnl['params'])} "
-                  f"→ {best_pnl['mean_pnl']:.2f}% TB, lời {best_pnl['pos']}/4")
+            print(f"\nHighest avg PnL (may be less robust): {fmt(best_pnl['params'])} "
+                  f"→ {best_pnl['mean_pnl']:.2f}% avg, profitable {best_pnl['pos']}/4")
     else:
-        print("\nKhông bộ nào đủ số lệnh tối thiểu — nới MIN_TOTAL_TRADES hoặc cửa sổ dữ liệu.")
-    print("\n⚠️  Đây là tối ưu IN-SAMPLE → có thể overfit. Nên kiểm chứng out-of-sample (cửa sổ khác).")
+        print("\nNo parameter set meets the minimum trade count — relax MIN_TOTAL_TRADES or the "
+              "data window.")
+    print("\n⚠️  This is IN-SAMPLE optimization → may overfit. Validate out-of-sample (different "
+          "window).")
 
 
 if __name__ == "__main__":

@@ -1,14 +1,15 @@
-"""Walk-forward rổ 15m cho ict_po3 v3 (params CỐ ĐỊNH) — kiểm tra edge ổn định theo THỜI GIAN.
+"""15m basket walk-forward for ict_po3 v3 (FIXED params) — is the edge stable over TIME?
 
-Chạy:  PYTHONPATH=. uv run python scripts/walkforward_ict_po3.py
+Run:  PYTHONPATH=. uv run python scripts/walkforward_ict_po3.py
 
-Chia lịch sử mỗi cặp thành N cửa sổ tuần tự, chạy bộ params mặc định trên TỪNG cửa sổ.
-Không re-optimize (params đã chốt) → đây là out-of-sample theo thời gian: nếu rổ dương ở ĐA SỐ
-cửa sổ thì edge ổn định; nếu chỉ dương 1–2 cửa sổ thì là may theo regime.
+Splits each pair's history into N sequential windows and runs the default params on EACH window.
+No re-optimization (params are locked in) → this is out-of-sample over time:
+if the basket is positive in MOST windows the edge is stable;
+if it is positive in only 1–2 windows it is regime luck.
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.backtest.engine import run_backtest
 from app.db import async_session
@@ -23,13 +24,13 @@ FEE = 0.0005
 
 
 def _d(ts_ms: int) -> str:
-    return datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).strftime("%m-%d")
+    return datetime.fromtimestamp(ts_ms / 1000, tz=UTC).strftime("%m-%d")
 
 
 async def main() -> None:
     discover()
     params = dict(get("ict_po3", "3").default_params)
-    print(f"params v3 (cố định): conf={params['confluence']} sl=ATR×{params['atr_mult']} "
+    print(f"params v3 (fixed): conf={params['confluence']} sl=ATR×{params['atr_mult']} "
           f"tp_mode={params['tp_mode']} bias_len={params['bias_len']}\n")
 
     data: dict = {}
@@ -40,12 +41,13 @@ async def main() -> None:
                 await s.commit()
                 c = await get_klines(s, sym, TF, limit=40000)
             except Exception:  # noqa: BLE001
-                print(f"  {sym}: sync lỗi"); continue
+                print(f"  {sym}: sync error")
+                continue
             if len(c) >= N_WINDOWS * 300:
                 data[sym] = c
             else:
-                print(f"  {sym}: thiếu dữ liệu ({len(c)})")
-    print(f"  …nạp xong {len(data)} cặp\n")
+                print(f"  {sym}: insufficient data ({len(c)})")
+    print(f"  …loaded {len(data)} pairs\n")
 
     # pnl[sym][w]
     pnl: dict = {sym: [None] * N_WINDOWS for sym in data}
@@ -64,9 +66,13 @@ async def main() -> None:
             except Exception:  # noqa: BLE001
                 pass
 
-    # Ma trận symbol × window
-    print(f"{'='*88}\nPnL% theo cửa sổ (15m, {N_WINDOWS} kỳ ~30 ngày):")
-    head = "  " + f"{'symbol':<9}" + "".join(f"{(win_labels[w] or '?'):>13}" for w in range(N_WINDOWS)) + f"{'#dương':>8}"
+    # symbol × window matrix
+    print(f"{'='*88}\nPnL% by window (15m, {N_WINDOWS} periods of ~30 days):")
+    head = (
+        "  " + f"{'symbol':<9}"
+        + "".join(f"{(win_labels[w] or '?'):>13}" for w in range(N_WINDOWS))
+        + f"{'#pos':>8}"
+    )
     print(head)
     for sym in data:
         vals = pnl[sym]
@@ -74,9 +80,9 @@ async def main() -> None:
         npos = sum(1 for v in vals if v is not None and v > 0)
         print(f"  {sym:<9}{cells}{npos:>6}/{N_WINDOWS}")
 
-    # Tổng hợp theo cửa sổ
-    print(f"\n{'-'*88}\nTheo cửa sổ (rổ {len(data)} cặp):")
-    print(f"  {'cửa sổ':<14}{'PnL TB%':>9}{'#cặp dương':>13}")
+    # Summary by window
+    print(f"\n{'-'*88}\nBy window (basket of {len(data)} pairs):")
+    print(f"  {'window':<14}{'avgPnL%':>9}{'#pos pairs':>13}")
     good_windows = 0
     for w in range(N_WINDOWS):
         vs = [pnl[sym][w] for sym in data if pnl[sym][w] is not None]
@@ -88,8 +94,8 @@ async def main() -> None:
             good_windows += 1
         print(f"  {(win_labels[w] or '?'):<14}{mean:>9.2f}{npos:>9}/{len(vs)}")
 
-    # Tổng hợp theo cặp
-    print(f"\n{'-'*88}\nTheo cặp (qua {N_WINDOWS} cửa sổ):")
+    # Summary by pair
+    print(f"\n{'-'*88}\nBy pair (across {N_WINDOWS} windows):")
     stable = []
     for sym in data:
         vs = [v for v in pnl[sym] if v is not None]
@@ -97,14 +103,16 @@ async def main() -> None:
             continue
         mean = sum(vs) / len(vs)
         npos = sum(1 for v in vs if v > 0)
-        if npos >= (len(vs) + 1) // 2 + 1:  # dương > nửa số cửa sổ
+        if npos >= (len(vs) + 1) // 2 + 1:  # positive in more than half the windows
             stable.append(sym)
-        print(f"  {sym:<9} TB {mean:>6.2f}%  dương {npos}/{len(vs)} cửa sổ")
+        print(f"  {sym:<9} avg {mean:>6.2f}%  positive {npos}/{len(vs)} windows")
 
     print(f"\n{'='*88}")
-    print(f"KẾT LUẬN: {good_windows}/{N_WINDOWS} cửa sổ rổ DƯƠNG trung bình.")
-    print(f"Cặp ỔN ĐỊNH (dương > nửa số cửa sổ): {', '.join(stable) if stable else 'KHÔNG cặp nào'}")
-    print("⚠️  Params cố định (không re-optimize). Edge yếu — cần thêm bằng chứng trước tiền thật.")
+    print(f"CONCLUSION: {good_windows}/{N_WINDOWS} windows with POSITIVE basket average.")
+    print("STABLE pairs (positive in > half the windows): "
+          f"{', '.join(stable) if stable else 'NONE'}")
+    print("⚠️  Fixed params (no re-optimization). Weak edge — needs more evidence before real "
+          "money.")
 
 
 if __name__ == "__main__":

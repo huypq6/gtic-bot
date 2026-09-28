@@ -1,7 +1,7 @@
 """SQLAlchemy async engine + session factory.
 
-Models (P2+) kế thừa `Base`. Timescale extension + hypertable do
-`db/init/01-extensions.sql` và Alembic migration lo, không khai báo ở đây.
+Models (P2+) inherit from `Base`. The Timescale extension + hypertable are handled by
+`db/init/01-extensions.sql` and Alembic migrations, not declared here.
 """
 
 from collections.abc import AsyncGenerator
@@ -17,7 +17,7 @@ async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit
 
 
 class Base(DeclarativeBase):
-    """Base cho mọi ORM model."""
+    """Base for all ORM models."""
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:

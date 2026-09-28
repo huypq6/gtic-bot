@@ -1,11 +1,11 @@
 """MarketFeed — Binance WS combined stream → EventBus.
 
-Kết nối 1 WebSocket combined cho mọi (symbol, tf) cấu hình: kline + ticker.
-Parse → publish lên bus (`kline.{symbol}.{tf}`, `ticker.{symbol}`).
-Mất kết nối → auto-reconnect backoff, phát `feed` status (OK/RECONNECTING/DOWN).
+Opens 1 combined WebSocket for all configured (symbol, tf): kline + ticker.
+Parse → publish to the bus (`kline.{symbol}.{tf}`, `ticker.{symbol}`).
+Connection lost → auto-reconnect with backoff, emits `feed` status (OK/RECONNECTING/DOWN).
 
-`connect` được inject để test (mặc định websockets.connect). Feed CHỈ phụ thuộc
-bus + websockets, không đụng DB (persistence tách ở market/store.py).
+`connect` is injected for testing (defaults to websockets.connect). The feed depends ONLY on
+the bus + websockets, never the DB (persistence lives in market/store.py).
 """
 
 import asyncio
@@ -21,7 +21,7 @@ BINANCE_WS_BASE = "wss://stream.binance.com:9443/stream?streams="
 
 
 def parse_combined(msg: dict) -> tuple[str, dict] | None:
-    """Parse 1 message combined-stream → (topic, payload) hoặc None nếu bỏ qua."""
+    """Parse 1 combined-stream message → (topic, payload), or None if ignored."""
     stream = msg.get("stream")
     data = msg.get("data")
     if not stream or not isinstance(data, dict):
@@ -77,10 +77,10 @@ class MarketFeed:
         self._backoff_base = backoff_base
         self._backoff_max = backoff_max
         self._running = False
-        self._ws = None  # WS đang mở (để SUBSCRIBE/UNSUBSCRIBE runtime)
+        self._ws = None  # currently open WS (for runtime SUBSCRIBE/UNSUBSCRIBE)
         self._msg_id = 0
-        # Stream kline bot cần (symbol, tf) — độc lập watchlist/tf mặc định của chart.
-        # Không có cái này, bot 15m chỉ nghe được khi tf mặc định = 15m → im lặng mãi.
+        # Kline streams bots need (symbol, tf) — independent of the chart's watchlist/default tf.
+        # Without this, a 15m bot only hears candles when the default tf = 15m → silent forever.
         self._bot_klines: set[tuple[str, str]] = set()
 
     def _streams_for(self, symbol: str) -> list[str]:
@@ -93,13 +93,13 @@ class MarketFeed:
             streams += self._streams_for(sym)
         for sym, tf in sorted(self._bot_klines):
             streams.append(f"{sym.lower()}@kline_{tf}")
-        return list(dict.fromkeys(streams))  # bỏ trùng, giữ thứ tự
+        return list(dict.fromkeys(streams))  # dedupe, keep order
 
     def stream_url(self) -> str:
         return self._base_url + "/".join(self._all_streams())
 
     async def ensure_kline(self, symbol: str, tf: str) -> None:
-        """Đảm bảo feed stream `kline.{symbol}.{tf}` cho bot (SUBSCRIBE runtime nếu đang nối)."""
+        """Ensure the feed streams `kline.{symbol}.{tf}` for a bot (runtime SUBSCRIBE if live)."""
         key = (symbol.upper(), tf)
         if key in self._bot_klines:
             return
@@ -120,14 +120,14 @@ class MarketFeed:
         if not self._ws:
             return
         params = self._streams_for(symbol)
-        if method == "UNSUBSCRIBE":  # giữ stream bot đang cần
+        if method == "UNSUBSCRIBE":  # keep streams a bot still needs
             bot = {f"{s.lower()}@kline_{tf}" for s, tf in self._bot_klines}
             params = [p for p in params if p not in bot]
         self._msg_id += 1
         await self._ws.send(json.dumps({"method": method, "params": params, "id": self._msg_id}))
 
     async def add_symbol(self, symbol: str) -> None:
-        """Thêm cặp + SUBSCRIBE realtime (không cần reconnect)."""
+        """Add a pair + realtime SUBSCRIBE (no reconnect needed)."""
         s = symbol.upper()
         if s in self._symbols:
             return
@@ -145,7 +145,7 @@ class MarketFeed:
         try:
             msg = json.loads(raw)
         except (ValueError, TypeError):
-            logger.debug("feed: bỏ qua message không phải JSON")
+            logger.debug("feed: skipping non-JSON message")
             return
         parsed = parse_combined(msg)
         if parsed:
@@ -153,7 +153,7 @@ class MarketFeed:
             await self._bus.publish(topic, payload)
 
     async def run(self) -> None:
-        """Vòng đời feed: connect → consume → reconnect khi lỗi (đến khi stop())."""
+        """Feed lifecycle: connect → consume → reconnect on error (until stop())."""
         self._running = True
         backoff = self._backoff_base
         while self._running:
@@ -162,7 +162,7 @@ class MarketFeed:
                 async with self._connect(self._base_url + "/".join(url_streams)) as ws:
                     self._ws = ws
                     backoff = self._backoff_base
-                    # Stream thêm trong lúc đang bắt tay (URL đã dựng, _ws còn None) → bù.
+                    # Streams added during the handshake (URL built, _ws still None) → catch up.
                     missing = [x for x in self._all_streams() if x not in url_streams]
                     if missing:
                         self._msg_id += 1
@@ -173,16 +173,16 @@ class MarketFeed:
                     async for raw in ws:
                         await self.handle_raw(raw)
                 self._ws = None
-                # iterator kết thúc bình thường (vd test) → thoát nếu đã stop
+                # iterator ended normally (e.g. tests) → exit if stopped
                 if not self._running:
                     break
             except asyncio.CancelledError:
                 raise
-            except Exception as exc:  # noqa: BLE001 — mọi lỗi WS đều reconnect
+            except Exception as exc:  # noqa: BLE001 — every WS error triggers a reconnect
                 self._ws = None
                 if not self._running:
                     break
-                logger.warning("feed mất kết nối: %s → reconnect sau %.1fs", exc, backoff)
+                logger.warning("feed disconnected: %s → reconnecting in %.1fs", exc, backoff)
                 await self._bus.publish("feed", {"status": "RECONNECTING"})
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, self._backoff_max)

@@ -1,12 +1,12 @@
-# Keltner Channel Breakout — Bứt phá kênh EMA ± ATR
+# Keltner Channel Breakout — Breaking out of the EMA ± ATR channel
 
-> Trường phái: **Trend / Momentum (breakout)**. Khung gợi ý: 15m–1d.
+> Style: **Trend / Momentum (breakout)**. Suggested timeframes: 15m–1d.
 
-## Ý tưởng
+## Idea
 
-Kênh Keltner (Chester Keltner) đặt dải quanh một EMA, độ rộng theo **ATR** (biến động). Khác Bollinger (dùng độ lệch chuẩn), Keltner dùng ATR nên mượt hơn. Bản này dùng theo hướng **breakout**: giá bứt khỏi dải báo hiệu động lượng mạnh.
+The Keltner Channel (Chester Keltner) places bands around an EMA, with the width based on **ATR** (volatility). Unlike Bollinger (which uses standard deviation), Keltner uses ATR, so it is smoother. This version is used in a **breakout** fashion: price breaking out of the bands signals strong momentum.
 
-## Công thức
+## Formula
 
 ```
 mid   = EMA(close, period)
@@ -14,33 +14,33 @@ upper = mid + mult × ATR(period)
 lower = mid − mult × ATR(period)
 ```
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
-| `giá > dải trên` | **BUY** (bứt phá lên) |
-| `giá < dải dưới` | **SELL** (bứt phá xuống) |
+| `price > upper band` | **BUY** (upside breakout) |
+| `price < lower band` | **SELL** (downside breakout) |
 
-> Lưu ý: đây là bản **breakout** (ngược với Bollinger reversion). Tùy thị trường, có thể đảo logic thành reversion.
+> Note: this is the **breakout** version (the opposite of Bollinger reversion). Depending on the market, the logic can be inverted to reversion.
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `period` | 20 | Chu kỳ EMA + ATR. |
-| `mult` | 2.0 | Hệ số nhân ATR (độ rộng kênh). |
-| `size` | 0.001 | Khối lượng. |
+| `period` | 20 | EMA + ATR period. |
+| `mult` | 2.0 | ATR multiplier (channel width). |
+| `size` | 0.001 | Order size. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Bắt động lượng/bứt phá; dải mượt nhờ ATR, ít nhiễu hơn Bollinger trong một số trường hợp.
-- ❌ Breakout giả trong sideway; vào sau khi giá đã bứt.
+- ✅ Catches momentum/breakouts; bands are smooth thanks to ATR, less noisy than Bollinger in some cases.
+- ❌ False breakouts in sideways markets; enters after price has already broken out.
 
-## Khi nào dùng
+## When to use
 
-- Thị trường sắp/đang có động lượng mạnh. Kết hợp lọc xu hướng để giảm breakout giả.
+- Markets about to have / already having strong momentum. Combine with a trend filter to reduce false breakouts.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- So sánh **breakout vs reversion** trên cùng dữ liệu để chọn hướng phù hợp cặp/khung.
-- Thử `mult` 1.5–2.5.
+- Compare **breakout vs reversion** on the same data to pick the direction that suits the pair/timeframe.
+- Try `mult` 1.5–2.5.

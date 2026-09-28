@@ -36,17 +36,17 @@ def test_ichimoku_none_when_short():
 
 
 def test_ichimoku_struct_on_enough_data():
-    cs = [candle(float(i)) for i in range(1, 120)]  # uptrend dài
+    cs = [candle(float(i)) for i in range(1, 120)]  # long uptrend
     ich = ichimoku(cs, 9, 26, 52, 26)
     assert ich is not None
-    assert ich["tenkan_now"] > ich["kijun_now"]  # uptrend: tenkan trên kijun
+    assert ich["tenkan_now"] > ich["kijun_now"]  # uptrend: tenkan above kijun
     assert "cloud_top" in ich and ich["cloud_top"] >= ich["cloud_bottom"]
 
 
 # ---- ichimoku strategy ----
 def test_ichimoku_buys_on_uptrend():
     s = Ichimoku({"conv": 5, "base": 10, "span_b": 20, "size": 1})
-    closes = [20] * 30 + [19, 18, 17, 16, 15] + list(range(15, 60))  # dip rồi tăng mạnh
+    closes = [20] * 30 + [19, 18, 17, 16, 15] + list(range(15, 60))  # dip then strong rally
     assert "BUY" in replay(s, [float(c) for c in closes])
 
 
@@ -58,12 +58,12 @@ def test_ichimoku_quiet_when_short():
 # ---- vwap strategy ----
 def test_vwap_cross_up_buys():
     s = VwapCross({"period": 5, "size": 1})
-    # giá đi ngang dưới rồi vọt lên trên VWAP
+    # price flat below then jumps above VWAP
     closes = [10, 10, 10, 10, 10, 9.5, 9.5, 9.5, 12]
     assert "BUY" in replay(s, closes)
 
 
-# ---- grid strategy (đọc ctx.position) ----
+# ---- grid strategy (reads ctx.position) ----
 def test_grid_buys_below_lower_when_flat():
     s = Grid({"period": 5, "step_pct": 2, "size": 1})
     bars = [candle(c) for c in [100, 100, 100, 100, 100]]  # ref=100, lower=98
@@ -75,7 +75,7 @@ def test_grid_closes_long_back_at_ref():
     s = Grid({"period": 5, "step_pct": 2, "size": 1})
     bars = [candle(c) for c in [100, 100, 100, 100, 100]]
     pos = Position(symbol="X", side="LONG", qty=1, entry_price=97)
-    sigs = s.on_candle(Context("X", 100.0, bars, pos))  # giá về mốc → CLOSE
+    sigs = s.on_candle(Context("X", 100.0, bars, pos))  # price back to the level → CLOSE
     assert [x.action for x in sigs] == ["CLOSE"]
 
 

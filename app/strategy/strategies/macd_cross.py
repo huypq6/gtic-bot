@@ -1,6 +1,6 @@
-"""MACD Crossover — giao cắt MACD line và signal line (trend/momentum).
+"""MACD Crossover — MACD line crossing the signal line (trend/momentum).
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
+=== EDIT THE STRATEGY HERE ===
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -12,7 +12,7 @@ from app.strategy.ta import macd, pad_left
 class MacdCross(Strategy):
     name = "macd"
     version = "1"
-    description = "MACD crossover — MACD cắt LÊN signal (BUY), cắt XUỐNG (SELL)."
+    description = "MACD crossover — MACD crosses ABOVE signal (BUY), crosses BELOW (SELL)."
     default_params = {"fast": 12, "slow": 26, "signal": 9, "size": 0.001}
     param_schema = {
         "fast": {"type": "int", "min": 2, "max": 100, "default": 12},
@@ -27,7 +27,7 @@ class MacdCross(Strategy):
         m, s = macd(closes, p["fast"], p["slow"], p["signal"])
         if len(m) < 2 or len(s) < 2:
             return []
-        m = m[-len(s) :]  # căn đuôi MACD line theo signal
+        m = m[-len(s) :]  # align the MACD line tail with the signal
         mp, mn, sp, sn = m[-2], m[-1], s[-2], s[-1]
         if mp <= sp and mn > sn:
             return [Signal("BUY", ctx.symbol, p["size"])]
@@ -42,4 +42,4 @@ class MacdCross(Strategy):
         return {"MACD": pad_left(m, n), "Signal": pad_left(s, n)}
 
     def plot_pane(self):
-        return {"MACD": 1, "Signal": 1}  # oscillator (quanh 0) → pane phụ
+        return {"MACD": 1, "Signal": 1}  # oscillator (around 0) → separate pane

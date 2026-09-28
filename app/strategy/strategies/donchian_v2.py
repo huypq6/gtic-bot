@@ -1,21 +1,24 @@
-"""Donchian v2 — breakout kênh + ATR trailing (chandelier) + lọc ADX/cuối tuần.
+"""Donchian v2 — channel breakout + ATR trailing (chandelier) + ADX/weekend filter.
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY === (xem donchian.md)
+=== EDIT THE STRATEGY HERE === (see donchian.md)
 
-Nâng cấp v1 theo hướng "intraday trend-following 1h" (nghiên cứu Concretum/turtle):
-- Entry như v1: close vượt đỉnh kênh `period` nến trước → LONG; thủng đáy → SHORT.
-- Exit chủ động (v1 chỉ đảo chiều khi breakout ngược):
-  - `exit_mode=0`: ATR trailing (chandelier) — trail = cực trị close kể từ entry ∓ mult×ATR.
-  - `exit_mode=1`: kênh ngược ngắn `exit_period` (kiểu turtle: long thoát khi thủng đáy M nến).
-  - `exit_mode=2`: cái nào chạm trước (mặc định).
-- Lọc ADX (`adx_min`>0): chỉ vào khi ADX ≥ ngưỡng — tránh whipsaw lúc không có trend.
-- Lọc cuối tuần (`dow_filter=1`): không vào lệnh MỚI từ thứ Bảy 00:00 → Chủ nhật 20:00 UTC
-  (vùng mean-reverting/chop theo nghiên cứu Concretum 2018–2025); lệnh đang giữ vẫn quản lý.
+Upgrades v1 towards "intraday trend-following on 1h" (Concretum/turtle research):
+- Entry as in v1: close above the top of the previous `period` candles → LONG;
+  below the bottom → SHORT.
+- Active exits (v1 only reverses on an opposite breakout):
+  - `exit_mode=0`: ATR trailing (chandelier) — trail = extreme close since entry ∓ mult×ATR.
+  - `exit_mode=1`: short opposite channel `exit_period` (turtle style: long exits when
+    breaking the M-candle low).
+  - `exit_mode=2`: whichever hits first (default).
+- ADX filter (`adx_min`>0): only enter when ADX ≥ threshold — avoids whipsaw when there is no trend.
+- Weekend filter (`dow_filter=1`): no NEW entries from Saturday 00:00 → Sunday 20:00 UTC
+  (mean-reverting/chop zone per Concretum research 2018–2025); open positions are still managed.
 
-Breakout ngược kênh `period` luôn ĐẢO CHIỀU vị thế (giữ tính trend-following của v1).
+An opposite breakout of the `period` channel always REVERSES the position
+(keeps v1's trend-following nature).
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
@@ -23,7 +26,7 @@ from app.strategy.ta import adx_dmi, atr
 
 
 def _utc(ts_ms: int) -> datetime:
-    return datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
+    return datetime.fromtimestamp(ts_ms / 1000, tz=UTC)
 
 
 @register
@@ -31,18 +34,18 @@ class DonchianV2(Strategy):
     name = "donchian"
     version = "2"
     description = (
-        "[v2] Donchian breakout + ATR trailing stop (chandelier) hoặc/và kênh-thoát ngắn "
-        "(turtle), lọc ADX + lọc cuối tuần (chop Sat→Sun 20h UTC). Trend-following 1h."
+        "[v2] Donchian breakout + ATR trailing stop (chandelier) and/or short exit channel "
+        "(turtle), ADX filter + weekend filter (chop Sat→Sun 20h UTC). Trend-following 1h."
     )
     default_params = {
         "period": 20,
-        "exit_period": 10,   # kênh ngược để thoát (turtle)
-        "exit_mode": 2,      # 0=ATR trail · 1=kênh ngược · 2=cả hai (chạm trước)
+        "exit_period": 10,   # opposite channel for exiting (turtle)
+        "exit_mode": 2,      # 0=ATR trail · 1=opposite channel · 2=both (first hit)
         "atr_len": 14,
         "atr_mult": 2.5,
-        "adx_min": 0,        # 0=tắt lọc ADX
+        "adx_min": 0,        # 0=ADX filter off
         "adx_len": 14,
-        "dow_filter": 0,     # 1=không entry mới Sat 00:00 → Sun 20:00 UTC
+        "dow_filter": 0,     # 1=no new entries Sat 00:00 → Sun 20:00 UTC
         "size": 0.001,
     }
     param_schema = {
@@ -60,7 +63,7 @@ class DonchianV2(Strategy):
     def __init__(self, params: dict | None = None) -> None:
         super().__init__(params)
         self._side: str | None = None  # LONG | SHORT
-        self._ext: float | None = None  # cực trị close kể từ entry (trail ratchet)
+        self._ext: float | None = None  # extreme close since entry (trail ratchet)
 
     @staticmethod
     def _weekend(dt: datetime) -> bool:
@@ -77,12 +80,12 @@ class DonchianV2(Strategy):
         highest = max(c["high"] for c in window)
         lowest = min(c["low"] for c in window)
 
-        # --- quản lý lệnh đang giữ: trail + kênh-thoát + đảo chiều ---
+        # --- manage open position: trail + exit channel + reversal ---
         if self._side is not None:
             self._ext = (
                 max(self._ext, close) if self._side == "LONG" else min(self._ext, close)
             )
-            # breakout ngược kênh chính → đảo chiều (ưu tiên hơn exit thường).
+            # opposite breakout of the main channel → reverse (takes priority over normal exits).
             if self._side == "LONG" and close < lowest:
                 return self._enter("SHORT", ctx, close)
             if self._side == "SHORT" and close > highest:
@@ -109,7 +112,7 @@ class DonchianV2(Strategy):
                 return [Signal("CLOSE", ctx.symbol)]
             return []
 
-        # --- đang flat: tìm entry ---
+        # --- flat: look for an entry ---
         if p["dow_filter"] == 1 and self._weekend(_utc(cur["ts"])):
             return []
         if p["adx_min"] > 0:
@@ -135,4 +138,4 @@ class DonchianV2(Strategy):
             w = candles[i - p : i]
             up[i] = max(c["high"] for c in w)
             lo[i] = min(c["low"] for c in w)
-        return {"Kênh trên": up, "Kênh dưới": lo}
+        return {"Upper channel": up, "Lower channel": lo}

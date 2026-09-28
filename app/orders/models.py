@@ -1,6 +1,6 @@
-"""ORM models nghiệp vụ: strategy, bot, order, position. (audit_log thêm ở P3.)
+"""Business ORM models: strategy, bot, order, position. (audit_log added in P3.)
 
-Khớp DDL trong docs/04-SRS.md §4. `kline` ở app/market/models.py.
+Matches the DDL in docs/04-SRS.md §4. `kline` lives in app/market/models.py.
 """
 
 from datetime import datetime
@@ -38,10 +38,10 @@ class StrategyModel(Base):
 
 
 class Account(Base):
-    """Tài khoản giao dịch (P9). PAPER: số dư giả lập, mô phỏng USDT-M Futures.
+    """Trading account (P9). PAPER: simulated balance, simulating USDT-M Futures.
 
-    `balance` = số dư ví (wallet) = nạp − rút + lãi/lỗ đã chốt − phí; luôn cập nhật cùng
-    transaction với 1 dòng `account_txn` (sổ cái là nguồn sự thật, balance là cache).
+    `balance` = wallet balance = deposits − withdrawals + realized PnL − fees; always updated in
+    the same transaction as an `account_txn` row (ledger = source of truth, balance = cache).
     """
 
     __tablename__ = "account"
@@ -52,27 +52,27 @@ class Account(Base):
     currency: Mapped[str] = mapped_column(String, nullable=False, default="USDT")
     balance: Mapped[float] = mapped_column(Numeric, nullable=False, default=0)
     peak_equity: Mapped[float] = mapped_column(Numeric, nullable=False, default=0)
-    # mô phỏng khớp lệnh
+    # fill simulation
     leverage: Mapped[float] = mapped_column(Numeric, nullable=False, default=1)
     taker_fee: Mapped[float] = mapped_column(Numeric, nullable=False, default=0.0005)
     maker_fee: Mapped[float] = mapped_column(Numeric, nullable=False, default=0.0002)
     slippage_bps: Mapped[float] = mapped_column(Numeric, nullable=False, default=2)
-    # rào chắn rủi ro (% theo equity); NULL = tắt
-    max_risk_pct: Mapped[float | None] = mapped_column(Numeric)  # trần rủi ro 1 lệnh
-    max_open_risk_pct: Mapped[float | None] = mapped_column(Numeric)  # tổng rủi ro đang mở
+    # risk guards (% of equity); NULL = disabled
+    max_risk_pct: Mapped[float | None] = mapped_column(Numeric)  # per-trade risk cap
+    max_open_risk_pct: Mapped[float | None] = mapped_column(Numeric)  # total open risk cap
     max_positions: Mapped[int | None] = mapped_column(Integer)
-    daily_loss_pct: Mapped[float | None] = mapped_column(Numeric)  # lỗ trong ngày UTC → nghỉ
-    max_dd_pct: Mapped[float | None] = mapped_column(Numeric)  # sụt từ đỉnh → HALTED
+    daily_loss_pct: Mapped[float | None] = mapped_column(Numeric)  # daily loss (UTC) → pause
+    max_dd_pct: Mapped[float | None] = mapped_column(Numeric)  # drawdown from peak → HALTED
     status: Mapped[str] = mapped_column(String, nullable=False, default="ACTIVE")
     halted_reason: Mapped[str | None] = mapped_column(String)
     halted_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # P9b — tài khoản sàn (TESTNET/LIVE): số liệu đọc từ Binance Futures (cache lần đồng bộ cuối)
+    # P9b — exchange account (TESTNET/LIVE): figures read from Binance Futures (last-sync cache)
     market: Mapped[str] = mapped_column(String, nullable=False, default="FUTURES")
     exch_equity: Mapped[float | None] = mapped_column(Numeric)
     exch_unrealized: Mapped[float | None] = mapped_column(Numeric)
     exch_margin: Mapped[float | None] = mapped_column(Numeric)
     exch_available: Mapped[float | None] = mapped_column(Numeric)
-    income_cursor: Mapped[int | None] = mapped_column(BigInteger)  # ms, đã nhập sổ tới đây
+    income_cursor: Mapped[int | None] = mapped_column(BigInteger)  # ms, ledger imported up to here
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sync_error: Mapped[str | None] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -84,7 +84,7 @@ class Account(Base):
 
 
 class AccountTxn(Base):
-    """Sổ cái: mọi biến động số dư ví. amount có dấu; balance_after = số dư sau dòng này."""
+    """Ledger: every wallet balance change. amount is signed; balance_after = balance after row."""
 
     __tablename__ = "account_txn"
 
@@ -98,7 +98,7 @@ class AccountTxn(Base):
     bot_id: Mapped[int | None] = mapped_column(Integer)
     symbol: Mapped[str | None] = mapped_column(String)
     note: Mapped[str | None] = mapped_column(String)
-    ext_id: Mapped[str | None] = mapped_column(String)  # id income của sàn (chống nhập trùng)
+    ext_id: Mapped[str | None] = mapped_column(String)  # exchange income id (dedup on import)
 
     __table_args__ = (
         CheckConstraint(
@@ -120,7 +120,8 @@ class Bot(Base):
     params: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String, nullable=False, default="STOPPED")
     account_id: Mapped[int | None] = mapped_column(ForeignKey("account.id"))
-    # quản lý vốn: {"method": risk_pct|risk_usdt|notional_usdt|notional_pct|fixed_qty, "value": x}
+    # money management: {"method": risk_pct|risk_usdt|notional_usdt|notional_pct|fixed_qty,
+    #                   "value": x}
     sizing: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -134,8 +135,8 @@ class OrderModel(Base):
     __tablename__ = "order"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    bot_id: Mapped[int | None] = mapped_column(ForeignKey("bot.id"))  # NULL nếu lệnh tay rời
-    ext_id: Mapped[str | None] = mapped_column(String)  # id sàn (testnet/live)
+    bot_id: Mapped[int | None] = mapped_column(ForeignKey("bot.id"))  # NULL for manual orders
+    ext_id: Mapped[str | None] = mapped_column(String)  # exchange order id (testnet/live)
     source: Mapped[str] = mapped_column(String, nullable=False)  # BOT|MANUAL|SYSTEM
     mode: Mapped[str] = mapped_column(String, nullable=False)
     symbol: Mapped[str] = mapped_column(String, nullable=False)
@@ -180,18 +181,18 @@ class PositionModel(Base):
     exit_price: Mapped[float | None] = mapped_column(Numeric)
     pnl: Mapped[float | None] = mapped_column(Numeric)
     exit_reason: Mapped[str | None] = mapped_column(String)  # SL|TP|SIGNAL|MANUAL
-    init_sl: Mapped[float | None] = mapped_column(Numeric)  # SL lúc mở → mốc 1R
-    # Snapshot lúc mở — bot_id bị NULL khi xóa bot, các cột này thì giữ nguyên.
+    init_sl: Mapped[float | None] = mapped_column(Numeric)  # SL at open → the 1R reference
+    # Snapshot at open — bot_id becomes NULL when the bot is deleted, these columns are kept.
     source: Mapped[str | None] = mapped_column(String)  # BOT|MANUAL
-    bot_ref: Mapped[int | None] = mapped_column(Integer)  # id bot gốc (không FK)
+    bot_ref: Mapped[int | None] = mapped_column(Integer)  # original bot id (no FK)
     strategy: Mapped[str | None] = mapped_column(String)  # "ict_po3 v4"
     tf: Mapped[str | None] = mapped_column(String)
     params: Mapped[dict | None] = mapped_column(JSONB)
     account_id: Mapped[int | None] = mapped_column(Integer)
-    fee: Mapped[float | None] = mapped_column(Numeric)  # tổng phí vào + ra (USDT)
-    margin: Mapped[float | None] = mapped_column(Numeric)  # ký quỹ khóa khi mở
-    risk_amount: Mapped[float | None] = mapped_column(Numeric)  # USDT mất nếu chạm SL ban đầu
-    ext_protect: Mapped[dict | None] = mapped_column(JSONB)  # {"sl": algoId, "tp": algoId} trên sàn
+    fee: Mapped[float | None] = mapped_column(Numeric)  # total entry + exit fees (USDT)
+    margin: Mapped[float | None] = mapped_column(Numeric)  # margin locked at open
+    risk_amount: Mapped[float | None] = mapped_column(Numeric)  # USDT lost if the initial SL is hit
+    ext_protect: Mapped[dict | None] = mapped_column(JSONB)  # {"sl": algoId, "tp": algoId}
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -222,11 +223,11 @@ class BacktestRun(Base):
     n_trades: Mapped[int | None] = mapped_column(Integer)
     equity_curve: Mapped[list | None] = mapped_column(JSONB)  # [[ts_ms, equity], ...]
     indicators: Mapped[dict | None] = mapped_column(JSONB)  # {name: [[ts, value], ...]}
-    # P9c: VBT (vectorbt, 100% vốn, vào/ra giá đóng) | ACCOUNT (mô phỏng tài khoản)
+    # P9c: VBT (vectorbt, 100% equity, entry/exit at close) | ACCOUNT (account simulation)
     engine: Mapped[str | None] = mapped_column(String)
     sizing: Mapped[dict | None] = mapped_column(JSONB)
-    settings: Mapped[dict | None] = mapped_column(JSONB)  # phí/trượt/rào chắn đã dùng
-    stats: Mapped[dict | None] = mapped_column(JSONB)  # CAGR, PF, avgR, tháng, so sánh…
+    settings: Mapped[dict | None] = mapped_column(JSONB)  # fees/slippage/guards used
+    stats: Mapped[dict | None] = mapped_column(JSONB)  # CAGR, PF, avgR, monthly, comparison…
     final_equity: Mapped[float | None] = mapped_column(Numeric)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -246,7 +247,7 @@ class BacktestTrade(Base):
     tp: Mapped[float | None] = mapped_column(Numeric)
     # P9c (engine ACCOUNT)
     qty: Mapped[float | None] = mapped_column(Numeric)
-    pnl: Mapped[float | None] = mapped_column(Numeric)  # USDT ròng
+    pnl: Mapped[float | None] = mapped_column(Numeric)  # net USDT
     fee: Mapped[float | None] = mapped_column(Numeric)
     r: Mapped[float | None] = mapped_column(Numeric)
     reason: Mapped[str | None] = mapped_column(String)
@@ -263,14 +264,14 @@ class ScanResult(Base):
     score: Mapped[float | None] = mapped_column(Numeric)
     signal: Mapped[str | None] = mapped_column(String)
     reason: Mapped[str | None] = mapped_column(String)
-    entry: Mapped[float | None] = mapped_column(Numeric)  # giá hiện tại
+    entry: Mapped[float | None] = mapped_column(Numeric)  # current price
     atr: Mapped[float | None] = mapped_column(Numeric)
-    sl: Mapped[float | None] = mapped_column(Numeric)  # SL đề xuất (ATR)
-    tp: Mapped[float | None] = mapped_column(Numeric)  # TP đề xuất (ATR)
+    sl: Mapped[float | None] = mapped_column(Numeric)  # suggested SL (ATR)
+    tp: Mapped[float | None] = mapped_column(Numeric)  # suggested TP (ATR)
 
 
 class AuditLog(Base):
-    """Ghi MỌI hành động (bot + tay) TRƯỚC khi tác động (NFR truy vết)."""
+    """Log EVERY action (bot + manual) BEFORE acting (traceability NFR)."""
 
     __tablename__ = "audit_log"
 

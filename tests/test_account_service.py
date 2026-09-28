@@ -1,5 +1,5 @@
-"""P9a end-to-end với DB thật (skip nếu không có DB): runner tính khối lượng theo vốn →
-PaperExecutor mô phỏng phí/trượt giá → sổ cái khớp số dư → rào chắn lỗ ngày → restore."""
+"""P9a end-to-end with a real DB (skipped without a DB): runner sizes by equity →
+PaperExecutor simulates fees/slippage → ledger matches balance → daily-loss guard → restore."""
 
 import os
 
@@ -42,7 +42,7 @@ async def env():
         async with engine.connect():
             pass
     except Exception:
-        pytest.skip("DB không sẵn sàng")
+        pytest.skip("DB not available")
     sf = async_sessionmaker(engine, expire_on_commit=False)
     await _clean(sf)
     async with sf() as s:
@@ -52,7 +52,7 @@ async def env():
         s.add(a)
         await s.commit()
     svc = AccountService(sf)
-    await svc.deposit(a.id, 1000, "vốn")
+    await svc.deposit(a.id, 1000, "capital")
     bus = FakeBus()
     ex = PaperExecutor(None, SYM, "PAPER", bus, sf)
     ex.attach_account(await svc.get(a.id), svc)
@@ -78,14 +78,14 @@ async def test_sized_trade_fees_ledger_and_daily_halt(env):
     await runner._dispatch(Signal("BUY", SYM, size=0.001, sl=98), 100)
 
     p = ex.engine.position
-    assert p.qty == pytest.approx(5)  # 1% × 1000 / (100 − 98), không phải 0.001 của strategy
-    assert p.entry_price == pytest.approx(100.02)  # trượt 2 bps
+    assert p.qty == pytest.approx(5)  # 1% × 1000 / (100 − 98), not the strategy's 0.001
+    assert p.entry_price == pytest.approx(100.02)  # 2 bps slippage
 
     st = await svc.snapshot(aid)
     assert st.used_margin == pytest.approx(5 * 100.02)
-    assert st.balance == pytest.approx(1000 - 0.0005 * 100.02 * 5)  # đã trừ phí vào
+    assert st.balance == pytest.approx(1000 - 0.0005 * 100.02 * 5)  # entry fee deducted
 
-    await ex.on_price(97)  # nhảy qua SL 98 → khớp ở 97 (gap) trừ trượt
+    await ex.on_price(97)  # gaps past SL 98 → fills at 97 (gap) minus slippage
     assert ex.engine.position is None
     async with sf() as s:
         q = select(PositionModel).where(PositionModel.symbol == SYM)
@@ -97,11 +97,11 @@ async def test_sized_trade_fees_ledger_and_daily_halt(env):
     assert float(pos.exit_price) == pytest.approx(exit_px)
     assert float(pos.pnl) == pytest.approx(gross - fees)
     assert float(pos.fee) == pytest.approx(fees)
-    # sổ cái là nguồn sự thật: số dư = tổng mọi dòng
+    # the ledger is the source of truth: balance = sum of all rows
     assert float(acc.balance) == pytest.approx(1000 + gross - fees)
     assert await _ledger_sum(sf, aid) == pytest.approx(float(acc.balance))
 
-    # lỗ ~1.5% > giới hạn ngày 1% → nghỉ tới hết ngày, lệnh mới bị chặn
+    # loss ~1.5% > 1% daily limit → paused until end of day, new orders blocked
     assert acc.halted_until is not None
     await runner._dispatch(Signal("SELL", SYM, sl=102), 97)
     assert ex.engine.position is None
@@ -111,9 +111,9 @@ async def test_sized_trade_fees_ledger_and_daily_halt(env):
 async def test_withdraw_limited_by_margin_and_deposit(env):
     sf, svc, aid, ex, runner, _ = env
     await ex.on_price(100)
-    await runner._dispatch(Signal("BUY", SYM, sl=98), 100)  # khóa ~500 ký quỹ
+    await runner._dispatch(Signal("BUY", SYM, sl=98), 100)  # locks ~500 margin
     st = await svc.snapshot(aid)
-    with pytest.raises(ValueError, match="tối đa"):
+    with pytest.raises(ValueError, match="at most"):
         await svc.withdraw(aid, st.available + 1)
     await svc.withdraw(aid, 100)
     await svc.deposit(aid, 50)
@@ -126,7 +126,7 @@ async def test_restore_open_position_after_restart(env):
     sf, svc, aid, ex, runner, bus = env
     await ex.on_price(100)
     await runner._dispatch(Signal("SELL", SYM, sl=102), 100)
-    # "restart": executor mới, nạp lại từ DB rồi chạm SL vẫn đóng + ghi sổ đúng
+    # "restart": new executor, reload from DB then SL hit still closes + books correctly
     ex2 = PaperExecutor(None, SYM, "PAPER", bus, sf)
     ex2.attach_account(await svc.get(aid), svc)
     assert await ex2.restore_open()

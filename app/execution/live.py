@@ -1,8 +1,9 @@
-"""Factory cho mode LIVE — TIỀN THẬT (Binance USDⓈ-M Futures). RÀO CHẮN nhiều lớp.
+"""Factory for LIVE mode — REAL MONEY (Binance USDⓈ-M Futures). Multi-layer GUARDS.
 
-CHỈ khởi tạo khi `ENABLE_LIVE=1` + có `BINANCE_KEY/SECRET` (kiểm ở clients.check_mode).
-Việc xác nhận gõ "LIVE" do API/UI lo (modal). Key live nên tắt quyền rút tiền +
-whitelist IP VPS (cấu hình ở sàn, ngoài app).
+ONLY initialized when `ENABLE_LIVE=1` + `BINANCE_KEY/SECRET` are set (checked in
+clients.check_mode).
+Typing "LIVE" to confirm is handled by the API/UI (modal). Live keys should have withdrawals
+disabled + a VPS IP whitelist (configured on the exchange, outside the app).
 """
 
 import logging
@@ -19,5 +20,5 @@ async def make_live_executor(
     timeout: float | None = None,
 ) -> ExchangeExecutor:
     client = await exchange_client("LIVE", settings)
-    logger.warning("⚠️  KHỞI TẠO LIVE EXECUTOR (TIỀN THẬT) bot=%s %s", bot_id, symbol)
+    logger.warning("⚠️  INITIALIZING LIVE EXECUTOR (REAL MONEY) bot=%s %s", bot_id, symbol)
     return ExchangeExecutor(bot_id, symbol, "LIVE", bus, session_factory, client, timeout=timeout)

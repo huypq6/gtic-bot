@@ -1,6 +1,6 @@
-"""ORM models cho dữ liệu thị trường. `kline` là Timescale hypertable (P1).
+"""ORM models for market data. `kline` is a Timescale hypertable (P1).
 
-Các model nghiệp vụ (strategy/bot/order/position/audit) thêm ở app/orders/models.py (P2+).
+Domain models (strategy/bot/order/position/audit) live in app/orders/models.py (P2+).
 """
 
 from datetime import datetime
@@ -12,7 +12,7 @@ from app.db import Base
 
 
 class WatchSymbol(Base):
-    """Watchlist — cặp theo dõi (sửa từ UI). Feed subscribe realtime theo bảng này."""
+    """Watchlist — watched pairs (edited from the UI). The feed subscribes based on this table."""
 
     __tablename__ = "watch_symbol"
 
@@ -25,7 +25,7 @@ class Kline(Base):
 
     symbol: Mapped[str] = mapped_column(String, nullable=False)
     tf: Mapped[str] = mapped_column(String, nullable=False)  # 1m,5m,1h,1d
-    # timestamptz — khớp migration; phải tz-aware để asyncpg encode đúng.
+    # timestamptz — matches the migration; must be tz-aware for asyncpg to encode correctly.
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     open: Mapped[float] = mapped_column(Numeric, nullable=False)
     high: Mapped[float] = mapped_column(Numeric, nullable=False)

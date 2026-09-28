@@ -1,5 +1,5 @@
-// Zustand store cho realtime state (WebSocket). REST → React Query; WS → đây.
-// Một kết nối /ws nhận firehose; store phân loại theo type và key symbol/tf.
+// Zustand store for realtime state (WebSocket). REST → React Query; WS → here.
+// A single /ws connection receives the firehose; the store sorts it by type and symbol/tf key.
 import { create } from "zustand";
 
 export type FeedStatus = "OK" | "RECONNECTING" | "DOWN" | "CONNECTING";
@@ -67,7 +67,7 @@ interface WsState {
   tickers: Record<string, Ticker>;
   lastKline: Record<string, KlineMsg>; // key = symbol.tf
   positions: Record<string, PositionMsg>; // key = pos_key (bot:<id> | manual:<symbol>)
-  orders: OrderMsg[]; // gần nhất trước
+  orders: OrderMsg[]; // most recent first
   scans: ScanRow[];
   connected: boolean;
   connect: () => void;

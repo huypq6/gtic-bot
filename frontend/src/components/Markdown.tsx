@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// Render markdown thành tài liệu đọc, style theo semantic token (sáng/tối).
+// Renders markdown as a readable document, styled with semantic tokens (light/dark).
 export default function Markdown({ children }: { children: string }) {
   return (
     <div className="text-sm leading-relaxed text-text">

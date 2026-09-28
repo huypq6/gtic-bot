@@ -1,9 +1,10 @@
-"""Quét nhiều CẶP cho ict_po3 v3 (params mặc định) → tìm "rổ cặp hợp".
+"""Scan many PAIRS for ict_po3 v3 (default params) → find a "suitable pair basket".
 
-Chạy:  PYTHONPATH=. uv run python scripts/scan_pairs_ict_po3.py
+Run:  PYTHONPATH=. uv run python scripts/scan_pairs_ict_po3.py
 
-Cố định params (bản v3 đang ship), thay đổi SYMBOL × TF → xếp hạng theo PnL để biết
-chiến thuật ăn ở cặp nào. In bảng từng TF + đề xuất rổ cặp (dương + đủ lệnh + win khá).
+Params fixed (the shipped v3), vary SYMBOL × TF → rank by PnL to see which pairs
+the strategy works on. Prints a table per TF + a suggested basket
+(positive + enough trades + decent win rate).
 """
 
 import asyncio
@@ -36,10 +37,10 @@ async def main() -> None:
                     await s.commit()
                     candles = await get_klines(s, sym, tf, limit=20000)
                 except Exception:  # noqa: BLE001
-                    print(f"  {sym} {tf}: sync lỗi (bỏ qua)")
+                    print(f"  {sym} {tf}: sync error (skipped)")
                     continue
                 if len(candles) < 200:
-                    print(f"  {sym} {tf}: thiếu dữ liệu ({len(candles)})")
+                    print(f"  {sym} {tf}: insufficient data ({len(candles)})")
                     continue
                 try:
                     r = run_backtest("ict_po3", "3", params, candles, 1000.0, FEE, tf, 1)
@@ -50,14 +51,18 @@ async def main() -> None:
 
     for tf, _ in TFS:
         items = [(sym, rows[(sym, tf)]) for sym in SYMBOLS if (sym, tf) in rows]
-        items.sort(key=lambda x: x[1]["pnl_pct"] if x[1]["pnl_pct"] is not None else -999, reverse=True)
-        print(f"\n{'='*78}\n{tf} — xếp theo PnL:")
-        print(f"  {'symbol':<10} {'pnl%':>8} {'win%':>6} {'maxDD%':>7} {'lệnh':>5}")
+        items.sort(
+            key=lambda x: x[1]["pnl_pct"] if x[1]["pnl_pct"] is not None else -999, reverse=True
+        )
+        print(f"\n{'='*78}\n{tf} — ranked by PnL:")
+        print(f"  {'symbol':<10} {'pnl%':>8} {'win%':>6} {'maxDD%':>7} {'trades':>6}")
         for sym, r in items:
-            print(f"  {sym:<10} {r['pnl_pct']:>8.2f} {r['winrate']:>6.1f} {r['max_dd']:>7.2f} {r['n_trades']:>5}")
+            print(f"  {sym:<10} {r['pnl_pct']:>8.2f} {r['winrate']:>6.1f} {r['max_dd']:>7.2f} "
+                  f"{r['n_trades']:>5}")
 
-    # Rổ đề xuất: dương trên CẢ 2 TF (đủ lệnh) → ưu tiên; hoặc dương 15m mạnh.
-    print(f"\n{'='*78}\nĐỀ XUẤT RỔ CẶP (đủ ≥{MIN_TRADES} lệnh):")
+    # Suggested basket: positive on BOTH TFs (enough trades) → preferred; otherwise strongly
+    # positive on 15m.
+    print(f"\n{'='*78}\nSUGGESTED PAIR BASKET (≥{MIN_TRADES} trades):")
     basket = []
     for sym in SYMBOLS:
         r15 = rows.get((sym, "15m"))
@@ -78,8 +83,9 @@ async def main() -> None:
         mark = "★" if n == 2 else " "
         print(f"  {mark} {sym:<10} {tag}")
     if not basket:
-        print("  (không cặp nào dương đủ lệnh — chiến thuật chưa có edge trên rổ thử)")
-    print("\n⚠️  In-sample. Nên walk-forward cặp được chọn trước khi tin.")
+        print("  (no pair is positive with enough trades — the strategy has no edge on the tested "
+              "basket)")
+    print("\n⚠️  In-sample. Walk-forward the selected pairs before trusting them.")
 
 
 if __name__ == "__main__":

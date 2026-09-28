@@ -1,8 +1,8 @@
-"""WSGateway — đẩy realtime (kline/ticker/feed/...) từ EventBus xuống frontend.
+"""WSGateway — pushes realtime data (kline/ticker/feed/...) from the EventBus to the frontend.
 
-Mỗi client subscribe firehose `"*"` (single-user, ít symbol → đơn giản, frontend
-tự lọc theo symbol đang xem). Khi connect gửi ngay 1 message `feed` trạng thái
-hiện tại để UI không phải chờ tick kế tiếp.
+Each client subscribes to the `"*"` firehose (single-user, few symbols → simple; the frontend
+filters by the symbol being viewed). On connect, a `feed` message with the current status
+is sent immediately so the UI does not have to wait for the next tick.
 """
 
 import asyncio
@@ -22,7 +22,7 @@ class WSGateway:
         self._status_sub = bus.subscribe("feed")
 
     async def track_feed_status(self) -> None:
-        """Task nền: nhớ trạng thái feed mới nhất để gửi cho client vừa kết nối."""
+        """Background task: remember the latest feed status to send to newly connected clients."""
         while True:
             msg = await self._status_sub.get()
             self._last_feed_status = msg.get("status", self._last_feed_status)
@@ -37,7 +37,7 @@ class WSGateway:
                 await websocket.send_json(msg)
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001 — client đóng/ngắt (disconnect, going away)
-            logger.debug("WS client ngắt kết nối")
+        except Exception:  # noqa: BLE001 — client closed/dropped (disconnect, going away)
+            logger.debug("WS client disconnected")
         finally:
             self._bus.unsubscribe("*", sub)

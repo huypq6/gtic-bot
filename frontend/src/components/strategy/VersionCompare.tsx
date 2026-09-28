@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchCompare } from "../../lib/api";
 import InfoTip from "../InfoTip";
 
-// So sánh hiệu năng các version theo backtest (US-08).
+// Compares version performance based on backtests (US-08).
 export default function VersionCompare({ name }: { name: string }) {
   const { data } = useQuery({
     queryKey: ["compare", name],

@@ -1,4 +1,4 @@
-"""REST tài khoản (P9a): số dư, nạp/rút, cấu hình mô phỏng + rào chắn, sổ cái, đường vốn."""
+"""Accounts REST (P9a): balance, deposit/withdraw, sim config + guardrails, ledger, equity."""
 
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -57,7 +57,7 @@ async def _account_dict(request: Request, session: AsyncSession, a: Account) -> 
         "dd_pct": st.dd_pct,
         "daily_pnl_pct": st.daily_pnl_pct,
         "net_deposit": net_in,
-        # lãi/lỗ tích lũy thật = equity − tiền đã nạp ròng (không tính nạp/rút là lãi)
+        # true cumulative PnL = equity − net deposits (deposits/withdrawals aren't profit)
         "total_pnl": st.equity - net_in,
         "total_pnl_pct": (st.equity - net_in) / net_in * 100 if net_in > 0 else None,
         "total_fees": -float(fees),
@@ -88,7 +88,7 @@ async def get_account(
 ) -> dict:
     a = await session.get(Account, account_id)
     if not a:
-        raise HTTPException(404, "tài khoản không tồn tại")
+        raise HTTPException(404, "account not found")
     return await _account_dict(request, session, a)
 
 
@@ -107,13 +107,13 @@ class Settings(BaseModel):
 class CreateAccount(Settings):
     name: str = Field(min_length=1, max_length=60)
     mode: str = "PAPER"  # PAPER | TESTNET | LIVE
-    initial_balance: float | None = Field(None, gt=0)  # PAPER: bắt buộc; sàn: lấy từ Binance
-    confirm: str | None = None  # LIVE: phải gõ "LIVE"
+    initial_balance: float | None = Field(None, gt=0)  # PAPER: required; exchange: from Binance
+    confirm: str | None = None  # LIVE: must type "LIVE"
 
 
 class PatchAccount(Settings):
     name: str | None = Field(None, min_length=1, max_length=60)
-    # các trường rào chắn gửi null để TẮT → cần biết trường nào có mặt trong body
+    # guardrail fields sent as null DISABLE them → need to know which fields are in the body
     model_config = {"extra": "forbid"}
 
 
@@ -127,21 +127,21 @@ async def create_account(
 ) -> dict:
     mode = body.mode.upper()
     if mode not in ("PAPER", "TESTNET", "LIVE"):
-        raise HTTPException(400, f"mode {mode} không hợp lệ")
+        raise HTTPException(400, f"invalid mode {mode}")
     if mode == "PAPER" and not body.initial_balance:
-        raise HTTPException(422, "tài khoản paper cần vốn ban đầu")
+        raise HTTPException(422, "a paper account requires an initial balance")
     if mode != "PAPER":
         from app.execution.clients import check_mode
 
         try:
-            check_mode(mode)  # LIVE: ENABLE_LIVE; cả 2: có key trong .env
+            check_mode(mode)  # LIVE: ENABLE_LIVE; both: key present in .env
         except ValueError as e:
             raise HTTPException(403 if mode == "LIVE" else 400, str(e)) from e
         if mode == "LIVE" and body.confirm != "LIVE":
-            raise HTTPException(400, "tài khoản LIVE (tiền thật) cần xác nhận gõ 'LIVE'")
+            raise HTTPException(400, "a LIVE account (real money) requires typing 'LIVE'")
         exists = (await session.execute(select(Account.id).where(Account.mode == mode))).first()
         if exists:
-            raise HTTPException(409, f"đã có tài khoản {mode} (1 cặp key/mode)")
+            raise HTTPException(409, f"a {mode} account already exists (1 key pair per mode)")
     vals = {k: v for k, v in body.model_dump().items()
             if k not in ("name", "initial_balance", "mode", "confirm") and v is not None}
     a = Account(
@@ -155,8 +155,8 @@ async def create_account(
         detail={"account_id": a.id, "name": a.name, "initial_balance": body.initial_balance},
     )
     if mode == "PAPER":
-        await request.app.state.accounts.deposit(a.id, body.initial_balance, "Vốn ban đầu")
-    else:  # đọc số dư thật ngay (lỗi kết nối → sync_error, vẫn tạo tài khoản)
+        await request.app.state.accounts.deposit(a.id, body.initial_balance, "Initial balance")
+    else:  # read the real balance now (connection error → sync_error, account still created)
         await request.app.state.accounts.sync_exchange(a.id)
     await session.refresh(a)
     return await _account_dict(request, session, a)
@@ -169,11 +169,11 @@ async def patch_account(
 ) -> dict:
     a = await session.get(Account, account_id)
     if not a:
-        raise HTTPException(404, "tài khoản không tồn tại")
+        raise HTTPException(404, "account not found")
     changes = body.model_dump(exclude_unset=True)
     for k, v in changes.items():
         if k in ("name", "leverage", "taker_fee", "maker_fee", "slippage_bps") and v is None:
-            continue  # không cho tắt các trường bắt buộc
+            continue  # required fields cannot be disabled
         setattr(a, k, v)
     await session.commit()
     await request.app.state.order_manager.write_audit(
@@ -194,7 +194,7 @@ async def _move(request: Request, account_id: int, body: Money, kind: str) -> di
     accounts = request.app.state.accounts
     a = await accounts.get(account_id)
     if not a:
-        raise HTTPException(404, "tài khoản không tồn tại")
+        raise HTTPException(404, "account not found")
     await request.app.state.order_manager.write_audit(
         source="MANUAL", action=kind, mode=a.mode,
         detail={"account_id": account_id, "amount": body.amount, "note": body.note},
@@ -221,13 +221,13 @@ async def withdraw(account_id: int, body: Money, request: Request) -> dict:
 async def sync_now(
     account_id: int, request: Request, session: AsyncSession = Depends(get_session)
 ) -> dict:
-    """Đồng bộ ngay số dư/sổ cái từ Binance (tài khoản TESTNET/LIVE)."""
+    """Sync balance/ledger from Binance now (TESTNET/LIVE accounts)."""
     accounts = request.app.state.accounts
     a = await accounts.get(account_id)
     if not a:
-        raise HTTPException(404, "tài khoản không tồn tại")
+        raise HTTPException(404, "account not found")
     if not is_exchange(a):
-        raise HTTPException(400, "tài khoản paper không cần đồng bộ")
+        raise HTTPException(400, "paper accounts do not need syncing")
     await accounts.sync_exchange(account_id)
     a = await session.get(Account, account_id)
     await session.refresh(a)
@@ -236,10 +236,10 @@ async def sync_now(
 
 @router.post("/accounts/{account_id}/resume")
 async def resume(account_id: int, request: Request) -> dict:
-    """Mở khóa tài khoản bị DỪNG (sụt vốn/lỗ ngày) — người dùng đã xem xét."""
+    """Unlock a HALTED account (drawdown/daily loss) — the user has reviewed it."""
     a = await request.app.state.accounts.get(account_id)
     if not a:
-        raise HTTPException(404, "tài khoản không tồn tại")
+        raise HTTPException(404, "account not found")
     await request.app.state.order_manager.write_audit(
         source="MANUAL", action="ACCOUNT_RESUME", mode=a.mode,
         detail={"account_id": account_id, "was": a.halted_reason},
@@ -273,8 +273,8 @@ async def ledger(
 async def equity_curve(
     account_id: int, request: Request, session: AsyncSession = Depends(get_session)
 ) -> dict:
-    """Đường số dư ví theo sổ cái + điểm equity hiện tại. Đồ thị 'vốn' (loại trừ nạp/rút)
-    = số dư − tiền nạp ròng lũy kế → chỉ phản ánh lãi/lỗ giao dịch."""
+    """Wallet balance curve from the ledger + current equity point. The 'equity' chart (excluding
+    deposits/withdrawals) = balance − cumulative net deposits → reflects trading PnL only."""
     rows = (
         await session.execute(
             select(AccountTxn.ts, AccountTxn.type, AccountTxn.amount, AccountTxn.balance_after)
@@ -287,7 +287,7 @@ async def equity_curve(
     for ts, typ, amt, bal in rows:
         if typ in ("DEPOSIT", "WITHDRAW"):
             net_in += float(amt)
-        t = int(ts.timestamp()) * 1000  # gộp theo giây: chart cần thời gian tăng ngặt
+        t = int(ts.timestamp()) * 1000  # bucket per second: chart needs strictly increasing time
         if balance and balance[-1][0] >= t:
             balance[-1][1], pnl[-1][1] = float(bal), float(bal) - net_in
         else:

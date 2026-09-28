@@ -1,4 +1,4 @@
-// Render form params từ param_schema (US-06) — không cần sửa code.
+// Renders the params form from param_schema (US-06) — no code changes needed.
 interface Spec {
   type?: string;
   min?: number;

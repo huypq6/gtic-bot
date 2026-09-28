@@ -1,7 +1,7 @@
-"""PaperEngine — matching nội bộ (pure). Logic này dùng chung cho paper mode.
+"""PaperEngine — internal matching (pure). This logic is shared by paper mode.
 
-Quy ước: 1 bot = 1 vị thế (không pyramiding). BUY = muốn LONG, SELL = muốn SHORT,
-CLOSE = đóng vị thế. Tín hiệu ngược chiều sẽ ĐÓNG rồi MỞ chiều mới (flip).
+Conventions: 1 bot = 1 position (no pyramiding). BUY = want LONG, SELL = want SHORT,
+CLOSE = close the position. An opposite signal CLOSES then OPENS the new side (flip).
 """
 
 import pytest
@@ -22,7 +22,7 @@ def close():
     return Signal(action="CLOSE", symbol="BTCUSDT")
 
 
-# ---- mở vị thế MARKET ----
+# ---- open MARKET position ----
 def test_market_buy_opens_long():
     eng = PaperEngine()
     events = eng.submit(buy(2), price=100)
@@ -40,7 +40,7 @@ def test_market_sell_opens_short_when_flat():
     assert eng.position.side == "SHORT"
 
 
-# ---- đóng vị thế + PnL ----
+# ---- close position + PnL ----
 def test_close_long_realizes_profit():
     eng = PaperEngine()
     eng.submit(buy(2), price=100)
@@ -57,14 +57,14 @@ def test_close_short_realizes_profit():
     eng.submit(sell(2), price=100)
     events = eng.submit(close(), price=90)
     closed = [e.closed for e in events if e.closed][0]
-    assert closed.pnl == (100 - 90) * 2  # +20 (short lãi khi giá giảm)
+    assert closed.pnl == (100 - 90) * 2  # +20 (short profits when price falls)
 
 
 def test_sell_flips_long_to_short():
     eng = PaperEngine()
     eng.submit(buy(1), price=100)
     events = eng.submit(sell(1), price=120)
-    # đóng long (+20) rồi mở short
+    # close long (+20) then open short
     assert eng.position.side == "SHORT"
     assert eng.position.entry_price == 120
     assert any(e.closed and e.closed.pnl == 20 for e in events)
@@ -75,7 +75,7 @@ def test_buy_when_already_long_is_noop():
     eng.submit(buy(1), price=100)
     events = eng.submit(buy(1), price=105)
     assert eng.position.qty == 1
-    assert eng.position.entry_price == 100  # không đổi
+    assert eng.position.entry_price == 100  # unchanged
     assert events == []
 
 
@@ -122,12 +122,12 @@ def test_no_trigger_when_price_inside_band():
 def test_buy_limit_queues_then_fills_when_price_crosses():
     eng = PaperEngine()
     events = eng.submit(buy(1, order_type="LIMIT", price=95), price=100)
-    assert eng.position is None  # chưa khớp
+    assert eng.position is None  # not filled yet
     assert any(e.fill and e.fill.type == "LIMIT" for e in events) is False
     assert len(eng.pending) == 1
-    eng.on_price(96)  # chưa chạm
+    eng.on_price(96)  # not hit yet
     assert eng.position is None
-    eng.on_price(95)  # chạm → khớp
+    eng.on_price(95)  # hit → filled
     assert eng.position is not None
     assert eng.position.entry_price == 95
     assert eng.pending == []
@@ -180,7 +180,7 @@ def test_force_close_manual():
     assert events[0].closed.pnl == (108 - 100) * 2
 
 
-# ---- phí ----
+# ---- fees ----
 def test_fee_reduces_pnl():
     eng = PaperEngine(fee_rate=0.001)
     eng.submit(buy(1), price=100)
@@ -199,13 +199,13 @@ def test_unrealized_pnl():
     assert eng.unrealized_pnl(105) == 0.0
 
 
-# ---- mô phỏng sát sàn: phí maker/taker, trượt giá, gap SL, thanh lý ----
+# ---- exchange-realistic simulation: maker/taker fees, slippage, SL gap, liquidation ----
 def test_slippage_and_taker_fees():
     eng = PaperEngine(fee_rate=0.0005, slippage_bps=10)  # 0.1%
     ev = eng.submit(Signal("BUY", "X", size=1, sl=90, tp=110), 100)
-    assert ev[-1].fill.price == pytest.approx(100.1)  # mua trượt lên
+    assert ev[-1].fill.price == pytest.approx(100.1)  # buy slips up
     assert ev[-1].fill.fee == pytest.approx(0.0005 * 100.1)
-    closed = eng.on_price(111)[0].closed  # TP bán trượt xuống
+    closed = eng.on_price(111)[0].closed  # TP sell slips down
     assert closed.exit_price == pytest.approx(110 * 0.999)
     assert closed.exit_fee == pytest.approx(0.0005 * closed.exit_price)
     assert closed.pnl == pytest.approx(closed.gross - closed.entry_fee - closed.exit_fee)
@@ -222,13 +222,13 @@ def test_limit_entry_uses_maker_fee_no_slip():
 def test_gap_fill_sl_at_worse_tick():
     eng = PaperEngine(gap_fill=True)
     eng.submit(Signal("SELL", "X", size=1, sl=105), 100)
-    closed = eng.on_price(107)[0].closed  # nhảy qua SL
+    closed = eng.on_price(107)[0].closed  # gaps past SL
     assert closed.exit_price == 107 and closed.reason == "SL"
 
 
 def test_liquidation_with_leverage():
     eng = PaperEngine(leverage=10, mmr=0.005)
-    eng.submit(Signal("BUY", "X", size=1), 100)  # không SL
+    eng.submit(Signal("BUY", "X", size=1), 100)  # no SL
     assert eng.liq_price == pytest.approx(100 * (1 - 0.1 + 0.005))
     assert eng.margin() == pytest.approx(10)
     closed = eng.on_price(90)[0].closed

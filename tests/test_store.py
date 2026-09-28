@@ -1,4 +1,4 @@
-"""store.upsert_klines — phải chia batch để không vượt 32767 bind params của asyncpg."""
+"""store.upsert_klines — must batch to stay under asyncpg's 32767 bind params."""
 
 from app.market import store
 from app.market.store import upsert_klines
@@ -37,15 +37,15 @@ async def test_single_batch():
 
 async def test_multiple_batches_under_param_limit():
     s = FakeSession()
-    n = store._UPSERT_BATCH * 2 + 1  # mô phỏng 3 ngày 1m klines
+    n = store._UPSERT_BATCH * 2 + 1  # simulate 3 days of 1m klines
     assert await upsert_klines(s, _rows(n)) == n
     assert s.execute_calls == 3  # 3 batch
-    # mỗi batch ≤ _UPSERT_BATCH dòng × 8 cột < 32767 params
+    # each batch ≤ _UPSERT_BATCH rows × 8 columns < 32767 params
     assert store._UPSERT_BATCH * 8 < 32767
 
-# ---- ensure_history: chỉ tải phần thiếu ----
+# ---- ensure_history: download only the missing part ----
 class RangeSession:
-    """Giả DB trả (min_ts, max_ts, count) cho truy vấn phủ dữ liệu."""
+    """Fake DB returning (min_ts, max_ts, count) for the coverage query."""
 
     def __init__(self, first, last, n):
         self.row = (first, last, n)
@@ -78,7 +78,7 @@ async def test_ensure_history_incremental_when_covered(monkeypatch):
     start = datetime(2026, 1, 1, tzinfo=UTC)
     last = start + timedelta(days=10)
     calls = await _ensure(monkeypatch, start, last, 10 * 96 + 1, start)
-    assert calls == [int(last.timestamp() * 1000)]  # chỉ từ nến cuối
+    assert calls == [int(last.timestamp() * 1000)]  # only from the last candle
 
 
 async def test_ensure_history_full_when_gappy_or_missing(monkeypatch):
@@ -87,6 +87,6 @@ async def test_ensure_history_full_when_gappy_or_missing(monkeypatch):
     start = datetime(2026, 1, 1, tzinfo=UTC)
     full = int(start.timestamp() * 1000)
     last = start + timedelta(days=10)
-    assert await _ensure(monkeypatch, start, last, 500, start) == [full]  # thủng
+    assert await _ensure(monkeypatch, start, last, 500, start) == [full]  # has gaps
     assert await _ensure(monkeypatch, start + timedelta(days=2), last, 800, start) == [full]
-    assert await _ensure(monkeypatch, None, None, 0, start) == [full]  # chưa có gì
+    assert await _ensure(monkeypatch, None, None, 0, start) == [full]  # nothing yet

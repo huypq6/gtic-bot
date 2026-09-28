@@ -1,49 +1,49 @@
-# Supertrend — Theo xu hướng dựa trên ATR
+# Supertrend — ATR-based trend following
 
-> Trường phái: **Trend-following**. Khung gợi ý: 15m–4h. Hợp xu hướng rõ.
+> Style: **Trend-following**. Suggested timeframes: 15m–4h. Suits clear trends.
 
-## Ý tưởng
+## Idea
 
-Supertrend vẽ một đường bám theo giá, **đổi phía** khi xu hướng đảo chiều. Dùng **ATR** (biến động) để đặt dải đệm, giúp lọc nhiễu tốt hơn đường đơn thuần. Đường nằm **dưới giá** = xu hướng tăng (long), nằm **trên giá** = xu hướng giảm (short).
+Supertrend plots a line that follows price and **switches sides** when the trend reverses. It uses **ATR** (volatility) to set a buffer band, which filters noise better than a plain line. Line **below price** = uptrend (long), **above price** = downtrend (short).
 
-## Công thức
+## Formula
 
 ```
 hl2          = (high + low) / 2
 basicUpper   = hl2 + mult × ATR(period)
 basicLower   = hl2 − mult × ATR(period)
-finalUpper/finalLower: làm "trượt" theo giá đóng để chống nhiễu
-direction    = +1 (uptrend) nếu giá đóng trên finalUpper, −1 ngược lại (có nhớ trạng thái)
+finalUpper/finalLower: "ratcheted" along with the close to resist noise
+direction    = +1 (uptrend) if close is above finalUpper, −1 otherwise (stateful)
 ```
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
-| direction đảo từ −1 → **+1** | **BUY** (vào LONG) |
-| direction đảo từ +1 → **−1** | **SELL** (vào SHORT) |
+| direction flips from −1 → **+1** | **BUY** (enter LONG) |
+| direction flips from +1 → **−1** | **SELL** (enter SHORT) |
 
-Chỉ vào lệnh đúng lúc **đổi chiều** (so sánh `direction[-2]` với `direction[-1]`).
+Enters only at the moment of the **flip** (comparing `direction[-2]` with `direction[-1]`).
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `period` | 10 | Chu kỳ ATR. |
-| `mult` | 3.0 | Hệ số nhân ATR (dải đệm). Lớn → ít đổi chiều, ít nhiễu nhưng trễ. |
-| `size` | 0.001 | Khối lượng. |
+| `period` | 10 | ATR period. |
+| `mult` | 3.0 | ATR multiplier (buffer band). Larger → fewer flips, less noise but more lag. |
+| `size` | 0.001 | Order size. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Bám xu hướng tốt, lọc nhiễu nhờ ATR; quy tắc rõ ràng, ít đổi chiều giả.
-- ❌ Trong sideway vẫn bị whipsaw (giảm bằng `mult` lớn hơn).
-- ❌ Vào trễ sau khi xu hướng đã xác lập.
+- ✅ Follows trends well, filters noise thanks to ATR; clear rules, few false flips.
+- ❌ Still whipsaws in sideways markets (reduce with a larger `mult`).
+- ❌ Enters late, after the trend is already established.
 
-## Khi nào dùng
+## When to use
 
-- Thị trường có xu hướng, biến động vừa–lớn. Tăng `mult` nếu nhiễu nhiều.
+- Trending markets with medium–high volatility. Increase `mult` if there is a lot of noise.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Quét `(period, mult)`; bộ phổ biến 10/3 hoặc 7/3.
-- So với Donchian/EMA cross trên cùng dữ liệu để chọn bộ lọc xu hướng phù hợp.
+- Sweep `(period, mult)`; popular sets are 10/3 or 7/3.
+- Compare with Donchian/EMA cross on the same data to choose a suitable trend filter.

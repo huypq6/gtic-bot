@@ -1,8 +1,10 @@
-"""Screening nhanh các strategy cổ điển có sẵn (params mặc định) — baseline trước khi viết alpha mới.
+"""Quick screening of the existing classic strategies (default params).
 
-Chạy:  PYTHONPATH=. uv run python scripts/screen_classics.py
-Mỗi strategy × {BTC,ETH,SOL} × {15m,1h}, 180 ngày, phí 0.05%/chiều.
-Mục đích: xem classic nào đáng sweep tiếp, classic nào loại ngay.
+A baseline before writing new alpha.
+
+Run:  PYTHONPATH=. uv run python scripts/screen_classics.py
+Each strategy × {BTC,ETH,SOL} × {15m,1h}, 180 days, 0.05% fee per side.
+Purpose: see which classics are worth sweeping further and which to drop immediately.
 """
 
 import asyncio
@@ -18,7 +20,7 @@ MARKETS = [
 START = "180 days ago UTC"
 FEE = 0.0005
 
-CANDIDATES = [  # (name, version) — bỏ ict_po3/ichimoku (đã nghiên cứu riêng)
+CANDIDATES = [  # (name, version) — excludes ict_po3/ichimoku (researched separately)
     ("adx", "1"), ("bollinger", "1"), ("donchian", "1"), ("ema_cross", "2"),
     ("grid", "1"), ("keltner", "1"), ("macd", "1"), ("psar", "1"),
     ("rsi_rev", "1"), ("stoch", "1"), ("supertrend", "1"), ("vwap", "1"),
@@ -32,7 +34,7 @@ async def load_data() -> dict:
             await sync_historical(s, sym, tf, START)
             await s.commit()
             data[(sym, tf)] = await get_klines(s, sym, tf, limit=20000)
-            print(f"  data {sym} {tf}: {len(data[(sym, tf)])} nến")
+            print(f"  data {sym} {tf}: {len(data[(sym, tf)])} candles")
     return data
 
 
@@ -40,7 +42,7 @@ async def main() -> None:
     from app.strategy.registry import discover, get
 
     discover()
-    print("Nạp dữ liệu…")
+    print("Loading data…")
     data = await load_data()
 
     rows = []
@@ -50,7 +52,7 @@ async def main() -> None:
         for (sym, tf), candles in data.items():
             try:
                 r = run_backtest(name, ver, params, candles, 1000.0, FEE, tf, 1)
-            except Exception as e:  # noqa: BLE001
+            except Exception:  # noqa: BLE001
                 per[(sym, tf)] = None
                 continue
             per[(sym, tf)] = r
@@ -70,7 +72,8 @@ async def main() -> None:
 
     rows.sort(key=lambda r: (r["pos"], r["mean"]), reverse=True)
     print(f"\n{'='*100}")
-    print(f"{'strategy':16} {'PnL_TB%':>8} {'#dương':>7} {'maxDD%':>7} {'lệnh':>6}   per-market (pnl%)")
+    print(f"{'strategy':16} {'avgPnL%':>8} {'#pos':>7} {'maxDD%':>7} {'trades':>6}   per-market "
+          "(pnl%)")
     for r in rows:
         per_s = " ".join(
             f"{sym[:3]}/{tf}:{(p['pnl_pct'] if p else float('nan')):+.1f}"
@@ -78,7 +81,7 @@ async def main() -> None:
         )
         print(f"{r['name']:16} {r['mean']:>8.2f} {r['pos']:>4}/{r['n']} {r['worst_dd']:>7.1f} "
               f"{r['trades']:>6}   {per_s}")
-    print("\n⚠️  Screening thô (default params, in-sample). Chỉ dùng để CHỌN ứng viên sweep.")
+    print("\n⚠️  Rough screening (default params, in-sample). Only for PICKING sweep candidates.")
 
 
 if __name__ == "__main__":

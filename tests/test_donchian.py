@@ -1,4 +1,4 @@
-"""Donchian Breakout — on_candle logic + đăng ký + backtest mẫu."""
+"""Donchian Breakout — on_candle logic + registration + sample backtest."""
 
 import pytest
 
@@ -18,7 +18,7 @@ def ctx(price, closes):
 
 def test_breakout_up_buys():
     s = DonchianBreakout({"period": 3, "size": 1})
-    sigs = s.on_candle(ctx(12.0, [10, 10, 10, 10]))  # giá > đỉnh 3 nến trước (high=10.5)
+    sigs = s.on_candle(ctx(12.0, [10, 10, 10, 10]))  # price > prior 3-candle high (10.5)
     assert [x.action for x in sigs] == ["BUY"]
     assert sigs[0].size == 1
 
@@ -52,12 +52,12 @@ def test_registered_in_registry():
     assert get("donchian", "1") is DonchianBreakout
 
 
-# ---- backtest mẫu (skip nếu chưa cài extra backtest) ----
+# ---- sample backtest (skipped if the backtest extra is not installed) ----
 def test_donchian_backtest_sample():
     pytest.importorskip("vectorbt")
     from app.backtest.engine import run_backtest
 
-    # chuỗi giá có breakout lên rồi xuống → có lệnh
+    # price series breaks out up then down → trades
     prices = [10] * 25 + [11, 12, 13, 14, 15, 14, 13, 12, 11, 10, 9, 8, 7]
     candles = [
         {"ts": i * 60000, "open": p, "high": p + 0.3, "low": p - 0.3,

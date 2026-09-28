@@ -1,6 +1,6 @@
-"""ADX/DMI — +DI cắt -DI, lọc theo độ mạnh xu hướng (ADX).
+"""ADX/DMI — +DI crosses -DI, filtered by trend strength (ADX).
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
+=== EDIT THE STRATEGY HERE ===
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -12,7 +12,7 @@ from app.strategy.ta import adx_dmi, adx_series
 class AdxDmi(Strategy):
     name = "adx"
     version = "1"
-    description = "ADX/DMI — +DI cắt -DI khi ADX đủ mạnh → BUY/SELL."
+    description = "ADX/DMI — +DI crosses -DI while ADX is strong enough → BUY/SELL."
     default_params = {"period": 14, "adx_min": 25, "size": 0.001}
     param_schema = {
         "period": {"type": "int", "min": 3, "max": 100, "default": 14},
@@ -27,9 +27,9 @@ class AdxDmi(Strategy):
             return []
         pp, pn = d["plus_di_prev"], d["plus_di_now"]
         mp, mn = d["minus_di_prev"], d["minus_di_now"]
-        if pp <= mp and pn > mn:  # +DI cắt lên -DI → xu hướng tăng mạnh
+        if pp <= mp and pn > mn:  # +DI crosses above -DI → strong uptrend
             return [Signal("BUY", ctx.symbol, p["size"])]
-        if pp >= mp and pn < mn:  # +DI cắt xuống → xu hướng giảm mạnh
+        if pp >= mp and pn < mn:  # +DI crosses below → strong downtrend
             return [Signal("SELL", ctx.symbol, p["size"])]
         return []
 
@@ -37,4 +37,4 @@ class AdxDmi(Strategy):
         return adx_series(candles, self.params["period"])
 
     def plot_pane(self):
-        return {"+DI": 1, "-DI": 1, "ADX": 1}  # oscillator → pane phụ
+        return {"+DI": 1, "-DI": 1, "ADX": 1}  # oscillator → separate pane

@@ -1,4 +1,4 @@
-"""P0 smoke test — backend khởi động & /api/health trả ok."""
+"""P0 smoke test — backend starts & /api/health returns ok."""
 
 from fastapi.testclient import TestClient
 

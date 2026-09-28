@@ -1,11 +1,11 @@
-"""Backtest engine — dùng CHUNG `Strategy.on_candle` (như paper/live, chống RK-4),
-fill giả lập bằng **vectorbt**.
+"""Backtest engine — uses the SAME `Strategy.on_candle` (as paper/live, mitigates RK-4),
+with simulated fills via **vectorbt**.
 
-Quy trình: nạp nến lịch sử → replay on_candle để sinh tín hiệu long/short →
-`vbt.Portfolio.from_signals` tính metrics + equity curve + danh sách trade.
+Flow: load historical candles → replay on_candle to produce long/short signals →
+`vbt.Portfolio.from_signals` computes metrics + equity curve + trade list.
 
-vectorbt là dep nặng (numba) → import LAZY trong hàm để app prod không cài cũng chạy
-được phần còn lại. Hàm chạy sync (gọi trong threadpool ở API).
+vectorbt is a heavy dependency (numba) → imported LAZILY inside functions so a prod app without it
+can still run everything else. Functions are sync (called in a threadpool by the API).
 """
 
 from app.strategy.base import Context
@@ -15,7 +15,7 @@ _TF_FREQ = {"1m": "1min", "5m": "5min", "15m": "15min", "1h": "1h", "4h": "4h", 
 
 
 def _build_signals(strategy, candles: list[dict]):
-    """Replay on_candle → 4 mảng bool (long/short entries/exits)."""
+    """Replay on_candle → 4 bool arrays (long/short entries/exits)."""
     from app.strategy.base import Position
 
     n = len(candles)
@@ -23,8 +23,8 @@ def _build_signals(strategy, candles: list[dict]):
     long_x = [False] * n
     short_e = [False] * n
     short_x = [False] * n
-    pos: Position | None = None  # theo dõi vị thế để bơm vào ctx.position (như live)
-    sltp: dict[int, tuple] = {}  # ts vào lệnh → (sl, tp) để gắn vào trade
+    pos: Position | None = None  # track the position to inject into ctx.position (as in live)
+    sltp: dict[int, tuple] = {}  # entry ts → (sl, tp) to attach to the trade
     for i in range(n):
         price = candles[i]["close"]
         symbol = candles[i].get("symbol", "")
@@ -67,25 +67,25 @@ def run_backtest(
     tf: str = "1m",
     leverage: int = 1,
 ) -> dict:
-    """Backtest. `fee_rate` = phí 1 chiều (Binance spot 0.001 / futures 0.0005).
+    """Backtest. `fee_rate` = one-way fee (Binance spot 0.001 / futures 0.0005).
 
-    `leverage` (Futures): khuếch đại lợi nhuận & lỗ & phí theo notional = vốn × đòn bẩy.
-    Mô phỏng bằng cách scale lợi nhuận từng nến × leverage trên VỐN thực; nếu equity
-    chạm 0 → đánh dấu `liquidated` (cháy tài khoản).
+    `leverage` (Futures): amplifies profit, loss and fees by notional = capital × leverage.
+    Simulated by scaling each candle's return × leverage on the REAL capital; if equity
+    hits 0 → mark as `liquidated` (account blown).
     """
     import numpy as np
     import pandas as pd
     import vectorbt as vbt
 
     if len(candles) < 5:
-        raise ValueError("không đủ dữ liệu để backtest")
+        raise ValueError("not enough data to backtest")
     leverage = max(1, int(leverage))
 
     discover()
     strategy = get(strategy_name, strategy_version)(params)
     long_e, long_x, short_e, short_x, sltp = _build_signals(strategy, candles)
 
-    # đường indicator overlay theo chiến lược (US-11 mở rộng).
+    # indicator overlay lines per strategy (US-11 extension).
     # Shape: {name: {"pane": 0|1, "data": [[ts, value], ...]}}. pane 1 = oscillator (RSI/ADX/…).
     indicators: dict[str, dict] = {}
     try:
@@ -99,14 +99,14 @@ def run_backtest(
                     if v is not None
                 ],
             }
-    except Exception:  # noqa: BLE001 — lỗi plot không được chặn backtest
+    except Exception:  # noqa: BLE001 — a plot error must not block the backtest
         indicators = {}
 
     idx = pd.to_datetime([c["ts"] for c in candles], unit="ms", utc=True)
     close = pd.Series([c["close"] for c in candles], index=idx)
     freq = _TF_FREQ.get(tf, "1min")
 
-    # vbt chạy ở notional = capital (1×); leverage áp ở hậu kỳ trên VỐN.
+    # vbt runs at notional = capital (1×); leverage is applied afterwards on the CAPITAL.
     pf = vbt.Portfolio.from_signals(
         close,
         entries=np.array(long_e),
@@ -120,7 +120,7 @@ def run_backtest(
 
     value = pf.value()
     vals = value.values.astype(float)
-    # lợi nhuận từng nến (đã gồm phí) → khuếch đại × leverage trên vốn thực.
+    # per-candle returns (fees included) → amplified × leverage on the real capital.
     eq = np.empty(len(vals))
     eq[0] = capital
     liquidated = False
@@ -136,7 +136,7 @@ def run_backtest(
         else:
             eq[i] = nxt
 
-    # metrics trên equity đã đòn bẩy.
+    # metrics on the leveraged equity.
     final = float(eq[-1])
     pnl_pct = (final / capital - 1) * 100
     peak = np.maximum.accumulate(eq)
@@ -163,7 +163,7 @@ def run_backtest(
                 if pd.notna(t["Exit Timestamp"])
                 else None,
                 "exit": _safe(t["Avg Exit Price"]),
-                "pnl_pct": round((_safe(t["Return"]) or 0.0) * 100 * leverage, 4),  # ×đòn bẩy
+                "pnl_pct": round((_safe(t["Return"]) or 0.0) * 100 * leverage, 4),  # × leverage
                 "sl": _safe(sl),
                 "tp": _safe(tp),
             }
@@ -173,7 +173,7 @@ def run_backtest(
         "pnl_pct": round(pnl_pct, 4),
         "winrate": round((_safe(pf.trades.win_rate()) or 0.0) * 100, 2),
         "max_dd": round(max_dd, 4),
-        "sharpe": _safe(pf.sharpe_ratio()),  # ~bất biến theo đòn bẩy (trước khi cháy)
+        "sharpe": _safe(pf.sharpe_ratio()),  # ~invariant to leverage (before liquidation)
         "n_trades": int(pf.trades.count()),
         "leverage": leverage,
         "liquidated": liquidated,

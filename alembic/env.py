@@ -1,7 +1,7 @@
-"""Alembic env — async engine, URL từ app.config.
+"""Alembic env — async engine, URL from app.config.
 
-target_metadata = app.db.Base.metadata. Models (P2+) phải được import ở đây để
-autogenerate thấy chúng. Hiện chưa có model nào.
+target_metadata = app.db.Base.metadata. Models (P2+) must be imported here so
+autogenerate can see them.
 """
 
 import asyncio
@@ -14,7 +14,7 @@ from alembic import context
 from app.config import settings
 from app.db import Base
 
-# Import models để chúng đăng ký vào Base.metadata (autogenerate thấy được).
+# Import models so they register into Base.metadata (visible to autogenerate).
 from app.market import models as _market_models  # noqa: F401,E402
 from app.orders import models as _orders_models  # noqa: F401,E402
 

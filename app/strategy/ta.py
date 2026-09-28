@@ -1,13 +1,13 @@
-"""Chỉ báo kỹ thuật thuần (pure) cho strategy. Dùng được cả paper/backtest/live."""
+"""Pure technical indicators for strategies. Usable in paper/backtest/live alike."""
 
 
 def pad_left(series: list[float], n: int) -> list[float | None]:
-    """Căn series về độ dài n bằng cách chèn None ở đầu (cho warmup indicator)."""
+    """Left-pad a series to length n with None (for indicator warmup)."""
     return [None] * max(0, n - len(series)) + list(series)
 
 
 def ema(values: list[float], period: int) -> list[float]:
-    """EMA series, độ dài = len(values)-period+1 (rỗng nếu thiếu dữ liệu)."""
+    """EMA series, length = len(values)-period+1 (empty if not enough data)."""
     if len(values) < period:
         return []
     k = 2 / (period + 1)
@@ -18,14 +18,14 @@ def ema(values: list[float], period: int) -> list[float]:
 
 
 def sma(values: list[float], period: int) -> float | None:
-    """Simple moving average của `period` giá trị cuối."""
+    """Simple moving average of the last `period` values."""
     if len(values) < period:
         return None
     return sum(values[-period:]) / period
 
 
 def stdev(values: list[float], period: int) -> float | None:
-    """Độ lệch chuẩn (population) của `period` giá trị cuối."""
+    """Standard deviation (population) of the last `period` values."""
     if len(values) < period:
         return None
     window = values[-period:]
@@ -37,7 +37,7 @@ def stdev(values: list[float], period: int) -> float | None:
 def macd(
     values: list[float], fast: int = 12, slow: int = 26, signal: int = 9
 ) -> tuple[list[float], list[float]]:
-    """MACD: trả (macd_line, signal_line) đã căn đuôi cùng độ dài (rỗng nếu thiếu)."""
+    """MACD: (macd_line, signal_line) tail-aligned to the same length (empty if not enough data)."""
     ef, es = ema(values, fast), ema(values, slow)
     if not ef or not es:
         return [], []
@@ -50,9 +50,9 @@ def macd(
 
 
 def supertrend(candles: list[dict], period: int = 10, mult: float = 3.0) -> list[int]:
-    """Supertrend → list direction theo từng nến (1 = uptrend/long, -1 = downtrend/short).
+    """Supertrend → list of directions per candle (1 = uptrend/long, -1 = downtrend/short).
 
-    Độ dài = len(candles) - period (rỗng nếu thiếu). Dùng [-2],[-1] để bắt lúc đảo chiều.
+    Length = len(candles) - period (empty if not enough data). Use [-2],[-1] to catch reversals.
     """
     if len(candles) < period + 1:
         return []
@@ -61,14 +61,14 @@ def supertrend(candles: list[dict], period: int = 10, mult: float = 3.0) -> list
         h, low = candles[i]["high"], candles[i]["low"]
         pc = candles[i - 1]["close"]
         trs.append(max(h - low, abs(h - pc), abs(low - pc)))
-    # Wilder ATR series, atr[j] ứng với nến index = period + j
+    # Wilder ATR series, atr[j] corresponds to candle index = period + j
     atr_series = [sum(trs[:period]) / period]
     for tr in trs[period:]:
         atr_series.append((atr_series[-1] * (period - 1) + tr) / period)
 
     directions: list[int] = []
     final_upper = final_lower = None
-    st = None  # supertrend trước
+    st = None  # previous supertrend
     direction = 1
     for j, a in enumerate(atr_series):
         ci = period + j
@@ -94,7 +94,7 @@ def supertrend(candles: list[dict], period: int = 10, mult: float = 3.0) -> list
 
 
 def psar(candles: list[dict], step: float = 0.02, max_af: float = 0.2) -> list[int]:
-    """Parabolic SAR → list direction (1 = up, -1 = down) theo từng nến. Dùng [-2],[-1] bắt đảo."""
+    """Parabolic SAR → direction per candle (1 = up, -1 = down). [-2],[-1] catch reversals."""
     n = len(candles)
     if n < 2:
         return []
@@ -124,7 +124,7 @@ def psar(candles: list[dict], step: float = 0.02, max_af: float = 0.2) -> list[i
 
 
 def adx_dmi(candles: list[dict], period: int = 14) -> dict | None:
-    """ADX/DMI → {plus_di(_prev/_now), minus_di(_prev/_now), adx}. None nếu thiếu."""
+    """ADX/DMI → {plus_di(_prev/_now), minus_di(_prev/_now), adx}. None if too little data."""
     n = len(candles)
     if n < 2 * period:
         return None
@@ -164,7 +164,7 @@ def adx_dmi(candles: list[dict], period: int = 14) -> dict | None:
 
 
 def stochastic_k(candles: list[dict], period: int = 14) -> float | None:
-    """%K của Stochastic Oscillator (0–100) tại nến cuối."""
+    """%K of the Stochastic Oscillator (0–100) at the last candle."""
     if len(candles) < period:
         return None
     w = candles[-period:]
@@ -176,7 +176,7 @@ def stochastic_k(candles: list[dict], period: int = 14) -> float | None:
 
 
 def vwap(candles: list[dict], period: int) -> float | None:
-    """Rolling VWAP (typical price (h+l+c)/3, trọng số volume) của `period` nến cuối."""
+    """Rolling VWAP (typical price (h+l+c)/3, volume-weighted) over the last `period` candles."""
     if len(candles) < period:
         return None
     w = candles[-period:]
@@ -187,7 +187,7 @@ def vwap(candles: list[dict], period: int) -> float | None:
 
 
 def _hl_mid(candles: list[dict], end: int, period: int) -> float:
-    """(HH + LL) / 2 của `period` nến kết thúc tại index `end`."""
+    """(HH + LL) / 2 over the `period` candles ending at index `end`."""
     w = candles[end - period + 1 : end + 1]
     return (max(c["high"] for c in w) + min(c["low"] for c in w)) / 2
 
@@ -195,7 +195,7 @@ def _hl_mid(candles: list[dict], end: int, period: int) -> float:
 def ichimoku(
     candles: list[dict], conv: int = 9, base: int = 26, span_b: int = 52, shift: int = 26
 ) -> dict | None:
-    """Ichimoku — trả tenkan/kijun (2 điểm cuối) + đỉnh/đáy mây hiện tại. None nếu thiếu."""
+    """Ichimoku — tenkan/kijun (last 2 points) + cloud top/bottom. None if data too short."""
     n = len(candles)
     if n < span_b + shift + 1:
         return None
@@ -204,7 +204,7 @@ def ichimoku(
     tenkan_now = _hl_mid(candles, i, conv)
     kijun_prev = _hl_mid(candles, i - 1, base)
     kijun_now = _hl_mid(candles, i, base)
-    # Mây tại nến hiện tại = các span tính từ `shift` nến trước.
+    # Cloud at the current candle = spans computed `shift` candles earlier.
     j = i - shift
     span_a = (_hl_mid(candles, j, conv) + _hl_mid(candles, j, base)) / 2
     span_b_val = _hl_mid(candles, j, span_b)
@@ -219,7 +219,7 @@ def ichimoku(
 
 
 def atr(candles: list[dict], period: int = 14) -> float | None:
-    """Average True Range (Wilder) — biến động giá. candles có high/low/close."""
+    """Average True Range (Wilder) — price volatility. candles have high/low/close."""
     if len(candles) < period + 1:
         return None
     trs: list[float] = []
@@ -235,7 +235,7 @@ def atr(candles: list[dict], period: int = 14) -> float | None:
 
 
 def rsi(values: list[float], period: int = 14) -> list[float]:
-    """RSI (Wilder), độ dài = len(values)-period (rỗng nếu thiếu)."""
+    """RSI (Wilder), length = len(values)-period (empty if not enough data)."""
     if len(values) <= period:
         return []
     gains, losses = [], []
@@ -260,13 +260,14 @@ def rsi(values: list[float], period: int = 14) -> list[float]:
     return out
 
 
-# ── Series căn theo TỪNG nến (dài = len(candles), None ở warmup) — DÙNG CHO plot() ──
-# Khác các hàm trên (trả "giá trị cuối" hoặc tail-aligned): các hàm *_series/*_line/*_bands
-# trả mảng đúng độ dài candles để overlay trực tiếp lên chart backtest.
+# ── Series aligned PER candle (length = len(candles), None during warmup) — FOR plot() ──
+# Unlike the functions above (which return the "last value" or are tail-aligned): the
+# *_series/*_line/*_bands functions
+# return arrays exactly as long as candles so they can be overlaid directly on the backtest chart.
 
 
 def atr_series(candles: list[dict], period: int = 14) -> list[float | None]:
-    """ATR (Wilder) theo từng nến, dài = len(candles). None ở warmup."""
+    """ATR (Wilder) per candle, length = len(candles). None during warmup."""
     n = len(candles)
     out: list[float | None] = [None] * n
     if n < period + 1:
@@ -276,7 +277,7 @@ def atr_series(candles: list[dict], period: int = 14) -> list[float | None]:
         h, low, pc = candles[i]["high"], candles[i]["low"], candles[i - 1]["close"]
         trs.append(max(h - low, abs(h - pc), abs(low - pc)))
     a = sum(trs[:period]) / period
-    out[period] = a  # trs[:period] = nến 1..period → căn vào nến index = period
+    out[period] = a  # trs[:period] = candles 1..period → aligned to candle index = period
     for k in range(period, len(trs)):
         a = (a * (period - 1) + trs[k]) / period
         out[k + 1] = a
@@ -284,7 +285,7 @@ def atr_series(candles: list[dict], period: int = 14) -> list[float | None]:
 
 
 def supertrend_line(candles: list[dict], period: int = 10, mult: float = 3.0) -> list[float | None]:
-    """Đường Supertrend (mức stop) theo từng nến — overlay. None ở warmup."""
+    """Supertrend line (stop level) per candle — overlay. None during warmup."""
     n = len(candles)
     out: list[float | None] = [None] * n
     if n < period + 1:
@@ -323,7 +324,7 @@ def supertrend_line(candles: list[dict], period: int = 10, mult: float = 3.0) ->
 
 
 def psar_line(candles: list[dict], step: float = 0.02, max_af: float = 0.2) -> list[float | None]:
-    """Giá trị Parabolic SAR theo từng nến — overlay (chấm SAR thành đường)."""
+    """Parabolic SAR value per candle — overlay (SAR dots drawn as a line)."""
     n = len(candles)
     if n < 2:
         return [None] * n
@@ -353,7 +354,7 @@ def psar_line(candles: list[dict], step: float = 0.02, max_af: float = 0.2) -> l
 
 
 def keltner_bands(candles: list[dict], period: int = 20, mult: float = 2.0) -> dict[str, list]:
-    """Keltner Channel → giữa (EMA), trên, dưới (= EMA ± mult·ATR) theo từng nến."""
+    """Keltner Channel → middle (EMA), upper, lower (= EMA ± mult·ATR) per candle."""
     n = len(candles)
     closes = [c["close"] for c in candles]
     mid_full = pad_left(ema(closes, period), n)
@@ -366,13 +367,13 @@ def keltner_bands(candles: list[dict], period: int = 20, mult: float = 2.0) -> d
         if m is None or a is None:
             continue
         mid[i], up[i], low[i] = m, m + mult * a, m - mult * a
-    return {"Keltner giữa": mid, "Keltner trên": up, "Keltner dưới": low}
+    return {"Keltner mid": mid, "Keltner upper": up, "Keltner lower": low}
 
 
 def ichimoku_lines(
     candles: list[dict], conv: int = 9, base: int = 26, span_b: int = 52, shift: int = 26
 ) -> dict[str, list]:
-    """Ichimoku → Tenkan, Kijun, Span A, Span B theo từng nến (mây = cloud strategy đang dùng)."""
+    """Ichimoku → Tenkan, Kijun, Span A, Span B per candle (cloud = the one the strategy uses)."""
     n = len(candles)
     tenkan: list[float | None] = [None] * n
     kijun: list[float | None] = [None] * n
@@ -383,7 +384,8 @@ def ichimoku_lines(
             tenkan[i] = _hl_mid(candles, i, conv)
         if i >= base - 1:
             kijun[i] = _hl_mid(candles, i, base)
-        j = i - shift  # mây "hiệu lực" tại nến i = span tính từ shift nến trước (khớp on_candle)
+        # "effective" cloud at candle i = span computed shift candles earlier (matches on_candle)
+        j = i - shift
         if j >= conv - 1 and j >= base - 1:
             span_a[i] = (_hl_mid(candles, j, conv) + _hl_mid(candles, j, base)) / 2
         if j >= span_b - 1:
@@ -392,7 +394,7 @@ def ichimoku_lines(
 
 
 def adx_series(candles: list[dict], period: int = 14) -> dict[str, list]:
-    """ADX/DMI → +DI, -DI, ADX theo từng nến (oscillator, pane phụ)."""
+    """ADX/DMI → +DI, -DI, ADX per candle (oscillator, secondary pane)."""
     n = len(candles)
     out_p: list[float | None] = [None] * n
     out_m: list[float | None] = [None] * n
@@ -424,13 +426,13 @@ def adx_series(candles: list[dict], period: int = 14) -> dict[str, list]:
         denom = pdi + mdi
         dx.append(100 * abs(pdi - mdi) / denom if denom else 0.0)
     for mi in range(len(plus_di)):
-        ci = period + mi  # DI[mi] căn vào nến period+mi
+        ci = period + mi  # DI[mi] aligned to candle period+mi
         if ci < n:
             out_p[ci], out_m[ci] = plus_di[mi], minus_di[mi]
     if len(dx) >= period:
         adx = sum(dx[:period]) / period
         if 2 * period - 1 < n:
-            out_adx[2 * period - 1] = adx  # ADX đầu tiên = dx[:period] → nến 2·period-1
+            out_adx[2 * period - 1] = adx  # first ADX = dx[:period] → candle 2·period-1
         for idx in range(period, len(dx)):
             adx = (adx * (period - 1) + dx[idx]) / period
             ci = period + idx
@@ -440,7 +442,7 @@ def adx_series(candles: list[dict], period: int = 14) -> dict[str, list]:
 
 
 def stochastic_series(candles: list[dict], period: int = 14) -> list[float | None]:
-    """%K Stochastic (0–100) theo từng nến (oscillator, pane phụ)."""
+    """%K Stochastic (0–100) per candle (oscillator, secondary pane)."""
     n = len(candles)
     out: list[float | None] = [None] * n
     for i in range(period - 1, n):

@@ -1,6 +1,6 @@
-"""Executor interface — đổi adapter = đổi mode, strategy không biết.
+"""Executor interface — swap the adapter = swap the mode; the strategy doesn't know.
 
-Paper: khớp nội bộ theo giá WS. Testnet/Live (P6/P8): python-binance.
+Paper: internal matching on WS prices. Testnet/Live (P6/P8): python-binance.
 """
 
 from abc import ABC, abstractmethod
@@ -9,29 +9,29 @@ from app.strategy.base import Position, Signal
 
 
 class Executor(ABC):
-    # Snapshot bot lúc chạy (strategy/tf/params) — ghi vào position khi mở lệnh để
-    # review vẫn đúng sau khi bot bị sửa params hoặc bị xóa. BotManager gán.
+    # Bot snapshot at runtime (strategy/tf/params) — written to the position on open so
+    # reviews stay correct after the bot's params are edited or it is deleted. Set by BotManager.
     trade_meta: dict = {}
 
     def current_position(self) -> Position | None:
-        """Vị thế hiện tại để strategy đọc qua Context. Mặc định None."""
+        """Current position for the strategy to read via Context. Defaults to None."""
         return None
 
     @abstractmethod
     async def submit(self, signal: Signal) -> None:
-        """Nhận Signal từ strategy/tay → đặt/đóng/hủy lệnh."""
+        """Receive a Signal from a strategy/manual action → place/close/cancel orders."""
         ...
 
     @abstractmethod
     async def cancel(self, order_id: str | None = None) -> None:
-        """Hủy lệnh chờ (limit)."""
+        """Cancel a pending (limit) order."""
         ...
 
     @abstractmethod
     async def modify_sltp(self, sl: float | None, tp: float | None) -> None:
-        """Sửa SL/TP của vị thế hiện tại."""
+        """Modify SL/TP of the current position."""
         ...
 
     async def on_price(self, price: float) -> None:
-        """Mỗi tick giá. Paper override để check SL/TP/limit. Mặc định no-op."""
+        """Called on every price tick. Paper overrides it to check SL/TP/limit. Default: no-op."""
         return None

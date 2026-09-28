@@ -2,7 +2,7 @@
 name = "gtic-bot"
 version = "0.1.0"
 description = "Binance trading bot platform — single-user, self-hosted (FastAPI + asyncio)"
-readme = "CLAUDE.md"
+readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",

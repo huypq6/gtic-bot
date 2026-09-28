@@ -1,30 +1,31 @@
 import type { Sizing } from "../../lib/api";
+import { t } from "../../lib/i18n";
 
-// Chọn cách tính khối lượng lệnh theo vốn — dùng ở tạo bot (Trading) + backtest.
+// Choose how position size is derived from equity — used when creating a bot (Trading) + in backtest.
 const SIZING_UNIT: Record<string, string> = {
-  risk_pct: "% vốn",
+  risk_pct: t("% equity"),
   risk_usdt: "USDT",
-  notional_pct: "% vốn",
+  notional_pct: t("% equity"),
   notional_usdt: "USDT",
   fixed_qty: "coin",
 };
 
 export const sizingText = (z: Sizing) =>
   z.method === "risk_pct"
-    ? `rủi ro ${z.value}%/lệnh`
+    ? t("risk {v}%/trade", { v: z.value })
     : z.method === "risk_usdt"
-      ? `rủi ro ${z.value} USDT/lệnh`
+      ? t("risk {v} USDT/trade", { v: z.value })
       : z.method === "notional_pct"
-        ? `lệnh ${z.value}% vốn`
+        ? t("size {v}% of equity", { v: z.value })
         : z.method === "notional_usdt"
-          ? `lệnh ${z.value} USDT`
+          ? t("size {v} USDT", { v: z.value })
           : `${z.value || "size strategy"} coin`;
 
 export default function SizingInput({
   value,
   onChange,
   methods,
-  label = "Khối lượng lệnh",
+  label = t("Position size"),
 }: {
   value: Sizing;
   onChange: (z: Sizing) => void;

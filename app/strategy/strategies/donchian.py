@@ -1,6 +1,6 @@
-"""Donchian Breakout — phá kênh giá (trend-following).
+"""Donchian Breakout — price channel breakout (trend-following).
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
+=== EDIT THE STRATEGY HERE ===
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -11,7 +11,10 @@ from app.strategy.registry import register
 class DonchianBreakout(Strategy):
     name = "donchian"
     version = "1"
-    description = "Phá kênh giá Donchian — trend-following: vượt đỉnh kênh LONG, thủng đáy SHORT."
+    description = (
+        "Donchian price channel breakout — trend-following: LONG above the channel top, "
+        "SHORT below the channel bottom."
+    )
     default_params = {"period": 20, "size": 0.001, "sl_pct": 0.0, "tp_pct": 0.0}
     param_schema = {
         "period": {"type": "int", "min": 5, "max": 200, "default": 20},
@@ -24,7 +27,7 @@ class DonchianBreakout(Strategy):
         p = self.params["period"]
         if len(ctx.candles) < p + 1:
             return []
-        window = ctx.candles[-(p + 1) : -1]  # p nến TRƯỚC nến hiện tại (tránh lookahead)
+        window = ctx.candles[-(p + 1) : -1]  # p candles BEFORE the current candle (avoid lookahead)
         highest = max(c["high"] for c in window)
         lowest = min(c["low"] for c in window)
         price = ctx.price
@@ -43,7 +46,7 @@ class DonchianBreakout(Strategy):
             w = candles[i - p : i]
             up[i] = max(c["high"] for c in w)
             lo[i] = min(c["low"] for c in w)
-        return {"Kênh trên": up, "Kênh dưới": lo}
+        return {"Upper channel": up, "Lower channel": lo}
 
     def _signal(self, symbol: str, action: str, price: float) -> Signal:
         size = self.params["size"]

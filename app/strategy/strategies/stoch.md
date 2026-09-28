@@ -1,43 +1,43 @@
-# Stochastic Oscillator — Quá mua / quá bán
+# Stochastic Oscillator — Overbought / oversold
 
-> Trường phái: **Mean-reversion**. Khung gợi ý: 15m–4h. Hợp thị trường dao động.
+> Style: **Mean-reversion**. Suggested timeframes: 15m–4h. Suits oscillating markets.
 
-## Ý tưởng
+## Idea
 
-Stochastic (George Lane) so sánh giá đóng cửa với **biên độ cao–thấp** gần đây. Giả thuyết: trong xu hướng tăng, giá đóng gần đỉnh; trong giảm, gần đáy. Khi %K rơi vào vùng cực → kỳ vọng đảo chiều.
+The Stochastic oscillator (George Lane) compares the closing price to the recent **high–low range**. Hypothesis: in an uptrend, price closes near the top; in a downtrend, near the bottom. When %K enters an extreme zone → expect a reversal.
 
-## Công thức
+## Formula
 
 ```
 %K = 100 × (close − LL_period) / (HH_period − LL_period)
 ```
-(LL/HH = đáy/đỉnh thấp/cao nhất trong `period` nến.) %K → 0 = quá bán, → 100 = quá mua.
+(LL/HH = lowest low / highest high over `period` candles.) %K → 0 = oversold, → 100 = overbought.
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
-| `%K < oversold` (vd 20) | **BUY** — quá bán |
-| `%K > overbought` (vd 80) | **SELL** — quá mua |
+| `%K < oversold` (e.g. 20) | **BUY** — oversold |
+| `%K > overbought` (e.g. 80) | **SELL** — overbought |
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `period` | 14 | Chu kỳ tính HH/LL. |
-| `oversold` | 20 | Ngưỡng quá bán → BUY. |
-| `overbought` | 80 | Ngưỡng quá mua → SELL. |
-| `size` | 0.001 | Khối lượng. |
+| `period` | 14 | Period for computing HH/LL. |
+| `oversold` | 20 | Oversold threshold → BUY. |
+| `overbought` | 80 | Overbought threshold → SELL. |
+| `size` | 0.001 | Order size. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Nhạy, bắt đảo chiều sớm trong sideway.
-- ❌ Trong **xu hướng mạnh**, %K dính vùng cực kéo dài → tín hiệu ngược xu hướng dễ lỗ.
+- ✅ Sensitive, catches reversals early in sideways markets.
+- ❌ In a **strong trend**, %K sticks to the extreme zone for a long time → counter-trend signals easily lose.
 
-## Khi nào dùng
+## When to use
 
-- Thị trường đi ngang. Nên lọc bằng xu hướng (vd chỉ BUY khi giá trên EMA dài) hoặc thêm SL.
+- Sideways markets. Filter by trend (e.g. only BUY when price is above a long EMA) or add an SL.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Thử ngưỡng (20/80, 30/70) và `period`. Backtest qua cả giai đoạn trending để thấy điểm yếu.
+- Try thresholds (20/80, 30/70) and `period`. Backtest across trending periods too to see the weakness.

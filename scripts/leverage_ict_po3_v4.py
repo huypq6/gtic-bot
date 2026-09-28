@@ -1,11 +1,10 @@
-"""ict_po3 v4 (BTC+SUI 15m, 365d) với đòn bẩy 1×/2×/3×/4× — DD có còn <10%?
+"""ict_po3 v4 (BTC+SUI 15m, 365d) with 1×/2×/3×/4× leverage — does DD stay <10%?
 
-Chạy:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/leverage_ict_po3_v4.py
-Engine scale lợi nhuận từng nến × leverage trên vốn thực; equity chạm 0 = cháy (liquidated).
+Run:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/leverage_ict_po3_v4.py
+The engine scales per-candle returns × leverage on real equity; equity hitting 0 = liquidated.
 """
 
 import asyncio
-from datetime import datetime, timezone
 
 from app.backtest.engine import run_backtest
 from app.db import async_session
@@ -36,18 +35,18 @@ async def main() -> None:
             await sync_historical(s, sym, TF, "365 days ago UTC")
             await s.commit()
             data[sym] = await get_klines(s, sym, TF, limit=40000)
-            print(f"  data {sym}: {len(data[sym])} nến")
+            print(f"  data {sym}: {len(data[sym])} candles")
 
     for lev in (1, 2, 3, 4):
-        print(f"\n{'='*92}\nĐÒN BẨY ×{lev}")
+        print(f"\n{'='*92}\nLEVERAGE ×{lev}")
         for sym, candles in data.items():
             r = run_backtest("ict_po3", "4", params, candles, 1000.0, FEE, TF, lev)
             wr = window_returns(r["equity_curve"])
             worst = min(wr, default=0.0)
-            liq = " ⚠️CHÁY" if r["liquidated"] else ""
+            liq = " ⚠️LIQUIDATED" if r["liquidated"] else ""
             print(f"  {sym}: pnl={r['pnl_pct']:+.2f}% maxDD={r['max_dd']:.2f}% "
-                  f"n={r['n_trades']} cửa sổ tệ nhất {worst:+.2f}%{liq}")
-    print("\nMục tiêu: chọn đòn bẩy lớn nhất còn giữ maxDD < ~10% và không tháng nào thảm họa.")
+                  f"n={r['n_trades']} worst window {worst:+.2f}%{liq}")
+    print("\nGoal: pick the highest leverage that keeps maxDD < ~10% and has no disastrous month.")
 
 
 if __name__ == "__main__":

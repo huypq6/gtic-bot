@@ -1,4 +1,4 @@
-"""Rào chắn LIVE: ENABLE_LIVE + xác nhận; feed DOWN → auto-pause."""
+"""LIVE guard: ENABLE_LIVE + confirmation; feed DOWN → auto-pause."""
 
 import pytest
 
@@ -57,10 +57,10 @@ async def test_pause_all_running_pauses_and_audits():
     mgr._runners = {1: FakeRunner(1), 2: FakeRunner(2), 3: FakeRunner(3, status="PAUSED")}
 
     n = await mgr.pause_all_running("feed DOWN")
-    assert n == 2  # chỉ 2 bot RUNNING bị pause
+    assert n == 2  # only the 2 RUNNING bots get paused
     assert mgr._runners[1].status == "PAUSED"
     assert mgr._runners[2].status == "PAUSED"
-    assert mgr._runners[3].status == "PAUSED"  # vốn đã paused
-    # audit SYSTEM/PAUSE cho 2 bot
+    assert mgr._runners[3].status == "PAUSED"  # was already paused
+    # audit SYSTEM/PAUSE for 2 bots
     assert len(om.audits) == 2
     assert all(a["source"] == "SYSTEM" and a["action"] == "PAUSE" for a in om.audits)

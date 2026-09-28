@@ -18,8 +18,8 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # Bật TimescaleDB ngay trong migration (không phụ thuộc db/init — bind mount đó không
-    # tồn tại khi docker chạy ở host từ xa). Idempotent, an toàn khi init script cũng đã chạy.
+    # Enable TimescaleDB right in the migration (does not depend on db/init — that bind mount does not
+    # exist when docker runs on a remote host). Idempotent, safe even if the init script already ran.
     op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
     op.create_table(
         "kline",
@@ -33,7 +33,7 @@ def upgrade() -> None:
         sa.Column("volume", sa.Numeric(), nullable=False),
         sa.PrimaryKeyConstraint("symbol", "tf", "ts"),
     )
-    # Hypertable: chunk theo 7 ngày (extension đã bật ở db/init/01-extensions.sql).
+    # Hypertable: 7-day chunks (extension already enabled in db/init/01-extensions.sql).
     op.execute(
         "SELECT create_hypertable('kline', 'ts', "
         "chunk_time_interval => INTERVAL '7 days', if_not_exists => TRUE)"

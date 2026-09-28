@@ -1,12 +1,14 @@
-"""Chẩn đoán vol_breakout (k0.6 sl0): lỗ tập trung ở đâu? — side / giờ vào / thứ / range hôm trước.
+"""vol_breakout diagnostic (k0.6 sl0): where are the losses concentrated?
 
-Chạy:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/diag_vol_breakout.py
-Mục đích: tìm fix MÔ HÌNH ghìm DD (không tinh chỉnh tham số mù).
+Broken down by side / entry hour / weekday / prior-day range.
+
+Run:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/diag_vol_breakout.py
+Purpose: find a MODEL-level fix to contain DD (not blind parameter tuning).
 """
 
 import asyncio
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.backtest.engine import run_backtest
 from app.db import async_session
@@ -19,7 +21,7 @@ FEE = 0.0005
 
 
 def _utc(ts):
-    return datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
+    return datetime.fromtimestamp(ts / 1000, tz=UTC)
 
 
 def bucket_stats(trades, keyf):
@@ -40,11 +42,14 @@ async def main() -> None:
     all_trades = []
     for (sym, tf), candles in data.items():
         r = run_backtest("vol_breakout", "1", PARAMS, candles, 1000.0, FEE, tf, 1)
-        # range hôm trước theo ngày để bucket theo độ rộng range
+        # prior-day range per day, to bucket by range width
         by_day = {}
         for c in candles:
             d = _utc(c["ts"]).date()
-            hi, lo, op = by_day.get(d, (c["high"], c["low"], c["open"]))[0:3] if d in by_day else (c["high"], c["low"], c["open"])
+            hi, lo, op = (
+                by_day.get(d, (c["high"], c["low"], c["open"]))[0:3]
+                if d in by_day else (c["high"], c["low"], c["open"])
+            )
             by_day[d] = (max(hi, c["high"]), min(lo, c["low"]), op)
         days = sorted(by_day)
         prev_rng_pct = {}
@@ -59,29 +64,40 @@ async def main() -> None:
         all_trades += r["trades"]
         print(f"{sym}: pnl={r['pnl_pct']:+.2f}% n={r['n_trades']}")
 
-    print(f"\nTổng {len(all_trades)} lệnh (3 cặp, 180d)\n")
-    fmt = lambda st: "\n".join(
-        f"    {k}: n={n:3d} Σpnl={s:+7.2f}% win={100*w/max(n,1):.0f}%" for k, (n, s, w) in st.items()
-    )
-    print("Theo SIDE:")
+    print(f"\nTotal {len(all_trades)} trades (3 pairs, 180d)\n")
+    def fmt(st):
+        return "\n".join(
+            f"    {k}: n={n:3d} Σpnl={s:+7.2f}% win={100*w/max(n,1):.0f}%"
+            for k, (n, s, w) in st.items()
+        )
+
+    print("By SIDE:")
     print(fmt(bucket_stats(all_trades, lambda t: t["side"])))
-    print("Theo GIỜ vào (UTC, gộp 4h):")
-    print(fmt(bucket_stats(all_trades, lambda t: f"{(_utc(t['entry_ts']).hour // 4) * 4:02d}-{(_utc(t['entry_ts']).hour // 4) * 4 + 3:02d}")))
-    print("Theo THỨ (0=T2):")
+    print("By entry HOUR (UTC, 4h buckets):")
+    print(fmt(bucket_stats(
+        all_trades,
+        lambda t: f"{(_utc(t['entry_ts']).hour // 4) * 4:02d}-"
+                  f"{(_utc(t['entry_ts']).hour // 4) * 4 + 3:02d}",
+    )))
+    print("By WEEKDAY (0=Mon):")
     print(fmt(bucket_stats(all_trades, lambda t: _utc(t["entry_ts"]).weekday())))
-    print("Theo RANGE hôm trước (% open):")
+    print("By prior-day RANGE (% of open):")
     print(fmt(bucket_stats(
         [t for t in all_trades if t.get("prev_rng") is not None],
-        lambda t: f"{'<2%' if t['prev_rng'] < 2 else '2-4%' if t['prev_rng'] < 4 else '4-6%' if t['prev_rng'] < 6 else '>6%'}",
+        lambda t: (
+            "<2%" if t["prev_rng"] < 2 else "2-4%" if t["prev_rng"] < 4
+            else "4-6%" if t["prev_rng"] < 6 else ">6%"
+        ),
     )))
-    print("Theo THỜI GIAN GIỮ (giờ):")
+    print("By HOLDING TIME (hours):")
     print(fmt(bucket_stats(
         [t for t in all_trades if t["exit_ts"]],
         lambda t: f"{min((t['exit_ts'] - t['entry_ts']) // 3_600_000 // 6 * 6, 24):02d}h+",
     )))
-    print("\n10 lệnh TỆ nhất:")
+    print("\n10 WORST trades:")
     for t in sorted(all_trades, key=lambda t: t["pnl_pct"] or 0)[:10]:
-        print(f"    {t['sym']} {t['side']} {_utc(t['entry_ts'])} pnl={t['pnl_pct']:+.2f}% prev_rng={t.get('prev_rng') and round(t['prev_rng'],1)}%")
+        print(f"    {t['sym']} {t['side']} {_utc(t['entry_ts'])} pnl={t['pnl_pct']:+.2f}% "
+              f"prev_rng={t.get('prev_rng') and round(t['prev_rng'],1)}%")
 
 
 if __name__ == "__main__":

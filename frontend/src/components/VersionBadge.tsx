@@ -2,9 +2,10 @@ import { useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { fetchVersion, type VersionInfo } from "../lib/api";
+import { t, lang } from "../lib/i18n";
 
 const fmt = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleString("vi-VN", { hour12: false }) : "—";
+  iso ? new Date(iso).toLocaleString(lang === "vi" ? "vi-VN" : "en-GB", { hour12: false }) : "—";
 
 function label(v: VersionInfo) {
   const parts = [`v${v.version}`];
@@ -13,7 +14,7 @@ function label(v: VersionInfo) {
   return parts.join(" · ") + (v.dirty ? "*" : "");
 }
 
-/** Phiên bản đang chạy ở header. Hỏi lại mỗi phút: server lên bản khác bản đã tải → nút tải lại. */
+/** Running version shown in the header. Re-polls every minute: if the server runs a different build than the one loaded → reload button. */
 export default function VersionBadge() {
   const { data } = useQuery({
     queryKey: ["version"],
@@ -28,11 +29,11 @@ export default function VersionBadge() {
   const outdated = loaded.current !== key;
 
   const title = [
-    `Phiên bản ${label(data)}`,
+    t("Version {v}", { v: label(data) }),
     data.subject && `Commit: ${data.subject}`,
-    `Ngày commit: ${fmt(data.commit_date)}`,
+    t("Commit date: {d}", { d: fmt(data.commit_date) }),
     data.built_at && `Build: ${fmt(data.built_at)}`,
-    `Server chạy từ: ${fmt(data.started_at)}`,
+    t("Server up since: {d}", { d: fmt(data.started_at) }),
   ]
     .filter(Boolean)
     .join("\n");
@@ -41,11 +42,11 @@ export default function VersionBadge() {
     return (
       <button
         onClick={() => window.location.reload()}
-        title={`Server đã cập nhật lên ${label(data)} — bấm để tải lại`}
+        title={t("Server updated to {v} — click to reload", { v: label(data) })}
         className="flex items-center gap-1 rounded-md bg-primary/15 px-2 py-1 font-medium text-primary hover:bg-primary/25"
       >
         <RefreshCw className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Có bản mới</span>
+        <span className="hidden sm:inline">{t("Update available")}</span>
       </button>
     );
   }

@@ -22,7 +22,7 @@ interface Props {
   symbol: string;
   tf: string;
   showEma: boolean;
-  reloadToken?: number; // bump để load lại lịch sử (sau khi sync xong)
+  reloadToken?: number; // bump to reload history (after sync completes)
 }
 
 export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props) {
@@ -37,7 +37,7 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
   const processedOrdersRef = useRef(0);
   const theme = useTheme((s) => s.theme);
 
-  // Tạo chart 1 lần.
+  // Create the chart once.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -74,7 +74,7 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
     };
   }, []);
 
-  // Load lịch sử khi đổi symbol/tf.
+  // Load history when symbol/tf changes.
   useEffect(() => {
     let cancelled = false;
     loadHistory(symbol, tf).then((bars) => {
@@ -90,7 +90,7 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, tf, reloadToken]);
 
-  // EMA overlays bật/tắt.
+  // Toggle EMA overlays.
   function redrawEma() {
     const chart = chartRef.current;
     if (!chart) return;
@@ -125,7 +125,7 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
   }
   useEffect(redrawEma, [showEma]);
 
-  // Áp lại màu khi đổi theme sáng/tối (không phá data/series).
+  // Re-apply colours on light/dark theme change (without touching data/series).
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
@@ -146,7 +146,7 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
     emaSlowRef.current?.applyOptions({ color: c.emaSlow });
   }, [theme]);
 
-  // Marker vào/ra lệnh (US-04) — từ order WS, đặt tại nến cuối khi khớp.
+  // Entry/exit markers (US-04) — from the order WS, placed on the last candle when filled.
   const orders = useWsStore((s) => s.orders);
   useEffect(() => {
     const last = barsRef.current[barsRef.current.length - 1];
@@ -154,7 +154,7 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
     const delta = orders.length - processedOrdersRef.current;
     if (delta <= 0) return;
     const c = chartColors();
-    const fresh = orders.slice(0, delta).reverse(); // cũ → mới
+    const fresh = orders.slice(0, delta).reverse(); // old → new
     for (const o of fresh) {
       if (o.symbol !== symbol || o.status !== "FILLED") continue;
       const buy = o.side === "BUY";
@@ -170,7 +170,7 @@ export default function CandleChart({ symbol, tf, showEma, reloadToken }: Props)
     markersApiRef.current?.setMarkers(markersRef.current.slice(-50));
   }, [orders, symbol]);
 
-  // Cập nhật realtime từ WS store (nến cuối).
+  // Realtime update from the WS store (last candle).
   const live = useWsStore((s) => s.lastKline[klineKey(symbol, tf)]);
   useEffect(() => {
     if (!live || !candleRef.current) return;

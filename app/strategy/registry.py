@@ -1,7 +1,8 @@
-"""Strategy registry — file-based. Mỗi class strategy đăng ký qua @register.
+"""Strategy registry — file-based. Each strategy class registers itself via @register.
 
-App quét package `strategies/`, đọc metadata (name, version, default_params) và
-sync vào bảng `strategy`. UI chỉ chỉnh params + chọn version, KHÔNG sửa code trong app.
+The app scans the `strategies/` package, reads metadata (name, version, default_params) and
+syncs it into the `strategy` table. The UI only edits params + picks a version; code is NOT
+edited in the app.
 """
 
 import importlib
@@ -16,13 +17,13 @@ _REGISTRY: dict[tuple[str, str], type[Strategy]] = {}
 
 
 def register(cls: type[Strategy]) -> type[Strategy]:
-    """Decorator: đăng ký class theo (name, version)."""
+    """Decorator: register a class by (name, version)."""
     _REGISTRY[(cls.name, cls.version)] = cls
     return cls
 
 
 def discover() -> None:
-    """Import mọi module trong app/strategy/strategies/ để chúng tự đăng ký."""
+    """Import every module in app/strategy/strategies/ so they self-register."""
     from app.strategy import strategies as pkg
 
     for m in pkgutil.iter_modules(pkg.__path__):
@@ -38,7 +39,7 @@ def get(name: str, version: str) -> type[Strategy]:
 
 
 async def sync_to_db(session: AsyncSession) -> int:
-    """Upsert metadata các strategy đã đăng ký vào bảng `strategy`."""
+    """Upsert metadata of registered strategies into the `strategy` table."""
     from app.orders.models import StrategyModel
 
     rows = [

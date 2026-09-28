@@ -1,4 +1,4 @@
-"""OrderManager — NFR: audit_log ghi TRƯỚC khi tác động."""
+"""OrderManager — NFR: audit_log is written BEFORE acting."""
 
 import pytest
 
@@ -46,10 +46,10 @@ async def test_audit_persists_even_if_act_fails():
 
     async def do():
         log.append("act")
-        raise RuntimeError("executor lỗi")
+        raise RuntimeError("executor failed")
 
     with pytest.raises(RuntimeError):
         await om.execute(source="BOT", action="OPEN", do=do)
-    # audit đã ghi trước khi act lỗi
+    # audit was written before the failing action
     assert log == ["audit", "act"]
     assert log[0] == "audit"

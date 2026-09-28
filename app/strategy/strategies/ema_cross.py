@@ -1,7 +1,7 @@
 """EMA crossover — golden cross → LONG, death cross → SHORT.
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY === (file-based, sửa ngoài app rồi reload)
-Tăng `version` khi đổi logic; DB lưu version + params instance đang chạy.
+=== EDIT THE STRATEGY HERE === (file-based: edit outside the app, then reload)
+Bump `version` when the logic changes; the DB stores the version + params of running instances.
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -21,9 +21,9 @@ def _ema_plot(closes: list[float], fast: int, slow: int) -> dict[str, list]:
 class EmaCross(Strategy):
     name = "ema_cross"
     version = "1"
-    description = "Giao cắt EMA nhanh/chậm — trend-following: golden cross LONG, death cross SHORT."
+    description = "Fast/slow EMA crossover — trend-following: golden cross LONG, death cross SHORT."
     default_params = {"fast": 9, "slow": 21, "size": 0.001}
-    # Schema cho UI render form params (P5).
+    # Schema used by the UI to render the params form (P5).
     param_schema = {
         "fast": {"type": "int", "min": 2, "max": 100, "default": 9},
         "slow": {"type": "int", "min": 3, "max": 200, "default": 21},
@@ -36,7 +36,7 @@ class EmaCross(Strategy):
         ef, es = ema(closes, fast), ema(closes, slow)
         if len(ef) < 2 or len(es) < 2:
             return []
-        # so khớp đuôi 2 series (khác độ dài) để xét giao cắt.
+        # align the tails of the 2 series (different lengths) to check for a cross.
         fp, fn = ef[-2], ef[-1]
         sp, sn = es[-2], es[-1]
         if fp <= sp and fn > sn:
@@ -51,11 +51,11 @@ class EmaCross(Strategy):
 
 @register
 class EmaCrossV2(Strategy):
-    """v2: thêm bộ lọc khoảng cách (gap %) để giảm vào lệnh nhiễu trên khung nhỏ."""
+    """v2: adds a distance filter (gap %) to reduce noisy entries on low timeframes."""
 
     name = "ema_cross"
     version = "2"
-    description = "EMA cross + bộ lọc gap% — giảm lệnh nhiễu (giao cắt yếu) trên khung nhỏ."
+    description = "EMA cross + gap% filter — fewer noisy trades (weak crosses) on low timeframes."
     default_params = {"fast": 9, "slow": 21, "size": 0.001, "gap_pct": 0.1}
     param_schema = {
         "fast": {"type": "int", "min": 2, "max": 100, "default": 9},
@@ -71,7 +71,7 @@ class EmaCrossV2(Strategy):
         if len(ef) < 2 or len(es) < 2:
             return []
         fp, fn, sp, sn = ef[-2], ef[-1], es[-2], es[-1]
-        # chỉ vào lệnh khi khoảng cách 2 EMA đủ lớn (gap %).
+        # only enter when the distance between the 2 EMAs is large enough (gap %).
         gap_ok = sn > 0 and abs(fn - sn) / sn * 100 >= p["gap_pct"]
         if not gap_ok:
             return []

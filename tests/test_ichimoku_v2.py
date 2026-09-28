@@ -1,4 +1,4 @@
-"""Ichimoku v2 — vào lệnh theo cross + ATR trailing stop cắt khi giá đảo."""
+"""Ichimoku v2 — enter on cross + ATR trailing stop exits when price reverses."""
 
 from app.strategy.base import Context
 from app.strategy.registry import all_strategies, discover
@@ -19,12 +19,15 @@ def replay(strat, prices):
 
 
 def test_long_then_trailing_stop_exit():
-    s = IchimokuTrail({"conv": 2, "base": 5, "span_b": 10, "atr_len": 5, "atr_mult": 2.0, "size": 1})
-    # đi ngang (nền + mây ~20), bứt phá lên (cross up + trên mây → BUY), rồi rớt mạnh → trailing stop cắt.
+    s = IchimokuTrail(
+        {"conv": 2, "base": 5, "span_b": 10, "atr_len": 5, "atr_mult": 2.0, "size": 1}
+    )
+    # ranging (base + cloud ~20), breaks out up (cross up + above cloud → BUY), then drops hard →
+    # trailing stop exits.
     prices = [20.0] * 20 + list(range(20, 40)) + [38, 32, 24]
     a = replay(s, prices)
     assert "BUY" in a and "CLOSE" in a
-    assert a.index("BUY") < len(a) - 1 - a[::-1].index("CLOSE")  # có CLOSE sau BUY
+    assert a.index("BUY") < len(a) - 1 - a[::-1].index("CLOSE")  # there is a CLOSE after the BUY
 
 
 def test_no_signal_until_enough_candles():

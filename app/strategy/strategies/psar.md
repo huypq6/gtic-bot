@@ -1,45 +1,45 @@
 # Parabolic SAR — Stop and Reverse
 
-> Trường phái: **Trend-following / trailing stop**. Khung gợi ý: 15m–1d. Hợp xu hướng rõ.
+> Style: **Trend-following / trailing stop**. Suggested timeframes: 15m–1d. Suits clear trends.
 
-## Ý tưởng
+## Idea
 
-Parabolic SAR (Welles Wilder) vẽ các "chấm" bám theo giá, đóng vai trò **trailing stop** và **đảo chiều**. Chấm nằm **dưới giá** = xu hướng tăng; khi giá chạm chấm → **đảo** sang giảm (và ngược lại). Tốc độ bám tăng dần theo hệ số gia tốc (AF).
+Parabolic SAR (Welles Wilder) plots "dots" that follow price, acting as a **trailing stop** and a **reversal** signal. Dots **below price** = uptrend; when price touches a dot → **flip** to downtrend (and vice versa). The trailing speed increases over time according to the acceleration factor (AF).
 
-## Công thức
+## Formula
 
 ```
 SAR_next = SAR + AF × (EP − SAR)
-EP  = đỉnh cao nhất (uptrend) / đáy thấp nhất (downtrend) kể từ khi vào xu hướng
-AF  = bắt đầu = step (0.02), +step mỗi khi có EP mới, tối đa max_af (0.2)
-Đảo chiều khi giá xuyên qua SAR.
+EP  = highest high (uptrend) / lowest low (downtrend) since the trend began
+AF  = starts at step (0.02), +step on every new EP, capped at max_af (0.2)
+Reverses when price crosses through the SAR.
 ```
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
-| SAR đảo từ giảm → **tăng** (dir −1 → +1) | **BUY** (LONG) |
-| SAR đảo từ tăng → **giảm** (dir +1 → −1) | **SELL** (SHORT) |
+| SAR flips from down → **up** (dir −1 → +1) | **BUY** (LONG) |
+| SAR flips from up → **down** (dir +1 → −1) | **SELL** (SHORT) |
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `step` | 0.02 | Gia tốc khởi đầu (AF). |
-| `max_af` | 0.2 | Trần gia tốc. |
-| `size` | 0.001 | Khối lượng. |
+| `step` | 0.02 | Initial acceleration (AF). |
+| `max_af` | 0.2 | Acceleration cap. |
+| `size` | 0.001 | Order size. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Trailing stop tự nhiên, luôn có điểm thoát; bám xu hướng tốt.
-- ❌ **Sideway**: đảo liên tục (whipsaw) → thua nhiều lệnh nhỏ.
-- ❌ Vào/ra muộn ở đầu và cuối sóng.
+- ✅ Natural trailing stop, always has an exit point; follows trends well.
+- ❌ **Sideways**: flips constantly (whipsaw) → many small losing trades.
+- ❌ Late entries/exits at the start and end of a move.
 
-## Khi nào dùng
+## When to use
 
-- Thị trường có xu hướng. Thường **kết hợp** chỉ báo xác nhận xu hướng (ADX, EMA) để lọc whipsaw.
+- Trending markets. Usually **combined** with a trend-confirmation indicator (ADX, EMA) to filter whipsaws.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- `step` lớn → nhạy, nhiều đảo; nhỏ → mượt, trễ. Thử trên nhiều giai đoạn.
+- Large `step` → sensitive, many flips; small → smooth, lagging. Test across multiple periods.

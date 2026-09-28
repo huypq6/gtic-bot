@@ -1,9 +1,10 @@
-"""Ichimoku v2 — v1 + ATR trailing stop (ghìm max DD, vẫn để lời chạy theo trend).
+"""Ichimoku v2 — v1 + ATR trailing stop (reins in max DD, still lets profits run with the trend).
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
-Khác v1: thêm stop bám theo giá (trailing). LONG: stop dời LÊN theo `price − atr_mult×ATR`
-(chỉ tăng), thủng stop → CLOSE. SHORT đối xứng. Vẫn đảo chiều khi có tín hiệu Ichimoku ngược.
-Mục tiêu: cắt DD lúc đảo chiều nhưng giữ phần lớn lợi nhuận trend (xem strategy-research).
+=== EDIT THE STRATEGY HERE ===
+Difference from v1: adds a stop that follows price (trailing). LONG: stop moves UP with
+`price − atr_mult×ATR` (only increases), stop broken → CLOSE. SHORT is symmetric.
+Still reverses on an opposite Ichimoku signal.
+Goal: cut DD at reversals while keeping most of the trend profit (see strategy-research).
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -16,11 +17,12 @@ class IchimokuTrail(Strategy):
     name = "ichimoku"
     version = "2"
     description = (
-        "[v2] Ichimoku + ATR trailing stop — như v1 (Tenkan×Kijun + mây) nhưng có stop bám giá "
-        "để ghìm max DD, vẫn để lời chạy theo trend. So với v1 (thô) để chọn bản tốt hơn."
+        "[v2] Ichimoku + ATR trailing stop — like v1 (Tenkan×Kijun + cloud) but with a "
+        "trailing stop to rein in max DD while letting profits run with the trend. "
+        "Compare with v1 (raw) to pick the better one."
     )
     default_params = {
-        "conv": 9, "base": 52, "span_b": 52,  # bộ tốt nhất từ sweep v1
+        "conv": 9, "base": 52, "span_b": 52,  # best config from the v1 sweep
         "atr_len": 14, "atr_mult": 2.0,        # trailing stop = atr_mult × ATR
         "size": 0.001,
     }
@@ -36,7 +38,7 @@ class IchimokuTrail(Strategy):
     def __init__(self, params: dict | None = None) -> None:
         super().__init__(params)
         self._side = None    # "LONG" | "SHORT" | None
-        self._stop = None    # mức trailing stop hiện tại
+        self._stop = None    # current trailing stop level
 
     def on_candle(self, ctx: Context) -> list[Signal]:
         p = self.params
@@ -45,7 +47,7 @@ class IchimokuTrail(Strategy):
         a = atr(candles, int(p["atr_len"]))
         m = float(p["atr_mult"])
 
-        # 1) Quản trailing stop nếu đang có lệnh (chỉ dời theo hướng có lợi).
+        # 1) Manage the trailing stop if in a position (only moves in the favorable direction).
         if self._side == "LONG":
             if a:
                 self._stop = max(self._stop, price - m * a)
@@ -59,7 +61,7 @@ class IchimokuTrail(Strategy):
                 self._side = self._stop = None
                 return [Signal("CLOSE", ctx.symbol)]
 
-        # 2) Tín hiệu Ichimoku (cần ATR để đặt stop).
+        # 2) Ichimoku signal (needs ATR to place the stop).
         ich = ichimoku(candles, p["conv"], p["base"], p["span_b"], p["base"])
         if ich is None or not a:
             return []

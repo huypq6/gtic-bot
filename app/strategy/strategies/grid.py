@@ -1,8 +1,8 @@
-"""Grid (lưới) — mua thấp/bán cao quanh một mốc tham chiếu (SMA).
+"""Grid — buy low/sell high around a reference level (SMA).
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
-Lưu ý: engine 1 bot = 1 vị thế, nên đây là bản grid "1 nấc/1 vị thế": vào lệnh khi
-giá lệch `step_pct` khỏi mốc, chốt khi giá quay về mốc, rồi lặp lại.
+=== EDIT THE STRATEGY HERE ===
+Note: the engine is 1 bot = 1 position, so this is a "1 step / 1 position" grid: enter when
+price deviates `step_pct` from the reference, close when price returns to it, then repeat.
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -14,7 +14,7 @@ from app.strategy.ta import sma
 class Grid(Strategy):
     name = "grid"
     version = "1"
-    description = "Grid quanh SMA — giá xuống 1 nấc BUY / lên 1 nấc SELL, chốt khi về mốc."
+    description = "Grid around SMA — 1 step down BUY / 1 step up SELL, close back at the SMA."
     default_params = {"period": 20, "step_pct": 1.0, "size": 0.001}
     param_schema = {
         "period": {"type": "int", "min": 2, "max": 200, "default": 20},
@@ -33,11 +33,11 @@ class Grid(Strategy):
         pos = ctx.position
         if pos is None:
             if price <= lower:
-                return [Signal("BUY", ctx.symbol, size)]   # giá xuống 1 nấc → mua
+                return [Signal("BUY", ctx.symbol, size)]   # price down 1 step → buy
             if price >= upper:
-                return [Signal("SELL", ctx.symbol, size)]  # giá lên 1 nấc → bán khống
+                return [Signal("SELL", ctx.symbol, size)]  # price up 1 step → short
             return []
-        # đang có vị thế → chốt khi giá quay về mốc tham chiếu
+        # in a position → close when price returns to the reference level
         if pos.side == "LONG" and price >= ref:
             return [Signal("CLOSE", ctx.symbol)]
         if pos.side == "SHORT" and price <= ref:
@@ -53,4 +53,4 @@ class Grid(Strategy):
         for i in range(p - 1, n):
             m = sum(closes[i - p + 1 : i + 1]) / p
             mid[i], up[i], lo[i] = m, m * (1 + step / 100), m * (1 - step / 100)
-        return {"Mốc (SMA)": mid, "Nấc trên": up, "Nấc dưới": lo}
+        return {"Reference (SMA)": mid, "Upper step": up, "Lower step": lo}

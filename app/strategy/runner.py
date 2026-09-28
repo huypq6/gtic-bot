@@ -1,8 +1,8 @@
-"""StrategyRunner (1 task/bot) + BotManager (vòng đời các bot).
+"""StrategyRunner (1 task per bot) + BotManager (bot lifecycle).
 
-Runner: subscribe kline → mỗi tick gọi executor.on_price (SL/TP/limit + PnL realtime);
-mỗi nến ĐÓNG dựng Context gọi strategy.on_candle → đẩy Signal cho executor.
-PAUSED: vẫn quản vị thế cũ (on_price) nhưng KHÔNG sinh tín hiệu mới (US-19).
+Runner: subscribes to klines → on every tick calls executor.on_price (SL/TP/limit + realtime PnL);
+on every CLOSED candle builds a Context, calls strategy.on_candle → pushes Signals to the executor.
+PAUSED: still manages existing positions (on_price) but does NOT generate new signals (US-19).
 """
 
 import asyncio
@@ -40,9 +40,9 @@ class StrategyRunner:
         session_factory: async_sessionmaker,
         order_manager=None,
         mode: str = "PAPER",
-        lookback: int = 1000,  # đủ dài để EMA/ATR đệ quy hội tụ = backtest
+        lookback: int = 1000,  # long enough for recursive EMA/ATR to converge = backtest
         backfill: bool = False,
-        accounts=None,  # AccountService (P9): tính khối lượng + rào chắn theo vốn
+        accounts=None,  # AccountService (P9): position sizing + guardrails based on capital
         account_id: int | None = None,
         sizing: dict | None = None,
     ) -> None:
@@ -60,14 +60,17 @@ class StrategyRunner:
         self._task: asyncio.Task | None = None
         self._stop = False
         self._backfill = backfill
-        self.last_candle_ts: int | None = None  # open-time nến đóng cuối nhận được (quan sát)
+        # open time of the last closed candle received (observability)
+        self.last_candle_ts: int | None = None
         self._accounts = accounts
         self.account_id = account_id
         self.sizing = sizing or {"method": "fixed_qty", "value": 0}
 
     async def start(self) -> None:
-        # seed nến lịch sử để indicator có đủ dữ liệu ngay. Backfill từ Binance trước để
-        # lịch sử liền mạch tới hiện tại (DB có thể cũ/đứt đoạn nếu feed chưa từng stream tf này).
+        # seed historical candles so indicators have enough data right away. Backfill from Binance
+        # first so
+        # history is continuous up to now (the DB may be stale/gappy if the feed never streamed this
+        # tf).
         n = self._candles.maxlen or 1000
         tf_ms = _TF_MS.get(self.tf, 60_000)
         if self._backfill:
@@ -76,12 +79,12 @@ class StrategyRunner:
                     await sync_historical(
                         s, self.symbol, self.tf, f"{(n + 5) * tf_ms // 60_000} minutes ago UTC"
                     )
-            except Exception:  # noqa: BLE001 — offline vẫn chạy với lịch sử DB
-                logger.warning("backfill %s %s thất bại", self.symbol, self.tf, exc_info=True)
+            except Exception:  # noqa: BLE001 — offline still runs with DB history
+                logger.warning("backfill %s %s failed", self.symbol, self.tf, exc_info=True)
         async with self._sf() as s:
             hist = await get_klines(s, self.symbol, self.tf, limit=n)
         now_ms = int(time.time() * 1000)
-        hist = [c for c in hist if c["ts"] + tf_ms <= now_ms]  # bỏ nến chưa đóng
+        hist = [c for c in hist if c["ts"] + tf_ms <= now_ms]  # drop the not-yet-closed candle
         self._candles.extend(hist)
         self._task = asyncio.create_task(self.run(), name=f"runner-{self.bot_id}")
 
@@ -95,7 +98,7 @@ class StrategyRunner:
         if not (opening and self._accounts and self.account_id is not None):
             await self._submit(sig, {})
             return
-        # tính khối lượng + mở lệnh nguyên tử theo tài khoản (nhiều bot chung vốn)
+        # size the position + open the order atomically per account (several bots share capital)
         async with self._accounts.lock(self.account_id):
             try:
                 sized, info = await self._size(sig, price)
@@ -111,7 +114,7 @@ class StrategyRunner:
         pos = self.executor.current_position()
         desired = "LONG" if sig.action == "BUY" else "SHORT"
         if pos and pos.side == desired:
-            return sig, {}  # cùng chiều → engine bỏ qua, không cần tính
+            return sig, {}  # same direction → engine ignores it, no sizing needed
         why = await self._accounts.enforce(self.account_id)
         if why:
             raise RiskReject(why)
@@ -119,7 +122,7 @@ class StrategyRunner:
         lim = limits_of(acc)
         st = await self._accounts.snapshot(self.account_id)
         if lim.max_positions is not None and st.n_open - (1 if pos else 0) >= lim.max_positions:
-            raise RiskReject(f"đã đủ {lim.max_positions} lệnh mở cùng lúc")
+            raise RiskReject(f"already at {lim.max_positions} open positions")
         engine = getattr(self.executor, "engine", None)
         entry = sig.price if sig.order_type == "LIMIT" and sig.price else price
         qty, risk, notes = size_order(
@@ -139,7 +142,7 @@ class StrategyRunner:
         return replace(sig, size=qty), info
 
     async def _submit(self, sig: Signal, info: dict) -> None:
-        # NFR: ghi audit TRƯỚC khi executor tác động.
+        # NFR: write the audit log BEFORE the executor acts.
         if self._om:
             await self._om.execute(
                 source="BOT", action=sig.action, mode=self.mode,
@@ -151,7 +154,7 @@ class StrategyRunner:
             await self.executor.submit(sig)
 
     async def _reject(self, sig: Signal, reason: str) -> None:
-        logger.info("bot %s: chặn %s %s — %s", self.bot_id, sig.action, self.symbol, reason)
+        logger.info("bot %s: blocked %s %s — %s", self.bot_id, sig.action, self.symbol, reason)
         if self._om:
             await self._om.write_audit(
                 source="BOT", action="RISK_REJECT", mode=self.mode, bot_id=self.bot_id,
@@ -173,7 +176,7 @@ class StrategyRunner:
                     last = self._candles[-1]["ts"] if self._candles else None
                     if last is not None and msg["ts"] <= last:
                         if msg["ts"] < last:
-                            continue  # nến cũ (reconnect) → bỏ
+                            continue  # stale candle (reconnect) → skip
                         self._candles[-1] = msg
                     else:
                         self._candles.append(msg)
@@ -189,14 +192,14 @@ class StrategyRunner:
                             await self._dispatch(sig, price)
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001 — không để 1 lỗi giết runner
-            logger.exception("runner bot %s lỗi", self.bot_id)
+        except Exception:  # noqa: BLE001 — never let one error kill the runner
+            logger.exception("runner bot %s error", self.bot_id)
         finally:
             self._bus.unsubscribe(f"kline.{self.symbol}.{self.tf}", sub)
 
 
 class BotManager:
-    """Quản lý các runner đang chạy. Lưu ở app.state, dùng bởi API + lifespan."""
+    """Manages running runners. Stored on app.state, used by the API + lifespan."""
 
     def __init__(
         self, bus: EventBus, session_factory: async_sessionmaker, order_manager=None,
@@ -206,7 +209,7 @@ class BotManager:
         self._bus = bus
         self._sf = session_factory
         self._om = order_manager
-        self._feed = feed  # MarketFeed: bot đăng ký stream kline (symbol, tf) của nó
+        self._feed = feed  # MarketFeed: bots register their kline stream (symbol, tf)
         self._backfill = backfill
         self._runners: dict[int, StrategyRunner] = {}
 
@@ -223,7 +226,8 @@ class BotManager:
             if acc is not None:
                 executor.attach_account(acc, self._accounts)
         if hasattr(executor, "restore_open"):
-            await executor.restore_open()  # vị thế còn mở từ trước restart (paper + sàn)
+            # positions still open from before the restart (paper + exchange)
+            await executor.restore_open()
         executor.trade_meta = {
             "strategy": f"{strategy_name} v{strategy_version}", "tf": tf, "params": dict(params),
         }
@@ -255,7 +259,7 @@ class BotManager:
             return await make_live_executor(
                 bot_id, symbol, self._bus, self._sf, settings, timeout
             )
-        raise ValueError(f"mode {mode} không hợp lệ")
+        raise ValueError(f"invalid mode {mode}")
 
     def last_candle_ts(self, bot_id: int) -> int | None:
         r = self._runners.get(bot_id)
@@ -266,7 +270,7 @@ class BotManager:
         return r.executor if r else None
 
     def refresh_account(self, account) -> None:
-        """Đổi cấu hình tài khoản → áp ngay cho engine các bot đang chạy (lệnh mới)."""
+        """Account config changed → apply now to the engines of running bots (new orders)."""
         for r in self._runners.values():
             if r.account_id == account.id and hasattr(r.executor, "attach_account"):
                 r.executor.attach_account(account, self._accounts)
@@ -277,7 +281,7 @@ class BotManager:
             r.status = status
 
     async def pause_all_running(self, reason: str) -> int:
-        """Auto-pause mọi bot đang RUNNING (vd mất feed — US-27). Ghi audit SYSTEM."""
+        """Auto-pause every RUNNING bot (e.g. feed lost — US-27). Writes a SYSTEM audit entry."""
         from sqlalchemy import update as sa_update
 
         from app.orders.models import Bot
@@ -310,8 +314,8 @@ class BotManager:
 
 
 class ManualTrader:
-    """Quản lý lệnh tay rời (không thuộc bot). 1 PaperExecutor/symbol, subscribe
-    ticker để cập nhật giá + check SL/TP/limit. bot_id=None, source=MANUAL."""
+    """Manages standalone manual orders (not owned by a bot). 1 PaperExecutor per symbol, subscribes
+    to the ticker to update prices + check SL/TP/limit. bot_id=None, source=MANUAL."""
 
     def __init__(
         self, bus: EventBus, session_factory: async_sessionmaker, accounts=None
@@ -325,7 +329,7 @@ class ManualTrader:
     async def ensure(self, symbol: str, mode: str = "PAPER") -> PaperExecutor:
         if symbol not in self._ex:
             ex = PaperExecutor(None, symbol, mode, self._bus, self._sf)
-            if self._accounts:  # lệnh tay paper ghi vào tài khoản paper mặc định
+            if self._accounts:  # paper manual orders are booked to the default paper account
                 acc = await self._accounts.default_paper()
                 if acc is not None:
                     ex.attach_account(acc, self._accounts)
@@ -348,7 +352,7 @@ class ManualTrader:
         except asyncio.CancelledError:
             raise
         except Exception:  # noqa: BLE001
-            logger.exception("manual trader %s lỗi", symbol)
+            logger.exception("manual trader %s error", symbol)
         finally:
             self._bus.unsubscribe(f"ticker.{symbol}", sub)
 

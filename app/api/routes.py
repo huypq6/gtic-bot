@@ -1,4 +1,4 @@
-"""REST routes. P0: /api/health. P1: /api/klines + /api/klines/sync (xem SRS §5)."""
+"""REST routes. P0: /api/health. P1: /api/klines + /api/klines/sync (see SRS §5)."""
 
 from datetime import UTC, datetime
 
@@ -16,25 +16,25 @@ from app.version import get_version
 
 router = APIRouter(prefix="/api")
 
-# Khung thời gian hỗ trợ (UI dropdown). Không hardcode ở frontend.
+# Supported timeframes (UI dropdown). Not hardcoded in the frontend.
 TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"]
 
 
 @router.get("/health")
 async def health() -> dict:
-    """Liveness probe — dùng cho compose healthcheck + smoke test frontend."""
+    """Liveness probe — used by the compose healthcheck + frontend smoke test."""
     return {"status": "ok"}
 
 
 @router.get("/version")
 async def version() -> dict:
-    """Phiên bản đang chạy (commit/build/ngày) — web hiện ở header, báo khi có bản mới."""
+    """Running version (commit/build/date) — shown in the web header; flags new builds."""
     return get_version()
 
 
 @router.get("/config")
 async def config(session: AsyncSession = Depends(get_session)) -> dict:
-    """Cấu hình UI: watchlist (DB) + khung thời gian + tf mặc định."""
+    """UI config: watchlist (DB) + timeframes + default tf."""
     return {
         "symbols": await get_watchlist(session),
         "timeframes": TIMEFRAMES,
@@ -50,10 +50,10 @@ class WatchReq(BaseModel):
 async def watchlist_add(
     body: WatchReq, request: Request, session: AsyncSession = Depends(get_session)
 ) -> dict:
-    """Thêm cặp vào watchlist + feed subscribe realtime. Kiểm tra cặp tồn tại trên Binance."""
+    """Add a pair to the watchlist + subscribe the realtime feed. Checks it exists on Binance."""
     symbol = body.symbol.strip().upper()
     if not symbol.isalnum():
-        raise HTTPException(400, "symbol không hợp lệ")
+        raise HTTPException(400, "invalid symbol")
     from binance import AsyncClient
 
     client = await AsyncClient.create()
@@ -62,7 +62,7 @@ async def watchlist_add(
     finally:
         await client.close_connection()
     if not info:
-        raise HTTPException(400, f"cặp {symbol} không tồn tại trên Binance")
+        raise HTTPException(400, f"pair {symbol} does not exist on Binance")
 
     await add_symbol(session, symbol)
     feed = getattr(request.app.state, "feed", None)
@@ -92,7 +92,7 @@ async def list_klines(
     limit: int = Query(1000, le=5000),
     session: AsyncSession = Depends(get_session),
 ) -> list[dict]:
-    """Nến lịch sử cho chart load ban đầu (sau đó cập nhật realtime qua WS)."""
+    """Historical candles for the chart's initial load (then updated in realtime via WS)."""
     s = datetime.fromtimestamp(start / 1000, tz=UTC) if start else None
     e = datetime.fromtimestamp(end / 1000, tz=UTC) if end else None
     return await get_klines(session, symbol, tf, s, e, limit)
@@ -101,13 +101,13 @@ async def list_klines(
 class SyncRequest(BaseModel):
     symbol: str
     tf: str = "1m"
-    start: str = "1 day ago UTC"  # python-binance hiểu chuỗi này
+    start: str = "1 day ago UTC"  # python-binance understands this string
     end: str | None = None
 
 
 @router.get("/scan")
 async def scan(session: AsyncSession = Depends(get_session)) -> list[dict]:
-    """Kết quả scan mới nhất (1 dòng/symbol, ts gần nhất)."""
+    """Latest scan results (1 row per symbol, most recent ts)."""
     from sqlalchemy import func
 
     sub = (
@@ -143,6 +143,6 @@ async def scan(session: AsyncSession = Depends(get_session)) -> list[dict]:
 async def sync_klines(
     body: SyncRequest, session: AsyncSession = Depends(get_session)
 ) -> dict:
-    """Tải lịch sử từ Binance REST về Postgres (hypertable)."""
+    """Download history from Binance REST into Postgres (hypertable)."""
     n = await sync_historical(session, body.symbol, body.tf, body.start, body.end)
     return {"synced": n, "symbol": body.symbol, "tf": body.tf}

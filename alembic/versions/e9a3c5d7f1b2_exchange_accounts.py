@@ -1,5 +1,5 @@
-"""P9b: tài khoản sàn (TESTNET/LIVE Futures) — cache số dư sàn, con trỏ sổ cái income,
-ext_id chống nhập trùng, loại FUNDING, id SL/TP đặt trên sàn của vị thế.
+"""P9b: exchange accounts (TESTNET/LIVE Futures) — exchange balance cache, income-ledger cursor,
+ext_id for import dedup, FUNDING type, ids of the position's SL/TP orders placed on the exchange.
 
 Revision ID: e9a3c5d7f1b2
 Revises: d7f2b4c6e8a0

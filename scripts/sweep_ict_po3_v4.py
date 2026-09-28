@@ -1,7 +1,8 @@
-"""Sweep ict_po3 v4 (rejection sweep + displacement + cutoff + min_rr) trên 15m/5m.
+"""Sweep ict_po3 v4 (rejection sweep + displacement + cutoff + min_rr) on 15m/5m.
 
-Chạy:  PYTHONPATH=. uv run python scripts/sweep_ict_po3_v4.py
-Xếp theo #thị-trường-dương rồi return/DD. Mục tiêu: dương đều + DD thấp (skill strategy-research).
+Run:  PYTHONPATH=. uv run python scripts/sweep_ict_po3_v4.py
+Ranked by #profitable-markets, then return/DD.
+Goal: consistently positive + low DD (strategy-research skill).
 """
 
 import asyncio
@@ -43,13 +44,13 @@ async def load_data() -> dict:
             await sync_historical(s, sym, tf, start)
             await s.commit()
             data[(sym, tf)] = await get_klines(s, sym, tf, limit=20000)
-            print(f"  data {sym} {tf}: {len(data[(sym, tf)])} nến")
+            print(f"  data {sym} {tf}: {len(data[(sym, tf)])} candles")
     return data
 
 
 def evaluate(params: dict, data: dict) -> dict:
     pnls, wins, trades, worst_dd, pos = [], [], 0, 0.0, 0
-    for (sym, tf), candles in data.items():
+    for (_sym, tf), candles in data.items():
         try:
             r = run_backtest("ict_po3", "4", params, candles, 1000.0, FEE, tf, 1)
         except Exception:  # noqa: BLE001
@@ -75,10 +76,10 @@ def fmt(p: dict) -> str:
 
 
 async def main() -> None:
-    print("Nạp dữ liệu…")
+    print("Loading data…")
     data = await load_data()
     grid = build_grid()
-    print(f"Quét {len(grid)} bộ × {len(MARKETS)} = {len(grid) * len(MARKETS)} backtest…\n")
+    print(f"Sweeping {len(grid)} sets × {len(MARKETS)} = {len(grid) * len(MARKETS)} backtests…\n")
     results = []
     for i, p in enumerate(grid, 1):
         r = evaluate(p, data)
@@ -89,16 +90,17 @@ async def main() -> None:
     elig = [r for r in results if r["trades"] >= MIN_TOTAL_TRADES]
     elig.sort(key=lambda r: (r["pos"], r["calmar"], r["mean_pnl"]), reverse=True)
 
-    print(f"\n{'='*92}\nTOP (≥{MIN_TOTAL_TRADES} lệnh; xếp #dương rồi ret/DD):")
-    print(f"  {'#dương':>7} {'PnL_TB%':>9} {'maxDD%':>7} {'ret/DD':>7} {'win%':>6} {'lệnh':>5}  params")
+    print(f"\n{'='*92}\nTOP (≥{MIN_TOTAL_TRADES} trades; ranked by #positive then ret/DD):")
+    print(f"  {'#pos':>7} {'avgPnL%':>9} {'maxDD%':>7} {'ret/DD':>7} {'win%':>6} {'trades':>6}  "
+          "params")
     for r in elig[:14]:
         print(f"  {r['pos']:>5}/4 {r['mean_pnl']:>9.2f} {r['max_dd']:>7.2f} {r['calmar']:>7.2f} "
               f"{r['mean_win']:>6.1f} {r['trades']:>5}  {fmt(r['params'])}")
     if elig:
         b = elig[0]
-        print(f"\nĐỀ XUẤT: {fmt(b['params'])}")
+        print(f"\nRECOMMENDED: {fmt(b['params'])}")
         print(f"  params = {b['params']}")
-    print("\n⚠️  IN-SAMPLE → walk-forward tuần (bước sau) mới là phán quyết.")
+    print("\n⚠️  IN-SAMPLE → the weekly walk-forward (next step) is the real verdict.")
 
 
 if __name__ == "__main__":

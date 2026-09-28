@@ -1,7 +1,7 @@
-"""OrderManager — điểm vào duy nhất cho mọi hành động lệnh (bot + tay).
+"""OrderManager — the single entry point for every order action (bot + manual).
 
-NFR truy vết: ghi `audit_log` TRƯỚC khi tác động (executor/sàn). `execute()` đảm bảo
-thứ tự: audit (commit) → rồi mới chạy `do`. Nếu `do` lỗi, audit vẫn còn (đã commit).
+Traceability NFR: write `audit_log` BEFORE acting (executor/exchange). `execute()` guarantees
+the order: audit (commit) → only then run `do`. If `do` fails, the audit row remains (committed).
 """
 
 import logging
@@ -50,7 +50,7 @@ class OrderManager:
         symbol: str | None = None,
         detail: dict | None = None,
     ) -> Any:
-        """Ghi audit TRƯỚC, rồi chạy `do`. Trả về kết quả `do`."""
+        """Write the audit FIRST, then run `do`. Returns the result of `do`."""
         await self.write_audit(
             source=source, action=action, mode=mode,
             bot_id=bot_id, symbol=symbol, detail=detail,

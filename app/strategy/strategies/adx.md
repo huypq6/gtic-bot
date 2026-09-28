@@ -1,47 +1,47 @@
-# ADX / DMI — Chỉ số xu hướng định hướng
+# ADX / DMI — Directional Movement Index
 
-> Trường phái: **Trend (lọc theo độ mạnh)**. Khung gợi ý: 1h–1d.
+> Style: **Trend (filtered by strength)**. Suggested timeframes: 1h–1d.
 
-## Ý tưởng
+## Idea
 
-Hệ thống DMI (Welles Wilder) gồm hai đường định hướng **+DI / −DI** (sức mua/bán) và **ADX** đo **độ mạnh** của xu hướng (không phân biệt hướng). Ý tưởng: chỉ giao dịch theo DI khi xu hướng đủ mạnh (ADX cao) → tránh vào lệnh trong sideway.
+The DMI system (Welles Wilder) consists of two directional lines, **+DI / −DI** (buying/selling pressure), and the **ADX**, which measures the **strength** of the trend (regardless of direction). The idea: only trade DI signals when the trend is strong enough (high ADX) → avoid entering during sideways markets.
 
-## Công thức (rút gọn)
+## Formula (simplified)
 
 ```
-+DM / −DM : biến động hướng lên / xuống giữa các nến
++DM / −DM : upward / downward directional movement between candles
 +DI = 100 × Wilder(+DM) / Wilder(TR)
 −DI = 100 × Wilder(−DM) / Wilder(TR)
 DX  = 100 × |+DI − −DI| / (+DI + −DI)
 ADX = Wilder-smooth(DX)
 ```
 
-## Quy tắc vào/ra lệnh
+## Entry/exit rules
 
-| Điều kiện | Hành động |
+| Condition | Action |
 |---|---|
-| `ADX ≥ adx_min` **và** +DI cắt **LÊN** −DI | **BUY** (xu hướng tăng mạnh) |
-| `ADX ≥ adx_min` **và** +DI cắt **XUỐNG** −DI | **SELL** (xu hướng giảm mạnh) |
+| `ADX ≥ adx_min` **and** +DI crosses **ABOVE** −DI | **BUY** (strong uptrend) |
+| `ADX ≥ adx_min` **and** +DI crosses **BELOW** −DI | **SELL** (strong downtrend) |
 
-ADX < `adx_min` (sideway) → **không vào lệnh**.
+ADX < `adx_min` (sideways) → **no entry**.
 
-## Tham số
+## Parameters
 
-| Param | Mặc định | Ý nghĩa |
+| Param | Default | Meaning |
 |---|---|---|
-| `period` | 14 | Chu kỳ DMI/ADX. |
-| `adx_min` | 25 | Ngưỡng độ mạnh xu hướng để cho phép vào lệnh (25 = "đủ mạnh"). |
-| `size` | 0.001 | Khối lượng. |
+| `period` | 14 | DMI/ADX period. |
+| `adx_min` | 25 | Trend-strength threshold required to allow entries (25 = "strong enough"). |
+| `size` | 0.001 | Order size. |
 
-## Ưu / Nhược
+## Pros / Cons
 
-- ✅ Bộ lọc **độ mạnh xu hướng** rất hữu ích — tránh giao dịch trong sideway.
-- ❌ Trễ; bản thân ADX không cho hướng (cần DI). DI cross có thể nhiễu khi ADX ngấp nghé ngưỡng.
+- ✅ The **trend-strength** filter is very useful — avoids trading in sideways markets.
+- ❌ Lagging; ADX alone gives no direction (needs DI). DI crosses can be noisy when ADX hovers around the threshold.
 
-## Khi nào dùng
+## When to use
 
-- Làm **bộ lọc** kết hợp các chiến thuật khác (chỉ vào lệnh khi ADX cao), hoặc dùng độc lập theo DI cross.
+- As a **filter** combined with other strategies (only enter when ADX is high), or standalone using DI crosses.
 
-## Lưu ý khi backtest
+## Backtest notes
 
-- Thử `adx_min` 20–30. Cần đủ dữ liệu (≥ 2×period) cho ADX ổn định.
+- Try `adx_min` 20–30. Needs enough data (≥ 2×period) for ADX to stabilize.

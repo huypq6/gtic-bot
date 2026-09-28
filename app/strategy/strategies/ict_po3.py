@@ -1,19 +1,19 @@
-"""ICT Power of Three (PO3) — Session AMD (Asia tích lũy → London/NY thao túng+phân phối).
+"""ICT Power of Three (PO3) — Session AMD (Asia accumulation → London/NY manipulation+distribution).
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY === (xem ict_po3.md cho thiết kế đầy đủ)
+=== EDIT THE STRATEGY HERE === (see ict_po3.md for the full design)
 
-Vòng đời 1 ngày theo AMD: phiên Asia (00:00–08:00 UTC) tạo range; London+NY
-(08:00–21:00) QUÉT range Asia (manipulation) rồi ĐẢO CHIỀU phân phối. Quét dưới
-Asia Low → LONG, quét trên Asia High → SHORT. Xác nhận bằng MSS (phá đỉnh/đáy phản
-ứng sau cú quét) + tuỳ chọn FVG / Order Block. SL ngoài điểm quét, TP = rr×risk.
-Chỉ đánh TRONG NGÀY (UTC), tối đa 1 lệnh/ngày, đóng hết trước khi sang ngày.
+A day's life cycle under AMD: the Asia session (00:00–08:00 UTC) builds a range; London+NY
+(08:00–21:00) SWEEPS the Asia range (manipulation) and then REVERSES into distribution. Sweep
+below Asia Low → LONG, sweep above Asia High → SHORT. Confirmed by MSS (break of the reaction
+high/low after the sweep) + optional FVG / Order Block. SL beyond the sweep point, TP = rr×risk.
+INTRADAY only (UTC), at most 1 trade/day, everything closed before the day rolls over.
 
-Thời gian lấy từ `candles[-1]["ts"]` theo UTC (KHÔNG dùng ctx.now — backtest không set).
-Stateful: giữ range/sweep/lệnh trong instance qua các nến (runner + backtest tái dùng
-cùng instance). Tự quản SL/TP bằng tín hiệu CLOSE (engine backtest không tự áp SL/TP).
+Time is taken from `candles[-1]["ts"]` in UTC (NOT ctx.now — backtest does not set it).
+Stateful: keeps range/sweep/trade in the instance across candles (runner + backtest reuse
+the same instance). Manages SL/TP itself via CLOSE signals (backtest engine does not apply SL/TP).
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.strategy.base import Context, Signal, Strategy
 from app.strategy.registry import register
@@ -21,7 +21,7 @@ from app.strategy.ta import atr, ema, pad_left
 
 
 def _utc(ts_ms: int) -> datetime:
-    return datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
+    return datetime.fromtimestamp(ts_ms / 1000, tz=UTC)
 
 
 @register
@@ -29,30 +29,31 @@ class IctPo3(Strategy):
     name = "ict_po3"
     version = "3"
     description = (
-        "[v3] ICT PO3 — MSS swing-structure (CHoCH) + bias HTF + retest FVG/OB + tp_mode + "
-        "lọc tin. Bản KHUYẾN NGHỊ (in-sample dương, OOS hỗn hợp). Xem ict_po3.md."
+        "[v3] ICT PO3 — swing-structure MSS (CHoCH) + HTF bias + FVG/OB retest + tp_mode + "
+        "news filter. RECOMMENDED version (positive in-sample, mixed OOS). See ict_po3.md."
     )
-    # Mặc định = bộ BỀN nhất từ sweep (scripts/sweep_ict_po3.py) sau khi thêm SL theo ATR:
-    # conf=2 retest, tp=thanh khoản đối diện, SL=ATR×1.0, bias_len 100. SL/TP CHẠM được (không còn
-    # flatten-dominated), win ~45%. Nhưng PnL TB ~hòa (phí ăn mòn do nhiều lệnh). KHÔNG phải bộ chắc lời.
+    # Defaults = most ROBUST set from the sweep (scripts/sweep_ict_po3.py) after adding the ATR SL:
+    # conf=2 retest, tp=opposite liquidity, SL=ATR×1.0, bias_len 100. SL/TP are REACHABLE (no
+    # longer flatten-dominated), win ~45%. But avg PnL is ~breakeven (fee drag from many trades).
+    # NOT a sure-profit set.
     default_params = {
-        "bias_mode": 1,        # 0=tắt (2 chiều) · 1=lọc theo EMA trend HTF (chỉ thuận trend)
-        "bias_len": 100,       # độ dài EMA bias (số nến ~ 4H/daily)
-        "confluence": 2,       # 1=MSS-breakout · 2=retest FVG · 3=retest FVG+OrderBlock
-        "mss_lookback": 2,     # tối thiểu số nến kể từ sweep trước khi cho phép MSS (debounce)
-        "swing": 1,            # nửa-độ-rộng fractal để xác định swing high/low (MSS = phá swing)
-        "tp_mode": 1,          # 0=TP theo rr_target · 1=TP về thanh khoản đối diện (Asia high/low)
-        "rr_target": 2.0,      # bội số R cho TP (khi tp_mode=0; cũng là fallback của tp_mode=1)
-        "sl_mode": 1,          # 0=SL tại điểm quét (xa, hay bị flatten) · 1=SL theo ATR (gần, TP dễ chạm)
-        "atr_len": 14,         # chu kỳ ATR cho sl_mode=1
-        "atr_mult": 1.0,       # SL cách entry = atr_mult × ATR (sl_mode=1)
-        "sl_buffer_pct": 0.05,  # đệm SL ngoài điểm quét, theo % giá (sl_mode=0)
-        "asia_end_h": 8,       # giờ UTC kết thúc phiên Asia (chốt range)
-        "flatten_h": 21,       # giờ UTC đóng hết lệnh (kết thúc NY)
-        "news_filter": 2,      # 0=tắt · 1=chặn vào lệnh trong khung giờ tin · 2=+chặn ngày NFP
-        "news_start_h": 12,    # khung giờ tin US (UTC): 8:30 ET = 12:30 (hè) / 13:30 (đông)
+        "bias_mode": 1,        # 0=off (both ways) · 1=HTF EMA trend filter (with-trend only)
+        "bias_len": 100,       # bias EMA length (candles ~ 4H/daily)
+        "confluence": 2,       # 1=MSS-breakout · 2=FVG retest · 3=FVG+OrderBlock retest
+        "mss_lookback": 2,     # minimum candles since the sweep before MSS is allowed (debounce)
+        "swing": 1,            # fractal half-width to define swing high/low (MSS = swing break)
+        "tp_mode": 1,          # 0=TP by rr_target · 1=TP at opposite liquidity (Asia high/low)
+        "rr_target": 2.0,      # R multiple for TP (when tp_mode=0; also the fallback for tp_mode=1)
+        "sl_mode": 1,          # 0=SL at sweep point (far, often flattened) · 1=ATR SL (near)
+        "atr_len": 14,         # ATR period for sl_mode=1
+        "atr_mult": 1.0,       # SL distance from entry = atr_mult × ATR (sl_mode=1)
+        "sl_buffer_pct": 0.05,  # SL buffer beyond the sweep point, % of price (sl_mode=0)
+        "asia_end_h": 8,       # UTC hour the Asia session ends (range locked)
+        "flatten_h": 21,       # UTC hour to close all trades (end of NY)
+        "news_filter": 2,      # 0=off · 1=block entries during news hours · 2=+block NFP days
+        "news_start_h": 12,    # US news window (UTC): 8:30 ET = 12:30 (summer) / 13:30 (winter)
         "news_end_h": 14,
-        "max_per_day": 0,      # 0=không giới hạn (vào lại sau mỗi lần đóng) · N=tối đa N lệnh/ngày (bớt phí)
+        "max_per_day": 0,      # 0=unlimited (re-enter after close) · N=max N trades/day
         "size": 0.001,
     }
     param_schema = {
@@ -78,18 +79,18 @@ class IctPo3(Strategy):
 
     def __init__(self, params: dict | None = None) -> None:
         super().__init__(params)
-        self._day = None              # ngày UTC đang theo dõi
+        self._day = None              # UTC day being tracked
         self._asia_high = None
         self._asia_low = None
         self._sweep = None            # "HIGH" (→SHORT) | "LOW" (→LONG) | None
-        self._sweep_extreme = None    # điểm cực trị của cú quét (đặt SL ngoài đây)
-        self._sweep_ts = None          # index nến quét (để dò swing-structure SAU sweep)
-        self._since = 0               # số nến đã qua kể từ sweep
-        self._armed = False           # đã MSS, đang chờ giá retest FVG để vào (conf≥2)
-        self._armed_dir = None        # hướng đã vũ trang
-        self._fvg_prox = None         # mép gần của FVG (mức retest để fill)
-        self._n_today = 0             # số lệnh đã vào trong ngày (cho max_per_day)
-        self._side = None             # "LONG" | "SHORT" | None (lệnh đang mở)
+        self._sweep_extreme = None    # extreme of the sweep (SL goes beyond it)
+        self._sweep_ts = None          # sweep candle ts (to find swing structure AFTER it)
+        self._since = 0               # candles elapsed since the sweep
+        self._armed = False           # MSS done, waiting for FVG retest to enter (conf≥2)
+        self._armed_dir = None        # armed direction
+        self._fvg_prox = None         # near edge of the FVG (retest level to fill)
+        self._n_today = 0             # trades entered today (for max_per_day)
+        self._side = None             # "LONG" | "SHORT" | None (open trade)
         self._sl = None
         self._tp = None
 
@@ -100,7 +101,7 @@ class IctPo3(Strategy):
         self._reset_setup()
 
     def _reset_setup(self) -> None:
-        """Xoá trạng thái sweep/MSS/vũ trang để dò setup mới (cùng ngày)."""
+        """Clear sweep/MSS/armed state to look for a new setup (same day)."""
         self._sweep = self._sweep_extreme = self._sweep_ts = None
         self._since = 0
         self._armed = False
@@ -121,20 +122,24 @@ class IctPo3(Strategy):
         asia_end_h, flatten_h = int(p["asia_end_h"]), int(p["flatten_h"])
         out: list[Signal] = []
 
-        # 1. Sang ngày mới → đóng lệnh treo (không qua đêm) rồi reset.
+        # 1. New day → close any dangling trade (no overnight holds), then reset.
         if self._day != day:
             if self._side is not None:
                 out.append(Signal("CLOSE", ctx.symbol))
                 self._clear_trade()
             self._reset_day(day)
 
-        # 2. Phiên Asia: gom range, chưa giao dịch.
+        # 2. Asia session: build the range, no trading yet.
         if hour < asia_end_h:
-            self._asia_high = cur["high"] if self._asia_high is None else max(self._asia_high, cur["high"])
-            self._asia_low = cur["low"] if self._asia_low is None else min(self._asia_low, cur["low"])
+            self._asia_high = (
+                cur["high"] if self._asia_high is None else max(self._asia_high, cur["high"])
+            )
+            self._asia_low = (
+                cur["low"] if self._asia_low is None else min(self._asia_low, cur["low"])
+            )
             return out
 
-        # 3. Đang có lệnh: quản SL/TP + flatten cuối ngày (kiểm theo close).
+        # 3. In a trade: manage SL/TP + end-of-day flatten (checked on close).
         if self._side is not None:
             close = cur["close"]
             hit = (
@@ -145,31 +150,32 @@ class IctPo3(Strategy):
             if hit or hour >= flatten_h:
                 out.append(Signal("CLOSE", ctx.symbol))
                 self._clear_trade()
-                self._reset_setup()  # đóng xong → dò setup MỚI cùng ngày (không giới hạn số lệnh)
+                self._reset_setup()  # closed → look for a NEW setup the same day
             return out
 
-        # 4. Ngoài cửa sổ săn lệnh / chưa có range Asia → không vào mới.
-        #    1 lệnh/thời điểm (chặn ở bước 3). max_per_day>0 → giới hạn số lệnh/ngày (giảm phí).
+        # 4. Outside the hunting window / no Asia range yet → no new entries.
+        #    1 trade at a time (enforced in step 3). max_per_day>0 → cap trades/day (lower fees).
         mpd = int(p.get("max_per_day", 0))
         if hour >= flatten_h or self._asia_high is None or self._asia_low is None:
             return out
         if mpd > 0 and self._n_today >= mpd:
             return out
 
-        # 4a. Lọc tin: không MỞ/ARM/FILL lệnh mới trong khung giờ tin (hoặc ngày NFP).
-        #     Lệnh đang mở vẫn được quản (đã xử lý ở bước 3) — chỉ chặn vào mới.
+        # 4a. News filter: no new OPEN/ARM/FILL during the news window (or on NFP days).
+        #     Open trades are still managed (handled in step 3) — only new entries are blocked.
         if self._news_blocked(dt, hour, p):
             return out
 
         close = cur["close"]
 
-        # 4b. Đã vũ trang (MSS xong, chờ retest FVG): fill khi giá hồi về vùng, hoặc huỷ nếu phá sweep.
+        # 4b. Armed (MSS done, waiting for FVG retest): fill when price pulls back into the zone,
+        #     or cancel if the sweep is broken.
         if self._armed:
             if self._armed_dir == "LONG":
-                if cur["low"] < self._sweep_extreme:  # phá sâu hơn sweep → setup hỏng, dò lại
+                if cur["low"] < self._sweep_extreme:  # broke past sweep → setup invalid
                     self._reset_setup()
                     return out
-                if cur["low"] <= self._fvg_prox:  # giá hồi vào FVG → vào lệnh (gần SL)
+                if cur["low"] <= self._fvg_prox:  # pulled back into FVG → enter
                     sig = self._open(ctx, "LONG", close, p)
                     if sig:
                         out.append(sig)
@@ -183,24 +189,24 @@ class IctPo3(Strategy):
                         out.append(sig)
             return out
 
-        # 5. Manipulation — ghi nhận cú quét ĐẦU TIÊN của ngày.
+        # 5. Manipulation — record the day's FIRST sweep.
         if self._sweep is None:
             if cur["high"] > self._asia_high:
                 self._sweep, self._sweep_extreme = "HIGH", cur["high"]
             elif cur["low"] < self._asia_low:
                 self._sweep, self._sweep_extreme = "LOW", cur["low"]
-            if self._sweep is not None:  # đánh dấu nến quét để dò swing-structure sau đó
+            if self._sweep is not None:  # mark the sweep candle to find swing structure afterwards
                 self._sweep_ts, self._since = cur["ts"], 1
-            return out  # cần nến sau để xác nhận MSS
+            return out  # need later candles to confirm MSS
 
-        # 6. MSS = CHoCH: phá SWING gần nhất hình thành SAU cú quét (đảo cấu trúc thật).
-        #    LONG: close vượt swing-high gần nhất (lower-high của nhịp hồi). SHORT: ngược lại.
+        # 6. MSS = CHoCH: break of the latest SWING formed AFTER the sweep (a real structure shift).
+        #    LONG: close above the latest swing-high (lower-high of the pullback). SHORT: reverse.
         direction = None
         w = int(p["swing"])
-        # Neo sweep theo ts (không theo index): runner live đưa cửa sổ trượt (deque 300),
-        # index tuyệt đối lệch mỗi nến → trước đây live không bao giờ thấy swing/MSS.
+        # Anchor the sweep by ts (not index): the live runner passes a sliding window (deque 300),
+        # so absolute indices shift every candle → live used to never see a swing/MSS.
         sweep_i = self._index_of(candles, self._sweep_ts)
-        if sweep_i is None:  # nến sweep đã trôi khỏi cửa sổ
+        if sweep_i is None:  # the sweep candle has scrolled out of the window
             self._reset_setup()
             return out
         if self._since >= int(p["mss_lookback"]):
@@ -213,7 +219,7 @@ class IctPo3(Strategy):
                 if ref is not None and close < ref:
                     direction = "SHORT"
 
-        # cập nhật điểm cực trị sweep (SL đặt ngoài đây).
+        # update the sweep extreme (SL goes beyond it).
         self._since += 1
         if self._sweep == "HIGH":
             self._sweep_extreme = max(self._sweep_extreme, cur["high"])
@@ -223,18 +229,19 @@ class IctPo3(Strategy):
         if direction is None:
             return out
 
-        # 6b. Bias HTF — chỉ đánh THUẬN trend (blog ICT: long khi bias tăng, short khi bias giảm).
+        # 6b. HTF bias — trade WITH the trend only (ICT blog: long if bias up, short if down).
         if int(p["bias_mode"]) == 1:
             em = ema([x["close"] for x in candles], int(p["bias_len"]))
-            if not em:  # chưa đủ dữ liệu xác định trend → không vào (an toàn).
+            if not em:  # not enough data to determine trend → no entry (safe).
                 return out
             bias_up = close > em[-1]
-            if (direction == "LONG") != bias_up:  # hướng lệnh phải khớp bias
+            if (direction == "LONG") != bias_up:  # trade direction must match the bias
                 return out
 
-        # 7. Confluence + vào lệnh:
-        #    conf=1 → vào MARKET ngay tại MSS-breakout (giá xa SL).
-        #    conf≥2 → VŨ TRANG: chờ giá RETEST về FVG mới vào (giá tốt hơn, gần SL → R:R đạt được).
+        # 7. Confluence + entry:
+        #    conf=1 → enter MARKET right at the MSS breakout (price far from SL).
+        #    conf≥2 → ARM: wait for price to RETEST the FVG before entering
+        #             (better price, close to SL → R:R achievable).
         conf = int(p["confluence"])
         if conf == 1:
             sig = self._open(ctx, direction, close, p)
@@ -243,7 +250,7 @@ class IctPo3(Strategy):
             return out
 
         prox = self._find_fvg(candles, direction)
-        if prox is None:  # chưa có FVG để retest → chờ nến sau (sweep vẫn giữ)
+        if prox is None:  # no FVG to retest yet → wait for later candles (sweep is kept)
             return out
         if conf >= 3 and not self._has_order_block(candles, direction):
             return out
@@ -251,16 +258,16 @@ class IctPo3(Strategy):
         return out
 
     def _sl_distance(self, ctx: Context, entry: float, p: dict) -> float:
-        """Khoảng cách SL từ entry. sl_mode=0: tới điểm quét (xa) + đệm. sl_mode=1: atr_mult×ATR (gần)."""
+        """SL distance. sl_mode=0: to sweep point (far) + buffer. sl_mode=1: atr_mult×ATR (near)."""
         if int(p.get("sl_mode", 0)) == 1:
             a = atr(ctx.candles, int(p["atr_len"]))
             dist = float(p["atr_mult"]) * a if a else 0.0
-            return dist if dist > 0 else entry * 0.005  # fallback 0.5% nếu thiếu ATR
+            return dist if dist > 0 else entry * 0.005  # fallback 0.5% if ATR is unavailable
         buf = entry * float(p["sl_buffer_pct"]) / 100.0
         return abs(entry - self._sweep_extreme) + buf
 
     def _open(self, ctx: Context, direction: str, entry: float, p: dict) -> Signal | None:
-        """Mở lệnh tại `entry`. SL theo `sl_mode` (điểm quét / ATR). TP theo `tp_mode` (rr / thanh khoản)."""
+        """Open at `entry`. SL by `sl_mode` (sweep point/ATR). TP by `tp_mode` (rr/liquidity)."""
         rr = float(p["rr_target"])
         tp_mode = int(p.get("tp_mode", 0))
         risk = self._sl_distance(ctx, entry, p)
@@ -269,7 +276,7 @@ class IctPo3(Strategy):
         if direction == "LONG":
             sl, tp = entry - risk, entry + rr * risk
             if tp_mode == 1 and self._asia_high is not None and self._asia_high > entry:
-                tp = self._asia_high  # đối diện = đỉnh range Asia
+                tp = self._asia_high  # opposite = top of the Asia range
             sig = Signal("BUY", ctx.symbol, float(p["size"]), sl=sl, tp=tp)
         else:
             sl, tp = entry + risk, entry - rr * risk
@@ -293,10 +300,10 @@ class IctPo3(Strategy):
 
     @staticmethod
     def _recent_swing(candles: list[dict], start_i: int, end_i: int, w: int, kind: str):
-        """Swing (fractal) gần nhất trong [start_i, end_i): tâm cao/thấp hơn `w` nến mỗi bên.
+        """Latest swing (fractal) in [start_i, end_i): pivot above/below `w` candles each side.
 
-        kind='high' → swing-high (cho CHoCH long); 'low' → swing-low (cho short). None nếu chưa có.
-        Tâm cần `w` nến xác nhận phía sau (đều < end_i = nến hiện tại) nên có độ trễ tự nhiên.
+        kind='high' → swing-high (long CHoCH); 'low' → swing-low (short). None if none yet.
+        The pivot needs `w` confirming candles after it (all < end_i = current) → natural lag.
         """
         key = "high" if kind == "high" else "low"
         for j in range(end_i - 1 - w, max(start_i, w) - 1, -1):
@@ -313,22 +320,22 @@ class IctPo3(Strategy):
 
     @staticmethod
     def _news_blocked(dt, hour: int, p: dict) -> bool:
-        """Có chặn vào lệnh mới vì tin không. NFP = thứ Sáu đầu tháng (day≤7, weekday=4)."""
+        """Are new entries blocked by news? NFP = first Friday of the month (day≤7, weekday=4)."""
         nf = int(p.get("news_filter", 0))
         if nf < 1:
             return False
         if int(p["news_start_h"]) <= hour < int(p["news_end_h"]):
             return True
-        if nf >= 2 and dt.weekday() == 4 and dt.day <= 7:  # ngày NFP
+        if nf >= 2 and dt.weekday() == 4 and dt.day <= 7:  # NFP day
             return True
         return False
 
     @staticmethod
     def _find_fvg(candles: list[dict], direction: str) -> float | None:
-        """Mép GẦN của FVG mới nhất (mức retest để fill). None nếu không có.
+        """NEAR edge of the most recent FVG (retest level to fill). None if there is none.
 
-        Bullish: low[i] > high[i-2] → gap [high[i-2], low[i]], mép gần = low[i] (đỉnh gap).
-        Bearish: high[i] < low[i-2] → gap [high[i], low[i-2]], mép gần = high[i] (đáy gap).
+        Bullish: low[i] > high[i-2] → gap [high[i-2], low[i]], near edge = low[i] (gap top).
+        Bearish: high[i] < low[i-2] → gap [high[i], low[i-2]], near edge = high[i] (gap bottom).
         """
         w = candles[-6:]
         prox = None
@@ -342,14 +349,14 @@ class IctPo3(Strategy):
 
     @staticmethod
     def _has_order_block(candles: list[dict], direction: str) -> bool:
-        """Có nến đối màu (gốc Order Block) trong cú đẩy MSS gần nhất."""
+        """Is there an opposite-colour candle (Order Block origin) in the latest MSS push?"""
         w = candles[-5:]
         if direction == "LONG":
-            return any(c["close"] < c["open"] for c in w)  # nến giảm = OB cho long
+            return any(c["close"] < c["open"] for c in w)  # bearish candle = OB for long
         return any(c["close"] > c["open"] for c in w)
 
     def plot(self, candles):
-        """Vẽ Asia High/Asia Low theo từng ngày (đường bậc thang, pane 0)."""
+        """Plot Asia High/Asia Low per day (step lines, pane 0)."""
         asia_end_h = int(self.params["asia_end_h"])
         day_hi: dict = {}
         day_lo: dict = {}
@@ -365,7 +372,7 @@ class IctPo3(Strategy):
             hi_line.append(day_hi.get(d))
             lo_line.append(day_lo.get(d))
         out = {"Asia High": hi_line, "Asia Low": lo_line}
-        if int(self.params["bias_mode"]) == 1:  # đường trend lọc hướng lệnh
+        if int(self.params["bias_mode"]) == 1:  # trend line that filters trade direction
             closes = [c["close"] for c in candles]
             out[f"Bias EMA {int(self.params['bias_len'])}"] = pad_left(
                 ema(closes, int(self.params["bias_len"])), len(candles)

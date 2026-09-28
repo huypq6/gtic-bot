@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, X } from "lucide-react";
 import { addWatch, removeWatch } from "../../lib/api";
 import { useWsStore } from "../../lib/ws";
+import { t } from "../../lib/i18n";
 
 interface Props {
   symbols: string[];
@@ -30,7 +31,7 @@ export default function Watchlist({ symbols, active, onSelect }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Thêm cặp */}
+      {/* Add pair */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -41,24 +42,24 @@ export default function Watchlist({ symbols, active, onSelect }: Props) {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value.toUpperCase())}
-          placeholder="Thêm cặp (vd SOLUSDT)"
+          placeholder={t("Add pair (e.g. SOLUSDT)")}
           className="min-w-0 flex-1 rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
         />
         <button
           type="submit"
           disabled={add.isPending || !input.trim()}
-          title="Thêm vào watchlist"
+          title={t("Add to watchlist")}
           className="rounded-md bg-accent px-2 py-1.5 text-white hover:bg-accent-strong disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
         </button>
       </form>
-      {add.isError && <p className="text-xs text-down">Cặp không hợp lệ / không có trên Binance.</p>}
+      {add.isError && <p className="text-xs text-down">{t("Invalid pair / not listed on Binance.")}</p>}
 
       <ul className="flex flex-col gap-1">
         {symbols.map((sym) => {
-          const t = tickers[sym];
-          const up = (t?.pct ?? 0) >= 0;
+          const tk = tickers[sym];
+          const up = (tk?.pct ?? 0) >= 0;
           return (
             <li key={sym} className="group relative">
               <button
@@ -72,18 +73,18 @@ export default function Watchlist({ symbols, active, onSelect }: Props) {
                 <span className="font-medium text-text">{sym}</span>
                 <span className="text-right">
                   <span className="block text-sm tabular-nums text-text">
-                    {t ? fmt(t.price) : "—"}
+                    {tk ? fmt(tk.price) : "—"}
                   </span>
-                  {t && (
+                  {tk && (
                     <span className={`block text-xs tabular-nums ${up ? "text-up" : "text-down"}`}>
                       {up ? "+" : ""}
-                      {t.pct.toFixed(2)}%
+                      {tk.pct.toFixed(2)}%
                     </span>
                   )}
                 </span>
               </button>
               <button
-                title="Xóa khỏi watchlist"
+                title={t("Remove from watchlist")}
                 onClick={() => remove.mutate(sym)}
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-faint opacity-0 transition hover:text-down group-hover:opacity-100"
               >

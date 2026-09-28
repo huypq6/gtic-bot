@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { t } from "../../lib/i18n";
 
-// US-14: rào chắn LIVE — gõ đúng "LIVE" mới cho phép. Cảnh báo đỏ.
+// US-14: LIVE safeguard — only allowed after typing "LIVE" exactly. Red warning.
 export default function EnableLiveModal({
   symbol,
   onConfirm,
@@ -19,15 +20,16 @@ export default function EnableLiveModal({
       <div className="w-full max-w-md rounded-2xl border border-down/40 bg-surface p-6 shadow-2xl">
         <div className="flex items-center gap-2 text-down">
           <AlertTriangle className="h-6 w-6" />
-          <h2 className="text-lg font-bold">CHẾ ĐỘ LIVE — TIỀN THẬT</h2>
+          <h2 className="text-lg font-bold">{t("LIVE MODE — REAL MONEY")}</h2>
         </div>
         <p className="mt-3 text-sm text-muted">
-          Bot <span className="font-semibold">{symbol}</span> sẽ đặt lệnh bằng{" "}
-          <span className="font-semibold text-down">tiền thật</span> trên Binance. Đảm bảo key đã
-          tắt quyền rút tiền + whitelist IP.
+          {t("Bot")} <span className="font-semibold">{symbol}</span> {t("will place orders with")}{" "}
+          <span className="font-semibold text-down">{t("real money")}</span>{" "}
+          {t("on Binance. Make sure the API key has withdrawals disabled + IP whitelist.")}
         </p>
         <p className="mt-3 text-sm text-muted">
-          Gõ <span className="font-mono font-semibold text-down">LIVE</span> để xác nhận:
+          {t("Type ")}<span className="font-mono font-semibold text-down">LIVE</span>{" "}
+          {t("to confirm:")}
         </p>
         <input
           autoFocus
@@ -41,14 +43,14 @@ export default function EnableLiveModal({
             onClick={onCancel}
             className="rounded-md px-3 py-1.5 text-sm text-muted hover:bg-surface-2"
           >
-            Hủy
+            {t("Cancel")}
           </button>
           <button
             onClick={onConfirm}
             disabled={!ok}
             className="rounded-md bg-down px-3 py-1.5 text-sm font-semibold text-white hover:bg-down/90 disabled:opacity-40"
           >
-            Chạy LIVE
+            {t("Run LIVE")}
           </button>
         </div>
       </div>

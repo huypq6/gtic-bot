@@ -1,7 +1,7 @@
-"""Phiên bản đang chạy — hiện trên web để biết đã cập nhật chưa.
+"""Running version — shown on the web so you can tell whether it has been updated.
 
-Prod (docker): stage `version` trong Dockerfile ghi `VERSION.json` từ git lúc build.
-Dev: không có file → hỏi git trực tiếp. Không có git → "dev".
+Prod (docker): the `version` stage in the Dockerfile writes `VERSION.json` from git at build time.
+Dev: no file → ask git directly. No git → "dev".
 """
 
 import json

@@ -1,7 +1,7 @@
-"""Sweep vol_breakout (Larry Williams k-range) trên 15m (fill intraday) + đối chứng 1h.
+"""Sweep vol_breakout (Larry Williams k-range) on 15m (intraday fills) + 1h as a control.
 
-Chạy:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/sweep_vol_breakout.py
-Xếp theo #thị-trường-dương rồi return/DD (skill strategy-research).
+Run:  PYTHONPATH=. PYTHONUNBUFFERED=1 uv run python scripts/sweep_vol_breakout.py
+Ranked by #profitable-markets, then return/DD (strategy-research skill).
 """
 
 import asyncio
@@ -15,7 +15,7 @@ MARKETS = [
     ("SOLUSDT", "15m", "90 days ago UTC"), ("BTCUSDT", "1h", "90 days ago UTC"),
 ]
 FEE = 0.0005
-MIN_TOTAL_TRADES = 30  # ~0.3 lệnh/ngày × 4 thị trường × 90d → mẫu đủ lớn
+MIN_TOTAL_TRADES = 30  # ~0.3 trades/day × 4 markets × 90d → large enough sample
 
 
 def build_grid() -> list[dict]:
@@ -39,13 +39,13 @@ async def load_data() -> dict:
             await sync_historical(s, sym, tf, start)
             await s.commit()
             data[(sym, tf)] = await get_klines(s, sym, tf, limit=20000)
-            print(f"  data {sym} {tf}: {len(data[(sym, tf)])} nến")
+            print(f"  data {sym} {tf}: {len(data[(sym, tf)])} candles")
     return data
 
 
 def evaluate(params: dict, data: dict) -> dict:
     pnls, wins, trades, worst_dd, pos = [], [], 0, 0.0, 0
-    for (sym, tf), candles in data.items():
+    for (_sym, tf), candles in data.items():
         try:
             r = run_backtest("vol_breakout", "1", params, candles, 1000.0, FEE, tf, 1)
         except Exception:  # noqa: BLE001
@@ -70,10 +70,10 @@ def fmt(p: dict) -> str:
 
 
 async def main() -> None:
-    print("Nạp dữ liệu…")
+    print("Loading data…")
     data = await load_data()
     grid = build_grid()
-    print(f"Quét {len(grid)} bộ × {len(MARKETS)} = {len(grid) * len(MARKETS)} backtest…\n")
+    print(f"Sweeping {len(grid)} sets × {len(MARKETS)} = {len(grid) * len(MARKETS)} backtests…\n")
     results = []
     for i, p in enumerate(grid, 1):
         r = evaluate(p, data)
@@ -84,16 +84,17 @@ async def main() -> None:
     elig = [r for r in results if r["trades"] >= MIN_TOTAL_TRADES]
     elig.sort(key=lambda r: (r["pos"], r["calmar"], r["mean_pnl"]), reverse=True)
 
-    print(f"\n{'='*92}\nTOP (≥{MIN_TOTAL_TRADES} lệnh; xếp #dương rồi ret/DD):")
-    print(f"  {'#dương':>7} {'PnL_TB%':>9} {'tệ_nhất%':>9} {'maxDD%':>7} {'ret/DD':>7} {'win%':>6} {'lệnh':>5}  params")
+    print(f"\n{'='*92}\nTOP (≥{MIN_TOTAL_TRADES} trades; ranked by #positive then ret/DD):")
+    print(f"  {'#pos':>7} {'avgPnL%':>9} {'worst%':>9} {'maxDD%':>7} {'ret/DD':>7} {'win%':>6} "
+          f"{'trades':>6}  params")
     for r in elig[:16]:
         print(f"  {r['pos']:>5}/4 {r['mean_pnl']:>9.2f} {r['worst_pnl']:>9.2f} {r['max_dd']:>7.2f} "
               f"{r['calmar']:>7.2f} {r['mean_win']:>6.1f} {r['trades']:>5}  {fmt(r['params'])}")
     if elig:
         b = elig[0]
-        print(f"\nĐỀ XUẤT: {fmt(b['params'])}")
+        print(f"\nRECOMMENDED: {fmt(b['params'])}")
         print(f"  params = {b['params']}")
-    print("\n⚠️  IN-SAMPLE → walk-forward mới là phán quyết.")
+    print("\n⚠️  IN-SAMPLE → walk-forward is the real verdict.")
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ import { fetchScan } from "../lib/api";
 import { useWsStore, type ScanRow } from "../lib/ws";
 import QuickTradePanel from "../components/scanner/QuickTradePanel";
 import InfoTip from "../components/InfoTip";
+import { t } from "../lib/i18n";
 
 const SIGNAL_CLS: Record<string, string> = {
   BUY: "text-up",
@@ -38,8 +39,8 @@ export default function Scanner() {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Scanner — đề xuất cặp (SL/TP theo ATR)</h2>
-        <span className="text-xs text-faint">cập nhật định kỳ · sắp theo score</span>
+        <h2 className="text-sm font-semibold">{t("Scanner — pair suggestions (ATR-based SL/TP)")}</h2>
+        <span className="text-xs text-faint">{t("updated periodically · sorted by score")}</span>
       </div>
       <div className="overflow-x-auto rounded-xl border border-border bg-surface">
         <table className="w-full text-sm">
@@ -50,7 +51,7 @@ export default function Scanner() {
                 <InfoTip term="score">Score</InfoTip>
               </th>
               <th className="px-3 py-2 font-medium">
-                <InfoTip term="signal">Tín hiệu</InfoTip>
+                <InfoTip term="signal">{t("Signal")}</InfoTip>
               </th>
               <th className="px-3 py-2 text-right font-medium">
                 <InfoTip term="entry">Entry</InfoTip>
@@ -61,8 +62,8 @@ export default function Scanner() {
               <th className="px-3 py-2 text-right font-medium">
                 <InfoTip term="tp">TP</InfoTip>
               </th>
-              <th className="px-3 py-2 font-medium">Lý do</th>
-              <th className="px-3 py-2 text-right font-medium">Hành động</th>
+              <th className="px-3 py-2 font-medium">{t("Reason")}</th>
+              <th className="px-3 py-2 text-right font-medium">{t("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -82,7 +83,7 @@ export default function Scanner() {
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1">
                       <button
-                        title="Đánh theo đề xuất (1 lệnh)"
+                        title={t("Trade the suggestion (1 order)")}
                         disabled={!tradable}
                         onClick={() => setTrade(r)}
                         className="rounded-md p-1.5 text-accent hover:bg-surface-2 disabled:opacity-30"
@@ -90,14 +91,14 @@ export default function Scanner() {
                         <Zap className="h-4 w-4" />
                       </button>
                       <button
-                        title="Tạo bot cho cặp này"
+                        title={t("Create a bot for this pair")}
                         onClick={() => navigate(`/trade?symbol=${r.symbol}`)}
                         className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-text"
                       >
                         <Bot className="h-4 w-4" />
                       </button>
                       <button
-                        title="Mở chart"
+                        title={t("Open chart")}
                         onClick={() => navigate(`/?symbol=${r.symbol}`)}
                         className="rounded-md p-1.5 text-muted hover:bg-surface-2 hover:text-text"
                       >
@@ -111,7 +112,7 @@ export default function Scanner() {
             {!rows.length && (
               <tr>
                 <td colSpan={8} className="px-3 py-4 text-sm text-faint">
-                  Chưa có kết quả quét (chờ vòng quét đầu tiên).
+                  {t("No scan results yet (waiting for the first scan).")}
                 </td>
               </tr>
             )}

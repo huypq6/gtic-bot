@@ -31,7 +31,7 @@ def upgrade() -> None:
     sa.Column('detail', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    # NOTE: bỏ drop 'kline_ts_idx' — index do Timescale hypertable quản lý.
+    # NOTE: dropping 'kline_ts_idx' skipped — the index is managed by the Timescale hypertable.
     # ### end Alembic commands ###
 
 

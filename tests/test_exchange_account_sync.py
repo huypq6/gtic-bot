@@ -1,4 +1,4 @@
-"""P9b: đồng bộ tài khoản sàn vào sổ cái (DB thật, client sàn giả; skip nếu không có DB)."""
+"""P9b: sync the exchange account into the ledger (real DB, fake client; skips without a DB)."""
 
 import os
 
@@ -38,7 +38,7 @@ async def env():
         async with engine.connect():
             pass
     except Exception:
-        pytest.skip("DB không sẵn sàng")
+        pytest.skip("DB not available")
     sf = async_sessionmaker(engine, expire_on_commit=False)
     async with sf() as s:
         await s.execute(delete(Account).where(Account.name == NAME))
@@ -67,9 +67,9 @@ async def test_first_sync_then_income_import_dedup_and_reconcile(env):
     await svc.sync_exchange(aid, ex)
     rows, acc = await ledger(sf, aid)
     assert [(r.type, float(r.amount)) for r in rows] == [("ADJUST", 500.0)]
-    assert float(acc.peak_equity) == 500  # số dư ban đầu không tính là lãi
+    assert float(acc.peak_equity) == 500  # the initial balance doesn't count as profit
     st = await svc.snapshot(aid)
-    assert (st.equity, st.used_margin, st.available) == (495, 100, 395)  # số liệu SÀN
+    assert (st.equity, st.used_margin, st.available) == (495, 100, 395)  # EXCHANGE figures
 
     c = int(acc.income_cursor)
     ex.rows = [
@@ -82,11 +82,11 @@ async def test_first_sync_then_income_import_dedup_and_reconcile(env):
         {"ext_id": "3:TRANSFER", "type": "TRANSFER", "amount": 100.0, "asset": "USDT",
          "symbol": None, "ts": c + 30},
         {"ext_id": "4:COMMISSION", "type": "COMMISSION", "amount": -1.0, "asset": "BNB",
-         "symbol": "BTCUSDT", "ts": c + 40},  # phí trả bằng BNB → không vào sổ USDT
+         "symbol": "BTCUSDT", "ts": c + 40},  # fee paid in BNB → not booked to the USDT ledger
     ]
     ex.snap["wallet"] = 611.0  # = 500 + 12 − 0.6 − 0.4 + 100
     await svc.sync_exchange(aid, ex)
-    await svc.sync_exchange(aid, ex)  # lần 2: không nhập trùng
+    await svc.sync_exchange(aid, ex)  # 2nd run: no duplicate imports
     rows, acc = await ledger(sf, aid)
     assert [r.type for r in rows] == ["ADJUST", "REALIZED_PNL", "FEE", "FUNDING", "DEPOSIT"]
     assert float(acc.balance) == pytest.approx(611.0)
@@ -96,7 +96,7 @@ async def test_first_sync_then_income_import_dedup_and_reconcile(env):
         )).scalar_one()
     assert float(total) == pytest.approx(611.0)
 
-    # ví sàn lệch sổ (vd income chưa về) → dòng ADJUST đối chiếu
+    # exchange wallet differs from ledger (e.g. income not arrived yet) → ADJUST reconciliation row
     ex.snap["wallet"] = 610.0
     await svc.sync_exchange(aid, ex)
     rows, acc = await ledger(sf, aid)
@@ -111,7 +111,7 @@ async def test_sync_error_recorded_and_no_deposit(env):
     await svc.sync_exchange(aid, ex)
     _, acc = await ledger(sf, aid)
     assert "Invalid API-key" in acc.sync_error and acc.last_sync_at is not None
-    with pytest.raises(ValueError, match="trên Binance"):
+    with pytest.raises(ValueError, match="on Binance"):
         await svc.deposit(aid, 100)
-    with pytest.raises(ValueError, match="trên Binance"):
+    with pytest.raises(ValueError, match="on Binance"):
         await svc.withdraw(aid, 10)

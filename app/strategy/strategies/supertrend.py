@@ -1,6 +1,6 @@
-"""Supertrend — theo xu hướng dựa trên ATR; vào lệnh khi đường đổi chiều.
+"""Supertrend — ATR-based trend following; enters when the line flips direction.
 
-=== SỬA CHIẾN THUẬT Ở ĐÂY ===
+=== EDIT THE STRATEGY HERE ===
 """
 
 from app.strategy.base import Context, Signal, Strategy
@@ -12,7 +12,7 @@ from app.strategy.ta import supertrend, supertrend_line
 class Supertrend(Strategy):
     name = "supertrend"
     version = "1"
-    description = "Supertrend (ATR) — đảo lên xu hướng tăng (BUY), đảo xuống (SELL)."
+    description = "Supertrend (ATR) — flips to uptrend (BUY), flips to downtrend (SELL)."
     default_params = {"period": 10, "mult": 3.0, "size": 0.001}
     param_schema = {
         "period": {"type": "int", "min": 3, "max": 100, "default": 10},
@@ -26,9 +26,9 @@ class Supertrend(Strategy):
         if len(dirs) < 2:
             return []
         prev, now = dirs[-2], dirs[-1]
-        if prev == -1 and now == 1:  # đảo lên xu hướng tăng
+        if prev == -1 and now == 1:  # flipped to uptrend
             return [Signal("BUY", ctx.symbol, p["size"])]
-        if prev == 1 and now == -1:  # đảo xuống xu hướng giảm
+        if prev == 1 and now == -1:  # flipped to downtrend
             return [Signal("SELL", ctx.symbol, p["size"])]
         return []
 
