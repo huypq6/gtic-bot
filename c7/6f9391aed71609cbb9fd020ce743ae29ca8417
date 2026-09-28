@@ -1,0 +1,19 @@
+README.md
+  s_b0e228b68e793d::t_3edf0d5bcbe480 255-270
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c76f9391aed71609cbb9fd020ce743ae29ca8417",
+  "prompts": {},
+  "sessions": {
+    "s_b0e228b68e793d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5efec822-4231-4769-aeb3-598074ab911c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
