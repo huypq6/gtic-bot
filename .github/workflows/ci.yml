@@ -8,6 +8,24 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: timescale/timescaledb:latest-pg16
+        env:
+          POSTGRES_USER: botuser
+          POSTGRES_PASSWORD: botpass
+          POSTGRES_DB: tradingbot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U botuser -d tradingbot"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://botuser:botpass@localhost:5432/tradingbot
+      # Tests must not depend on Binance (GitHub runners are geo-blocked by Binance).
+      FEED_AUTOSTART: "false"
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -16,6 +34,8 @@ jobs:
         run: uv sync --frozen
       - name: Lint
         run: uv run ruff check .
+      - name: Migrate
+        run: uv run alembic upgrade head
       - name: Test
         run: uv run pytest -q
 
