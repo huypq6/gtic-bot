@@ -217,7 +217,10 @@ CI runs all of the above on every push and pull request.
 | [05 — Strategy Development Guide](docs/05-Strategy-Dev-Guide.md) | Writing, backtesting and validating strategies |
 | [06 — Paper Trading Runbook](docs/06-Paper-Trading-Runbook.md) | Running and monitoring paper bots |
 | [07 — Exchange Smoke Test](docs/07-Exchange-Smoke-Test.md) | Checklist before using Testnet/Live keys |
-| `docs/00`–`04`, `IMPLEMENTATION-PLAN` | Original planning docs (BRD, URD, mockups, SRS) — *in Vietnamese* |
+| [00 — Plan](docs/00-Plan.md) | Solution summary, stack decisions, roadmap |
+| [01 — BRD](docs/01-BRD.md) · [02 — URD](docs/02-URD.md) | Business & user requirements, user stories |
+| [03 — ASCII Mockups](docs/03-ASCII-Mockups.md) | Original wireframes |
+| [04 — SRS](docs/04-SRS.md) | Software requirements: interfaces, data model, API, NFRs |
 
 ## Language
 

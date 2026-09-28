@@ -1,12 +1,12 @@
 # ASCII Mockups — UI Wireframes
 ### Trading Bot Platform (responsive web)
 
-Quy ước: `[ ]` nút · `( )` radio · `[x]` checkbox · `▼` dropdown · `●` realtime
+Legend: `[ ]` button · `( )` radio · `[x]` checkbox · `▼` dropdown · `●` realtime
 Mode badge: `🟢PAPER` `🟡TESTNET` `🔴LIVE`
 
 ---
 
-## 1. Layout tổng (Desktop)
+## 1. Overall layout (Desktop)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -14,41 +14,41 @@ Mode badge: `🟢PAPER` `🟡TESTNET` `🔴LIVE`
 │                                            ● Feed: LIVE   🟢PAPER   ⚙ ☾    │
 ├───────────────┬──────────────────────────────────────────────────────────┤
 │ WATCHLIST     │                                                            │
-│ ───────────── │                  (nội dung trang chính)                    │
+│ ───────────── │                  (main page content)                       │
 │ ●BTCUSDT      │                                                            │
 │   64,210 +1.2%│                                                            │
 │ ●ETHUSDT      │                                                            │
 │   3,180  -0.4%│                                                            │
 │ ●SOLUSDT      │                                                            │
 │   142.5 +3.1% │                                                            │
-│ [+ thêm cặp]  │                                                            │
+│ [+ add pair]  │                                                            │
 └───────────────┴──────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Dashboard (trang chủ)
+## 2. Dashboard (home page)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ DASHBOARD                                       🟢PAPER  ● Feed OK         │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ ┌─ Equity ──────────┐ ┌─ PnL hôm nay ─┐ ┌─ Vị thế mở ─┐ ┌─ Winrate ─┐    │
+│ ┌─ Equity ──────────┐ ┌─ PnL today ───┐ ┌─ Open pos. ─┐ ┌─ Winrate ─┐    │
 │ │  $10,420  ▲ 4.2%  │ │  +$182  ▲     │ │     3       │ │   58%     │    │
 │ └───────────────────┘ └───────────────┘ └─────────────┘ └───────────┘    │
 │                                                                            │
-│ BOTS ĐANG CHẠY                                                             │
+│ RUNNING BOTS                                                               │
 │ ┌────────────────────────────────────────────────────────────────────┐   │
-│ │ Bot          Cặp      Mode     Ver   PnL      Status      Action     │   │
+│ │ Bot          Pair     Mode     Ver   PnL      Status      Action     │   │
 │ │ ema_cross    BTCUSDT  🟢PAPER  1.2   +$92    ●Running   [⏸][⚙][✕]   │   │
 │ │ rsi_rev      ETHUSDT  🟢PAPER  2.0   -$14    ●Running   [⏸][⚙][✕]   │   │
 │ │ macd_v3      SOLUSDT  🟡TEST   3.1   +$104   ⏸Paused    [▶][⚙][✕]   │   │
 │ └────────────────────────────────────────────────────────────────────┘   │
-│ [+ Tạo bot mới]                                                            │
+│ [+ New bot]                                                                │
 │                                                                            │
-│ VỊ THẾ MỞ                                          [Đóng tất cả]           │
+│ OPEN POSITIONS                                     [Close all]             │
 │ ┌────────────────────────────────────────────────────────────────────┐   │
-│ │ Cặp     Side  Size   Entry    Hiện tại  PnL     SL/TP      Action    │   │
+│ │ Pair    Side  Size   Entry    Current   PnL     SL/TP      Action    │   │
 │ │ BTCUSDT LONG  0.01   63,900   64,210   +$31   62k/66k  [Close][Edit] │   │
 │ │ ETHUSDT LONG  0.10   3,200    3,180    -$20   3.1k/3.4k [Close][Edit]│   │
 │ └────────────────────────────────────────────────────────────────────┘   │
@@ -57,7 +57,7 @@ Mode badge: `🟢PAPER` `🟡TESTNET` `🔴LIVE`
 
 ---
 
-## 3. Chart (giống sàn chính thống)
+## 3. Chart (like a mainstream exchange)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -74,31 +74,31 @@ Mode badge: `🟢PAPER` `🟡TESTNET` `🔴LIVE`
 │ RSI  ┄┄┄┄70┄┄┄┄┄╱╲┄┄┄┄┄┄┄╱╲┄┄┄┄┄  56                                     │
 │      ──────30─────────────────────────                                     │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ ĐẶT LỆNH TAY:  ( )Market ( )Limit   Giá[______] Size[_____]  SL[__] TP[__] │
+│ MANUAL ORDER:  ( )Market ( )Limit Price[______] Size[_____]  SL[__] TP[__] │
 │                [ BUY / LONG ]   [ SELL / SHORT ]                           │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 4. Strategies (danh sách + version)
+## 4. Strategies (list + versions)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ STRATEGIES                                              [+ Tạo chiến thuật]│
+│ STRATEGIES                                              [+ New strategy]   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ Tên          Version  File             Backtest PnL  Đang dùng  Action     │
+│ Name         Version  File             Backtest PnL  In use     Action     │
 │ ────────────────────────────────────────────────────────────────────────  │
 │ ema_cross    1.0      ema_cross.py     +12.4%        —          [Edit][BT] │
 │ ema_cross    1.2 ★    ema_cross.py     +18.1%        2 bots     [Edit][BT] │
 │ rsi_rev      2.0      rsi_rev.py       +6.8%         1 bot      [Edit][BT] │
 │ macd_v3      3.1      macd_v3.py       +21.0%        1 bot      [Edit][BT] │
 │                                                                            │
-│ ★ = version active mặc định    [BT]=Backtest                              │
+│ ★ = default active version    [BT]=Backtest                               │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.1 Chỉnh params chiến thuật (không sửa code)
+### 4.1 Editing strategy params (no code edits)
 
 ```
 ┌─────────────────────── ema_cross  v1.2 ────────────────────────┐
@@ -106,9 +106,9 @@ Mode badge: `🟢PAPER` `🟡TESTNET` `🔴LIVE`
 │   fast EMA      [  9 ]                                         │
 │   slow EMA      [ 21 ]                                         │
 │   size          [ 0.01 ]                                       │
-│   timeout (s)   [ 30 ]   (auto-cancel limit treo)             │
+│   timeout (s)   [ 30 ]   (auto-cancel stale limit)            │
 │                                                                │
-│ THUẬT TOÁN (read-only / mở editor)            [ Mở code ✎ ]   │
+│ ALGORITHM (read-only / open in editor)       [ Open code ✎ ]  │
 │ ┌────────────────────────────────────────────────────────┐   │
 │ │ def on_candle(self, ctx):                              │   │
 │ │     fast = ema(ctx.candles, self.params['fast'])       │   │
@@ -116,7 +116,7 @@ Mode badge: `🟢PAPER` `🟡TESTNET` `🔴LIVE`
 │ │     ...                                                │   │
 │ └────────────────────────────────────────────────────────┘   │
 │                                                                │
-│ [ Lưu thành version mới ]   [ Lưu đè ]   [ Backtest ngay ]    │
+│ [ Save as new version ]  [ Overwrite ]   [ Backtest now ]     │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -128,11 +128,11 @@ Mode badge: `🟢PAPER` `🟡TESTNET` `🔴LIVE`
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ BACKTEST                                                                   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ Chiến thuật[ ema_cross v1.2 ▼]  Cặp[ BTCUSDT ▼]  TF[ 1H ▼]                │
-│ Từ[ 2025-01-01 ]  Đến[ 2025-06-01 ]  Vốn[ 10000 ]  Fee[ 0.04% ]          │
-│                                                       [ ▶ Chạy backtest ]  │
+│ Strategy[ ema_cross v1.2 ▼]  Pair[ BTCUSDT ▼]  TF[ 1H ▼]                  │
+│ From[ 2025-01-01 ]  To[ 2025-06-01 ]  Capital[ 10000 ]  Fee[ 0.04% ]     │
+│                                                       [ ▶ Run backtest ]   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ KẾT QUẢ                                                                    │
+│ RESULTS                                                                    │
 │ ┌─ PnL ─────┐ ┌─ Winrate ─┐ ┌─ Max DD ─┐ ┌─ Sharpe ─┐ ┌─ #Trades ─┐     │
 │ │ +18.1%    │ │   61%     │ │  -7.3%   │ │  1.84    │ │   142     │     │
 │ └───────────┘ └───────────┘ └──────────┘ └──────────┘ └───────────┘     │
@@ -144,30 +144,30 @@ Mode badge: `🟢PAPER` `🟡TESTNET` `🔴LIVE`
 │  10.0k┤___╱╲___╱╲__╱                                                      │
 │       └────────────────────────────────────────────────────────────       │
 │                                                                            │
-│ DANH SÁCH LỆNH                                                            │
-│  #  Thời gian          Side  Entry    Exit     PnL                        │
+│ TRADE LIST                                                                │
+│  #  Time               Side  Entry    Exit     PnL                        │
 │  1  01-03 14:00        LONG  42,100   43,050   +2.2%                      │
 │  2  01-07 09:00        LONG  43,800   43,200   -1.4%                      │
-│  ...                                          [ Xem trên chart ]          │
+│  ...                                          [ View on chart ]           │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 6. Scanner (nghiên cứu & đề xuất)
+## 6. Scanner (research & suggestions)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ SCANNER                          Bộ lọc[ Trend + RSI ▼]   [↻ Quét lại]     │
+│ SCANNER                          Filter[ Trend + RSI ▼]   [↻ Rescan]       │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ Cặp       Score  Tín hiệu    Lý do                       Action            │
+│ Pair      Score  Signal      Reason                      Action            │
 │ ──────────────────────────────────────────────────────────────────────    │
-│ SOLUSDT    92    ▲ LONG     EMA cross up + RSI 45 hồi   [Chart][→Bot]      │
-│ AVAXUSDT   85    ▲ LONG     Breakout kháng cự 4H        [Chart][→Bot]      │
-│ DOGEUSDT   71    ◦ Watch    Sideway, chờ xác nhận       [Chart]            │
-│ XRPUSDT    40    ▼ SHORT    Mất hỗ trợ + RSI 68         [Chart][→Bot]      │
+│ SOLUSDT    92    ▲ LONG     EMA cross up + RSI 45 dip   [Chart][→Bot]      │
+│ AVAXUSDT   85    ▲ LONG     4H resistance breakout      [Chart][→Bot]      │
+│ DOGEUSDT   71    ◦ Watch    Sideways, await confirm     [Chart]            │
+│ XRPUSDT    40    ▼ SHORT    Lost support + RSI 68       [Chart][→Bot]      │
 │                                                                            │
-│ Quét lúc 14:32 · 50 cặp · auto mỗi 15 phút                                │
+│ Scanned at 14:32 · 50 pairs · auto every 15 min                           │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -177,60 +177,60 @@ Mode badge: `🟢PAPER` `🟡TESTNET` `🔴LIVE`
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ AUDIT LOG                Lọc:[ Tất cả ▼] [ Bot ▼] [ Tay ▼]   [Export CSV]  │
+│ AUDIT LOG                Filter:[ All ▼] [ Bot ▼] [ Manual ▼] [Export CSV] │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ Thời gian       Nguồn   Mode    Cặp      Hành động       Chi tiết          │
+│ Time            Source  Mode    Pair     Action          Details           │
 │ ──────────────────────────────────────────────────────────────────────    │
 │ 14:31:02        BOT     🟢PAPER BTCUSDT  OPEN LONG       0.01 @63,900     │
-│ 14:33:50        TAY     🟢PAPER ETHUSDT  EDIT SL/TP      SL 3.1k→3.0k     │
+│ 14:33:50        MANUAL  🟢PAPER ETHUSDT  EDIT SL/TP      SL 3.1k→3.0k     │
 │ 14:35:11        BOT     🟢PAPER SOLUSDT  CANCEL LIMIT    timeout 30s       │
-│ 14:40:00        TAY     🟢PAPER BTCUSDT  CLOSE           +$31             │
+│ 14:40:00        MANUAL  🟢PAPER BTCUSDT  CLOSE           +$31             │
 │ 14:41:25        SYS     —       —        FEED RECONNECT  WS reconnected    │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 8. Live Mode — rào chắn an toàn (modal xác nhận)
+## 8. Live Mode — safety guardrails (confirmation modal)
 
 ```
-        ┌────────────── ⚠  KÍCH HOẠT LIVE TRADING ──────────────┐
+        ┌─────────────── ⚠  ENABLE LIVE TRADING ────────────────┐
         │                                                       │
-        │   🔴 Bạn sắp chuyển bot 'ema_cross v1.2' sang LIVE    │
-        │      → giao dịch bằng TIỀN THẬT trên Binance.         │
+        │   🔴 You are about to switch 'ema_cross v1.2' to LIVE │
+        │      → trading with REAL MONEY on Binance.            │
         │                                                       │
-        │   Kiểm tra:                                           │
-        │   [x] Đã backtest                                     │
-        │   [x] Đã chạy paper ≥ 24h                             │
-        │   [ ] API key tắt quyền rút tiền                      │
+        │   Checklist:                                          │
+        │   [x] Backtested                                      │
+        │   [x] Ran on paper ≥ 24h                              │
+        │   [ ] API key withdrawals disabled                    │
         │                                                       │
-        │   Gõ "LIVE" để xác nhận: [________]                   │
+        │   Type "LIVE" to confirm: [________]                  │
         │                                                       │
-        │            [ Huỷ ]      [ 🔴 BẬT LIVE ]               │
+        │            [ Cancel ]   [ 🔴 ENABLE LIVE ]            │
         └───────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 9. Mobile (responsive — màn hình hẹp)
+## 9. Mobile (responsive — narrow screen)
 
 ```
 ┌─────────────────────┐    ┌─────────────────────┐
 │ ⚡BinBot   🟢 ● ☰   │    │ BTCUSDT  ●64,210    │
 ├─────────────────────┤    │ +1.2%   [1H▼]       │
 │ Equity  $10,420 ▲   │    ├─────────────────────┤
-│ PnL hôm nay  +$182  │    │     ╱╲    ▲BUY      │
+│ PnL today    +$182  │    │     ╱╲    ▲BUY      │
 ├─────────────────────┤    │   ╱╲  ╲ ╱           │
 │ BOTS                │    │ ╱    ╲╱   EMA──      │
 │ ┌─────────────────┐ │    │ ┄┄┄┄┄┄┄ SL/TP      │
 │ │ema_cross 🟢     │ │    ├─────────────────────┤
 │ │BTC +$92 ●Run ⏸ │ │    │ [Buy]      [Sell]   │
 │ ├─────────────────┤ │    ├─────────────────────┤
-│ │rsi_rev 🟢       │ │    │ VỊ THẾ              │
+│ │rsi_rev 🟢       │ │    │ POSITIONS           │
 │ │ETH -$14 ●Run ⏸ │ │    │ BTC LONG +$31       │
 │ └─────────────────┘ │    │ [Close]   [Edit]    │
 ├─────────────────────┤    └─────────────────────┘
-│ [📊][🤖][🔍][📜]    │     (tab bar dưới cùng)
+│ [📊][🤖][🔍][📜]    │     (tab bar at bottom)
 └─────────────────────┘
    Dashboard
 ```

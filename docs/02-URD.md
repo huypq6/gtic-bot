@@ -1,110 +1,110 @@
 # URD — User Requirements Document
-### Trading Bot Automation cho sàn Binance
+### Trading Bot Automation for Binance
 
-| Mục | Nội dung |
+| Item | Details |
 |---|---|
-| Phiên bản | 1.0 |
-| Đối tượng | Single user (trader kiêm developer) |
-| Liên kết | BRD v1.0 |
+| Version | 1.0 |
+| Audience | Single user (trader and developer) |
+| Related | BRD v1.0 |
 
 ---
 
 ## 1. Persona
 
-**Trader-Developer (chủ hệ thống)**
-- Tự viết/sửa chiến thuật bằng Python.
-- Muốn theo dõi nhiều cặp realtime trên cả desktop lẫn mobile.
-- Cần kiểm chứng kỹ trước khi dùng tiền thật.
-- Ưu tiên kiểm soát: muốn can thiệp tay bất cứ lúc nào.
+**Trader-Developer (system owner)**
+- Writes/edits strategies in Python themselves.
+- Wants to monitor many pairs in realtime on both desktop and mobile.
+- Needs thorough validation before using real money.
+- Prioritizes control: wants to be able to intervene manually at any time.
 
 ---
 
-## 2. User Stories (theo nhóm chức năng)
+## 2. User Stories (by functional area)
 
-### 2.1 Biểu đồ & Theo dõi thị trường
+### 2.1 Charts & Market Monitoring
 | ID | User Story | Acceptance Criteria |
 |---|---|---|
-| US-01 | Là user, tôi muốn xem biểu đồ nến realtime giống sàn để phân tích | Nến/volume cập nhật realtime, đổi khung TG (1m–1D), zoom/pan |
-| US-02 | Tôi muốn bật indicator (EMA, RSI, MACD…) lên chart | Overlay/subpane indicator, bật/tắt được |
-| US-03 | Tôi muốn xem nhiều cặp trong watchlist | Danh sách cặp + giá + %thay đổi realtime |
-| US-04 | Tôi muốn thấy điểm bot vào/ra lệnh trên chart | Marker mua/bán + SL/TP hiển thị trên nến |
+| US-01 | As a user, I want to view realtime candlestick charts like the exchange's for analysis | Candles/volume update in realtime, switchable timeframe (1m–1D), zoom/pan |
+| US-02 | I want to add indicators (EMA, RSI, MACD…) to the chart | Overlay/subpane indicators, toggleable |
+| US-03 | I want to see multiple pairs in a watchlist | List of pairs + price + realtime % change |
+| US-04 | I want to see the bot's entry/exit points on the chart | Buy/sell markers + SL/TP shown on the candles |
 
-### 2.2 Chiến thuật (Strategy)
+### 2.2 Strategy
 | ID | User Story | Acceptance Criteria |
 |---|---|---|
-| US-05 | Tôi muốn viết/sửa thuật toán chiến thuật bằng Python | Thêm file strategy, hot-reload hoặc reload được |
-| US-06 | Tôi muốn chỉnh params chiến thuật từ UI không cần sửa code | Form params (fast/slow/threshold…), lưu DB |
-| US-07 | Tôi muốn quản lý nhiều phiên bản của một chiến thuật | Mỗi version có name+version+params, chạy song song |
-| US-08 | Tôi muốn so sánh hiệu năng các version | Bảng so sánh PnL/winrate/drawdown theo version |
+| US-05 | I want to write/edit strategy algorithms in Python | Add a strategy file, hot-reload or reload supported |
+| US-06 | I want to tune strategy params from the UI without editing code | Params form (fast/slow/threshold…), saved to DB |
+| US-07 | I want to manage multiple versions of a strategy | Each version has name+version+params, run in parallel |
+| US-08 | I want to compare performance across versions | Comparison table of PnL/win rate/drawdown by version |
 
 ### 2.3 Backtest
 | ID | User Story | Acceptance Criteria |
 |---|---|---|
-| US-09 | Tôi muốn backtest chiến thuật trên dữ liệu lịch sử | Chọn cặp + khung TG + khoảng ngày → chạy |
-| US-10 | Tôi muốn xem kết quả backtest trực quan | Equity curve, trade list, metrics (PnL, winrate, MDD, Sharpe) |
-| US-11 | Tôi muốn thấy lệnh backtest vẽ lên chart | Marker entry/exit trên chart lịch sử |
+| US-09 | I want to backtest a strategy on historical data | Choose pair + timeframe + date range → run |
+| US-10 | I want to see backtest results visually | Equity curve, trade list, metrics (PnL, win rate, MDD, Sharpe) |
+| US-11 | I want to see backtest trades plotted on the chart | Entry/exit markers on the historical chart |
 
-### 2.4 Giao dịch (Paper / Testnet / Live)
+### 2.4 Trading (Paper / Testnet / Live)
 | ID | User Story | Acceptance Criteria |
 |---|---|---|
-| US-12 | Tôi muốn chạy bot ở chế độ giả lập (paper) với dữ liệu thật | Lệnh khớp nội bộ, PnL realtime, không gọi sàn |
-| US-13 | Tôi muốn chạy bot trên Testnet sàn | Lệnh thật trên testnet.binance |
-| US-14 | Tôi muốn bật Live có rào chắn an toàn | Cờ riêng + xác nhận + cảnh báo màu |
-| US-15 | Tôi muốn chọn mode rõ ràng cho từng bot | Badge mode hiển thị nổi bật (PAPER/TESTNET/LIVE) |
+| US-12 | I want to run the bot in simulated (paper) mode with real data | Orders matched internally, realtime PnL, no exchange calls |
+| US-13 | I want to run the bot on the exchange Testnet | Real orders on testnet.binance |
+| US-14 | I want to enable Live with safety guardrails | Dedicated flag + confirmation + color warning |
+| US-15 | I want to clearly choose a mode for each bot | Prominent mode badge (PAPER/TESTNET/LIVE) |
 
-### 2.5 Quản lý lệnh & Can thiệp thủ công
+### 2.5 Order Management & Manual Intervention
 | ID | User Story | Acceptance Criteria |
 |---|---|---|
-| US-16 | Tôi muốn xem mọi vị thế đang mở + PnL | Bảng positions realtime |
-| US-17 | Tôi muốn đóng lệnh thủ công | Nút Close → executor đóng ngay |
-| US-18 | Tôi muốn sửa SL/TP thủ công | Edit SL/TP áp dụng ngay |
-| US-19 | Tôi muốn pause/resume bot | Toggle, bot ngừng sinh lệnh mới |
-| US-20 | Tôi muốn đặt lệnh tay xen kẽ bot | Form đặt lệnh market/limit thủ công |
-| US-21 | Tôi muốn xem lịch sử & audit log mọi lệnh | Bảng log: thời gian, nguồn (bot/tay), hành động |
+| US-16 | I want to see all open positions + PnL | Realtime positions table |
+| US-17 | I want to close a trade manually | Close button → executor closes immediately |
+| US-18 | I want to edit SL/TP manually | SL/TP edits apply immediately |
+| US-19 | I want to pause/resume a bot | Toggle; the bot stops generating new orders |
+| US-20 | I want to place manual orders alongside the bot | Manual market/limit order form |
+| US-21 | I want to view history & an audit log of all orders | Log table: time, source (bot/manual), action |
 
-### 2.6 Nghiên cứu & Đề xuất
+### 2.6 Research & Suggestions
 | ID | User Story | Acceptance Criteria |
 |---|---|---|
-| US-22 | Tôi muốn hệ thống quét cặp và đề xuất vào lệnh | Scanner chạy định kỳ, list cặp + score + tín hiệu |
-| US-23 | Tôi muốn từ đề xuất mở nhanh chart/đặt lệnh | Click đề xuất → mở chart/prefill lệnh |
+| US-22 | I want the system to scan pairs and suggest entries | Scanner runs periodically, lists pairs + score + signal |
+| US-23 | I want to quickly open a chart/place an order from a suggestion | Click a suggestion → open chart/prefill order |
 
-### 2.7 Phi chức năng (từ góc user)
+### 2.7 Non-functional (from the user's perspective)
 | ID | User Story | Acceptance Criteria |
 |---|---|---|
-| US-24 | Tôi muốn truy cập từ điện thoại lẫn máy tính | Responsive web |
-| US-25 | Tôi muốn dữ liệu sát realtime sàn | Cập nhật < 1s, WS không poll |
-| US-26 | Tôi muốn không bị treo lệnh limit lâu | Auto-cancel theo timeout |
-| US-27 | Tôi muốn được cảnh báo khi mất kết nối sàn | Banner cảnh báo + bot auto-pause |
+| US-24 | I want access from both phone and computer | Responsive web |
+| US-25 | I want data close to the exchange in realtime | Updates < 1s, WS with no polling |
+| US-26 | I don't want limit orders left hanging for long | Auto-cancel on timeout |
+| US-27 | I want to be warned when the exchange connection is lost | Warning banner + bot auto-pause |
 
 ---
 
-## 3. Ma trận quyền theo Mode (an toàn)
+## 3. Permission Matrix by Mode (safety)
 
-| Hành động | Backtest | Paper | Testnet | Live |
+| Action | Backtest | Paper | Testnet | Live |
 |---|---|---|---|---|
-| Chạy không xác nhận thêm | ✅ | ✅ | ✅ | ❌ (cần cờ + confirm) |
-| Tiền thật | ❌ | ❌ | ❌ | ✅ |
-| Can thiệp thủ công | ✅ | ✅ | ✅ | ✅ |
-| Cảnh báo màu UI | — | xanh | vàng | đỏ |
+| Runs without extra confirmation | ✅ | ✅ | ✅ | ❌ (requires flag + confirm) |
+| Real money | ❌ | ❌ | ❌ | ✅ |
+| Manual intervention | ✅ | ✅ | ✅ | ✅ |
+| UI warning color | — | green | yellow | red |
 
 ---
 
-## 4. Luồng người dùng chính (User Flows)
+## 4. Main User Flows
 
-**Flow A — Thử chiến thuật mới (an toàn → thật):**
+**Flow A — Trying a new strategy (safe → real):**
 ```
-Viết/sửa strategy → Backtest → xem metrics → chỉnh params
-   → Paper trade (realtime) → đạt kỳ vọng → Testnet → Live (bật cờ)
-```
-
-**Flow B — Giám sát & can thiệp:**
-```
-Dashboard → thấy vị thế + PnL → bất thường → Close/Sửa SL-TP
-   hoặc Pause bot → ghi audit log
+Write/edit strategy → Backtest → review metrics → tune params
+   → Paper trade (realtime) → meets expectations → Testnet → Live (enable flag)
 ```
 
-**Flow C — Từ đề xuất tới lệnh:**
+**Flow B — Monitoring & intervention:**
 ```
-Scanner đề xuất cặp → mở chart kiểm tra → đặt lệnh tay
-   hoặc gán cho bot chạy
+Dashboard → see positions + PnL → anomaly → Close/Edit SL-TP
+   or Pause bot → write audit log
+```
+
+**Flow C — From suggestion to order:**
+```
+Scanner suggests a pair → open chart to check → place manual order
+   or assign it to a bot
 ```
