@@ -252,6 +252,22 @@ Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 This software is for **educational and research purposes**. Trading cryptocurrency derivatives with leverage carries a high risk of loss, including total loss of funds. Nothing in this repository is financial advice. Backtest and paper results do not guarantee future performance. You are solely responsible for any use of this software with real money. Start with paper trading, then testnet, and only risk what you can afford to lose.
 
+### Legal notice
+
+- GTIC is **free, non-commercial, self-hosted software**. It is not an exchange, broker, custodian, or investment
+  service: it holds no user funds, matches no orders for others, charges no fees, and has no affiliation with or
+  referral arrangement with Binance or any other exchange.
+- **You are responsible for complying with the laws of your jurisdiction** before connecting it to a real exchange
+  account. Cryptocurrency and crypto-derivatives trading is restricted or regulated in many countries, and using an
+  exchange that is not licensed where you live may be unlawful.
+- **Vietnam:** under Resolution 05/2025/NQ-CP and Decree 284/2026/NĐ-CP, domestic investors are expected to trade
+  crypto assets only through service providers licensed by the Ministry of Finance, and trading elsewhere may be
+  subject to administrative fines once the transition period ends. Providing crypto-related services without a
+  licence is also sanctioned. Backtest, Paper and Testnet modes do not trade real assets.
+- Do not use this software to provide trading, fund-management, signal or hosting services to others without the
+  licences required in your jurisdiction.
+- This notice is not legal advice. If in doubt, consult a qualified lawyer.
+
 ## License
 
 [MIT](LICENSE) © Huy Pham
