@@ -1,0 +1,19 @@
+CODE_OF_CONDUCT.md
+  s_b0e228b68e793d::t_542b0d34c04c9c 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "de729035abeb3688a76fa7c515279ddd841c4bd1",
+  "prompts": {},
+  "sessions": {
+    "s_b0e228b68e793d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5efec822-4231-4769-aeb3-598074ab911c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
