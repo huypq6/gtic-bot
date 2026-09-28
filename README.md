@@ -4,6 +4,8 @@
 
 # GTIC Trading Bot
 
+**English** · [Tiếng Việt](README.vi.md)
+
 **Ghost Trader In Chair** — a self-hosted, single-user trading bot platform for **Binance USDⓈ-M Futures**.<br/>
 Write a strategy once, then take it from **backtest → paper → testnet → live** without changing a line.
 
