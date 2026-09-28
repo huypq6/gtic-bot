@@ -1,6 +1,7 @@
 # Contributing
 
 Thanks for your interest in GTIC Trading Bot! Bug reports, strategy ideas and pull requests are welcome.
+By participating you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Development setup
 

@@ -248,7 +248,7 @@ reverse proxy. Use Live keys with withdrawals disabled and an IP whitelist. See 
 
 ## Contributing
 
-Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Please follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## ⚠️ Disclaimer
 

@@ -252,7 +252,7 @@ Dùng key Live đã tắt quyền rút tiền và bật whitelist IP. Xem [SECUR
 
 ## Đóng góp
 
-Hoan nghênh issue và pull request — xem [CONTRIBUTING.md](CONTRIBUTING.md).
+Hoan nghênh issue và pull request — xem [CONTRIBUTING.md](CONTRIBUTING.md). Vui lòng tuân thủ [Quy tắc ứng xử](CODE_OF_CONDUCT.md).
 
 ## ⚠️ Miễn trừ trách nhiệm
 
