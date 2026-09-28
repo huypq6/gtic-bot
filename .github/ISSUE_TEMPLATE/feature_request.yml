@@ -1,0 +1,21 @@
+name: Feature or strategy request
+description: Suggest an improvement or a new strategy
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: For a strategy, describe entry/exit rules, SL/TP, timeframe and any reference.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

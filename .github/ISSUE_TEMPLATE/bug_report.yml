@@ -1,0 +1,43 @@
+name: Bug report
+description: Something isn't working as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "⚠️ Never paste API keys, secrets or your `.env`. Security issues → see SECURITY.md."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Create bot ema_cross v1 on BTCUSDT 15m (PAPER)\n2. ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options: [Backtest, Paper, Testnet, Live, Not mode-specific]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown in the app header (e.g. v0.1.0 · #59 · 3f8c33e) or `git rev-parse --short HEAD`
+  - type: dropdown
+    id: deploy
+    attributes:
+      label: How are you running it?
+      options: [docker compose, local dev (uv + vite), other]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      render: shell

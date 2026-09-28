@@ -238,6 +238,16 @@ The UI is in **English** by default. Click **VI** in the header to switch to Vie
 
 All phases are built: market feed and charts, paper trading, order management, backtesting, strategy versioning, testnet, scanner, live-mode safeguards, and accounts/risk management. **Testnet/Live on Binance Futures is implemented but has not yet been smoke-tested with real keys** (see [docs/07](docs/07-Exchange-Smoke-Test.md)). Treat those modes as experimental.
 
+## Security
+
+GTIC is single-user and has **no built-in login** — anyone who can reach the port can place orders.
+**Do not expose it to the internet**: keep it on localhost/LAN, behind a VPN, or behind an authenticating
+reverse proxy. Use Live keys with withdrawals disabled and an IP whitelist. See [SECURITY.md](SECURITY.md).
+
+## Contributing
+
+Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## ⚠️ Disclaimer
 
 This software is for **educational and research purposes**. Trading cryptocurrency derivatives with leverage carries a high risk of loss, including total loss of funds. Nothing in this repository is financial advice. Backtest and paper results do not guarantee future performance. You are solely responsible for any use of this software with real money. Start with paper trading, then testnet, and only risk what you can afford to lose.
