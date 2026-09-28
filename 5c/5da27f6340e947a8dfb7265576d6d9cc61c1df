@@ -1,0 +1,577 @@
+app/strategy/strategies/adx_dmi.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 1,3,15,30,32,40
+frontend/src/components/VersionBadge.tsx
+  s_b0e228b68e793d::t_01dbc2698df490 5,8,17,32,34,36,45,49
+app/strategy/strategies/ema_cross.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 3-4,24,26,39,54,58,74
+frontend/src/pages/Audit.tsx
+  s_b0e228b68e793d::t_01dbc2698df490 3,21-22,26-27,51
+tests/test_donchian.py
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 21
+  s_b0e228b68e793d::t_6c4b3642a6a526 1,55,60
+tests/test_ict_po3.py
+  s_b0e228b68e793d::t_d87ae0e03a69f7 46-47,66-67
+  s_b0e228b68e793d::t_d71885c6b1d1f7 150-152
+  s_b0e228b68e793d::t_57e89d78b3ace2 4,10,153-154,215,223
+  s_b0e228b68e793d::t_6c4b3642a6a526 2,30,50,52,54,58,68,74,79,86,98,100,106,114,116,124,128,130,134,137,140,145,148,166,193,197,200,213,234,247,249,255,258,260
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 23,117,176,181,188
+pyproject.toml
+  s_b0e228b68e793d::t_8e901c85afcc91 5
+tests/test_runner.py
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 1-2,52
+  s_b0e228b68e793d::t_6c4b3642a6a526 53-54,56
+frontend/src/components/orders/TradesTable.tsx
+  s_b0e228b68e793d::t_cd5f5216099e38 39,47,90-94,185,187-188,192,194,198,200-201,204-206,209-210,213-214,217-219,224-225,228-229,232-233,236,270-271,281-283,286-293,296-297,304,307-308,322-323,336,341,346,350
+  s_b0e228b68e793d::t_9976078467b440 8,11-14,18-22,28,38,40-45,48,50-51,66,68,79,100,102,107,110,113,116,122,142,153,164-165,169-170,180,220-221,239,246,269,284,303,315-319,324-326,329-333,335,340,344,348
+app/strategy/base.py
+  s_b0e228b68e793d::t_cb37820fc23f8e 19
+  s_b0e228b68e793d::t_5eba6904e1b03b 1,38,48,66
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 3-5,59,61,68-69
+  s_b0e228b68e793d::t_718671a09a2761 55
+app/orders/manager.py
+  s_b0e228b68e793d::t_68ca7ab8474bef 1,3-4,53
+app/strategy/strategies/grid.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 1,3-5,36,38,40,56
+  s_b0e228b68e793d::t_8b61bc3462996f 17
+tests/test_new_strategies.py
+  s_b0e228b68e793d::t_6c4b3642a6a526 69,71
+frontend/src/pages/Scanner.tsx
+  s_b0e228b68e793d::t_9976078467b440 9,42-43,54,65-66,86,94,101,115
+tests/test_indicator_strategies.py
+  s_b0e228b68e793d::t_6c4b3642a6a526 45,54,60,67
+app/strategy/registry.py
+  s_b0e228b68e793d::t_5eba6904e1b03b 1,3,20,26,42
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 4-5
+tests/test_account_service.py
+  s_b0e228b68e793d::t_ac9dd5daa0edad 1-2,45,55,81-82,86,88,100,104,114,116,129
+app/backtest/sim.py
+  s_b0e228b68e793d::t_8a9b1ec9721310 18
+  s_b0e228b68e793d::t_5eba6904e1b03b 1-3,6,12-14,51,79-80,83,86,89,111,125,166,169,171,173,216,218,229,234,239-240,278,306
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 4-5,7-11
+  s_b0e228b68e793d::t_54de2c65fc3e67 189
+  s_b0e228b68e793d::t_d87ae0e03a69f7 232-233
+  s_b0e228b68e793d::t_0a336ba6adfd98 185-188,190-195
+app/orders/models.py
+  s_b0e228b68e793d::t_68ca7ab8474bef 1,3,41,55,60-62,64-65,75,101,139,184-185,187,192-194,226,229-230,250,267,269-270,274
+  s_b0e228b68e793d::t_136bd4a7b59a36 124
+  s_b0e228b68e793d::t_ecabe6a14d9e16 43-44,69,87,123,138,195
+app/strategy/strategies/ichimoku.md
+  s_b0e228b68e793d::t_c5d9045889e346 1,3,5-7,9-21,23,25,27,29,31-35,37,39,41-42,44,46,48,50-53,55,57-59,61,63,65,67-68
+tests/test_ict_po3_v4.py
+  s_b0e228b68e793d::t_6c4b3642a6a526 8,12,16,42,55,61,106
+  s_b0e228b68e793d::t_d87ae0e03a69f7 23-24,82-85
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 14
+scripts/leverage_ict_po3_v4.py
+  s_b0e228b68e793d::t_13b054f0446ba5 1,3-4,38,41,48
+  s_b0e228b68e793d::t_5d0f74574e7131 46
+  s_b0e228b68e793d::t_537c60148d0b8c 49
+app/market/models.py
+  s_b0e228b68e793d::t_835f49d4c7e1c5 1,3,15,28
+app/strategy/strategies/ict_po3_v1.py
+  s_b0e228b68e793d::t_8775f6a4bd7bfd 1,33-34,39,73,150-151,154,157,213-214,266-267,281
+  s_b0e228b68e793d::t_59e4cc0a411c8b 118-123,140-145
+  s_b0e228b68e793d::t_7c4243d58d96df 16,24
+  s_b0e228b68e793d::t_d8df7e4a8291c4 3,5-9,11-13,32,37,40-47,65,69-72,74-75,77,88,109,116,126,139,171,177,179,181,190,205,208,211-212,223,231,233-234,246,264,284,288,304
+  s_b0e228b68e793d::t_46a78703ba449c 36,202
+tests/test_backtest_engine.py
+  s_b0e228b68e793d::t_6c4b3642a6a526 1,3-4,22,46,68
+frontend/src/components/live/EnableLiveModal.tsx
+  s_b0e228b68e793d::t_57e89d78b3ace2 31
+  s_b0e228b68e793d::t_01dbc2698df490 3,5,23,26-28,32,46,53
+app/account/risk.py
+  s_b0e228b68e793d::t_7b5dd8263526e1 1,3-4,9,12-16,21,26-27,29-30,32,58,66,68,70,84,87,89,94,104,106,109,111,116-117,122,126-127,131,135,139
+  s_b0e228b68e793d::t_b5af275992b78a 134
+app/strategy/strategies/parabolic_sar.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 1,3,15
+scripts/scan_pairs_ict_po3.py
+  s_b0e228b68e793d::t_13b054f0446ba5 1,3,5,40,43,57-58,65,88
+  s_b0e228b68e793d::t_537c60148d0b8c 6-7,54-56
+  s_b0e228b68e793d::t_837467bc1a2c7c 60-61,63-64,86-87
+app/account/service.py
+  s_b0e228b68e793d::t_a7aeb90f88de81 1,3,5,39,54,70,73,126,144,153-154,164-165,170,179,185-186,195,213,217,219,221-222,224,242,247,249,273,282,289,291,293,302,304,312,319,330,343
+  s_b0e228b68e793d::t_daa958b4007672 274-275
+  s_b0e228b68e793d::t_13c55f741226f8 4,223,284-285
+app/strategy/runner.py
+  s_b0e228b68e793d::t_5eba6904e1b03b 1,3-5,43,45,82-83,87,101,117,125,145,157,179,195-196,202,212,262,284,317-318,332,355
+  s_b0e228b68e793d::t_d87ae0e03a69f7 70-73
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 63-64,229-230,273
+app/strategy/ta.py
+  s_b0e228b68e793d::t_5eba6904e1b03b 1,5,10,21,28,53,55,64,71,167,179,190,207,222,238,263,266,270,280,288,327,357,370,376,397,429,435,445
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 40,387-388
+  s_b0e228b68e793d::t_c12c4ff73474d5 198
+  s_b0e228b68e793d::t_d87ae0e03a69f7 264-265
+  s_b0e228b68e793d::t_a61136101d46fa 97,127
+app/execution/binance_futures.py
+  s_b0e228b68e793d::t_d45c4cc36d8cb4 3-8,12-15,26,31,33,54,57,94,99,108,167-168,170,172,208
+  s_b0e228b68e793d::t_0d2f61303ea79e 9-11,142-144,180
+app/execution/testnet.py
+  s_b0e228b68e793d::t_68ca7ab8474bef 1
+  s_b0e228b68e793d::t_d45c4cc36d8cb4 3-4
+app/strategy/strategies/ema_cross.md
+  s_b0e228b68e793d::t_d8df7e4a8291c4 1,3,5,7,9,12,15,17-18,20,22,26,28,30,36,38,40,42-45,47,49-51,53,55-56,58,60-61
+frontend/src/pages/Backtest.tsx
+  s_b0e228b68e793d::t_cb851120db216a 19,26,39,54,64,82,113-114,147,150,157,161,164,177,180-181,183-184,186-187,196,201,218,228-231,235-237,240,254,257,261,272,279,294,302-303,306,311-312,362,366,384,393-398,402-406,409
+tests/test_exchange_executor.py
+  s_b0e228b68e793d::t_219550806021d4 191
+  s_b0e228b68e793d::t_7c4243d58d96df 139
+  s_b0e228b68e793d::t_54322d3b5e1030 1,3,55,91,111,121,128,143,174,198,205-206,214-215,231-232
+frontend/src/locales/vi/accountBacktest.ts
+  s_b0e228b68e793d::t_d87ae0e03a69f7 1-231
+frontend/src/locales/vi/index.ts
+  s_b0e228b68e793d::t_0dfc65f32d0bdc 1,3,6
+  s_b0e228b68e793d::t_6a58f9f5ea6520 2,4-5,7-12
+scripts/sweep_ichimoku_v2.py
+  s_b0e228b68e793d::t_26febda604cdbe 48
+  s_b0e228b68e793d::t_13b054f0446ba5 1,3-4,73,76,81,91,93
+  s_b0e228b68e793d::t_837467bc1a2c7c 13-14,82-83,89-90
+app/strategy/strategies/macd.md
+  s_b0e228b68e793d::t_d8df7e4a8291c4 1,3,5,7,9,17,19,21-22,24,26,28-31,33,35-36,38,40,42,44-45
+app/market/feed.py
+  s_b0e228b68e793d::t_835f49d4c7e1c5 3-5,7-8,24,80,82-83,96,102,123,130,148,156,165,176,181,185
+app/market/store.py
+  s_b0e228b68e793d::t_835f49d4c7e1c5 1,3-6,36,41,71,89-90,119,121-123,142,151-152
+app/strategy/params.py
+  s_b0e228b68e793d::t_5eba6904e1b03b 1,3,18,23,29
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 4-5
+tests/test_binance_futures.py
+  s_b0e228b68e793d::t_7c4243d58d96df 1
+  s_b0e228b68e793d::t_57e89d78b3ace2 72,74
+scripts/diag_vol_breakout2.py
+  s_b0e228b68e793d::t_13b054f0446ba5 4-5,41,56,62-63,65
+  s_b0e228b68e793d::t_537c60148d0b8c 1-2,60-61
+  s_b0e228b68e793d::t_74c85a9516aeb1 10,23
+  s_b0e228b68e793d::t_837467bc1a2c7c 74-75
+frontend/src/components/InfoTip.tsx
+  s_b0e228b68e793d::t_01dbc2698df490 3,5,17
+app/strategy/strategies/grid.md
+  s_b0e228b68e793d::t_d8df7e4a8291c4 1,3,5,7,9,11,13,16,20,22-25,27,29,31,33-35,37,39-41,43,45,47,49-50
+scripts/cb_validate_vol_breakout.py
+  s_b0e228b68e793d::t_13b054f0446ba5 1,3-4,17-18,37,43,54-55
+  s_b0e228b68e793d::t_74c85a9516aeb1 8,35,44-45
+frontend/src/components/backtest/EquityCurve.tsx
+  s_b0e228b68e793d::t_cb851120db216a 40
+frontend/src/components/AppLayout.tsx
+  s_b0e228b68e793d::t_0dfc65f32d0bdc 6,30,37-43,46
+tests/test_strategy_doc.py
+  s_b0e228b68e793d::t_ee390499069abc 1-47
+tests/test_feed.py
+  s_b0e228b68e793d::t_f7bb138aea6a3c 82,104,138,158,163,168,201,223
+  s_b0e228b68e793d::t_f872cd5d636539 186
+app/api/routes.py
+  s_b0e228b68e793d::t_835f49d4c7e1c5 31,53
+  s_b0e228b68e793d::t_ca00b3e3e9c44f 19,25,37,56,65,95,104,110,146
+  s_b0e228b68e793d::t_7e79b3c47d0969 1
+frontend/src/components/backtest/BacktestChart.tsx
+  s_b0e228b68e793d::t_cb851120db216a 17,20,23,39,76,87,96,98-100,102,106,128
+  s_b0e228b68e793d::t_786644cffa615b 108,110,112,114
+tests/test_paper_engine.py
+  s_b0e228b68e793d::t_54322d3b5e1030 1,3-4,25,43,60,67,78,125,128,130,183,202,206,208,225,231
+app/strategy/strategies/macd_cross.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 1,3,15,30,45
+frontend/src/components/FeedBanner.tsx
+  s_b0e228b68e793d::t_01dbc2698df490 3,5,19-21
+app/main.py
+  s_b0e228b68e793d::t_835f49d4c7e1c5 3-4,7-8,67,97,108,129,134-135,156,167
+app/strategy/strategies/donchian.py
+  s_b0e228b68e793d::t_ce8a5dc0458af3 1,3,30,49
+  s_b0e228b68e793d::t_c125dbd999d5c0 14-17
+scripts/walkforward_ict_po3.py
+  s_b0e228b68e793d::t_837467bc1a2c7c 111-114
+  s_b0e228b68e793d::t_fecc0bed623eae 3,5,49-50,69,83-85,97
+  s_b0e228b68e793d::t_d7039ec8f17be1 44
+  s_b0e228b68e793d::t_537c60148d0b8c 1,6-7,70-74
+  s_b0e228b68e793d::t_0842590353cc6b 8,12,27,33,45,75,98,106,108,115
+frontend/src/pages/Dashboard.tsx
+  s_b0e228b68e793d::t_952793bb92f5c6 25,30
+app/strategy/strategies/supertrend.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 1,3,15,29,31
+app/strategy/strategies/ict_po3_v2.py
+  s_b0e228b68e793d::t_8775f6a4bd7bfd 1,38,78,160-161,164,167,223-224,274,288-289,303
+  s_b0e228b68e793d::t_46a78703ba449c 35,212
+  s_b0e228b68e793d::t_d8df7e4a8291c4 3,5-9,11-13,32-33,36,39-48,70,74-77,79-80,82,93,114,121,131,144,153-154,181,187,189,191,200,215,218,221-222,233,241,243-244,256,280,286,306,310,326
+  s_b0e228b68e793d::t_7c4243d58d96df 16,24
+  s_b0e228b68e793d::t_59e4cc0a411c8b 123-128,145-150
+frontend/src/lib/chartTheme.ts
+  s_b0e228b68e793d::t_952793bb92f5c6 1
+app/strategy/strategies/ichimoku.py
+  s_b0e228b68e793d::t_ce8a5dc0458af3 1,3,15,34,36
+frontend/src/components/strategy/VersionCompare.tsx
+  s_b0e228b68e793d::t_952793bb92f5c6 5
+app/strategy/strategies/donchian.md
+  s_b0e228b68e793d::t_04588b33d49987 1,3,5,7,9,11,13-14,16,18,20,22-24,26,28,30,32-35,37,39-42,44,46-48,50,52-54,56,58-59,61,63-81
+docs/07-Exchange-Smoke-Test.md
+  s_b0e228b68e793d::t_9b9852c708a704 1,3-4,6-9,11-54
+app/api/trading.py
+  s_b0e228b68e793d::t_65c12cf7847027 56-60,67-71,73
+  s_b0e228b68e793d::t_3b31e68d753e6e 114,536
+  s_b0e228b68e793d::t_112c3a164baeac 162,164,245,305,485,513
+  s_b0e228b68e793d::t_c88ef7210eed5d 35,81,124-125,142,144,146,153,201,203,205,207,209,232,259,282,315,382,410,451,465,467,476,491,539,546,548,551,561,588,594,614,616
+  s_b0e228b68e793d::t_835f49d4c7e1c5 188-189,269,389,394
+frontend/src/components/ModeBadge.tsx
+  s_b0e228b68e793d::t_952793bb92f5c6 1
+app/strategy/strategies/keltner.md
+  s_b0e228b68e793d::t_d8df7e4a8291c4 1,3,5,7,9,17,19,21-22,24,26,28,30-32,34,36-37,39,41,43,45-46
+app/strategy/strategies/vol_breakout.md
+  s_b0e228b68e793d::t_0ee4e46ede5ffa 3,5,7-11,13,15,17-20,22-23,25,27,29-85,89,91-119
+app/execution/paper.py
+  s_b0e228b68e793d::t_f42d7381433852 1,3-4,43,46,57,96,100,118,129,134,206,237
+tests/test_live_guard.py
+  s_b0e228b68e793d::t_7c4243d58d96df 64
+  s_b0e228b68e793d::t_57e89d78b3ace2 1,60,63
+scripts/scan_pairs_ict_po3_v4.py
+  s_b0e228b68e793d::t_837467bc1a2c7c 58-59,67-68
+  s_b0e228b68e793d::t_fecc0bed623eae 1-2,4,28,44,48,64,66
+  s_b0e228b68e793d::t_74c85a9516aeb1 8,24
+app/orders/trades.py
+  s_b0e228b68e793d::t_68ca7ab8474bef 1,3-4,13-14,28,30-31,80,84,87
+  s_b0e228b68e793d::t_136bd4a7b59a36 58-59
+app/strategy/strategies/vwap_cross.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 1,3,15
+frontend/src/components/strategy/ParamsForm.tsx
+  s_b0e228b68e793d::t_952793bb92f5c6 1
+tests/test_health.py
+  s_b0e228b68e793d::t_f7bb138aea6a3c 1
+frontend/src/lib/api.ts
+  s_b0e228b68e793d::t_952793bb92f5c6 1-2,56,70,92,103,229,245,249,251,280-281,290,411,451
+app/execution/live.py
+  s_b0e228b68e793d::t_d45c4cc36d8cb4 1,5-6,23
+  s_b0e228b68e793d::t_0d2f61303ea79e 3-4
+frontend/src/components/backtest/SimResult.tsx
+  s_b0e228b68e793d::t_8278b1a3f3e07d 9,26,28-31,35-37,40,56-57,59-60,62,65-67,70,74-75,77,81,83,86-87,89-90,92,98,104-108,111-113,120-122,124,130,132,151-153,160
+tests/test_bus.py
+  s_b0e228b68e793d::t_f7bb138aea6a3c 1,55,62
+scripts/sweep_ict_po3_v4.py
+  s_b0e228b68e793d::t_13b054f0446ba5 1,3,47,79,82,93,101,103
+  s_b0e228b68e793d::t_26febda604cdbe 53
+  s_b0e228b68e793d::t_537c60148d0b8c 4-5
+  s_b0e228b68e793d::t_837467bc1a2c7c 94-95
+app/execution/clients.py
+  s_b0e228b68e793d::t_d45c4cc36d8cb4 1,3,22,26,28,32,36,45,50,59
+app/strategy/strategies/ict_po3.py
+  s_b0e228b68e793d::t_7c4243d58d96df 16,24
+  s_b0e228b68e793d::t_d8df7e4a8291c4 3,5-9,11-13,32-33,41-46,48-54,82,86,88,90-93,104,125,132,142,156,164-165,192,198,200,209,222,235,238,241-242,253,265,279,329,335,355,359,375
+  s_b0e228b68e793d::t_2ed6e24ee8ffcf 261
+  s_b0e228b68e793d::t_59e4cc0a411c8b 134-139
+  s_b0e228b68e793d::t_8775f6a4bd7bfd 1,35-38,40,47,56,87,89,153,157,171-172,175,178,202-203,206-207,243-244,305,323,337-338,352
+  s_b0e228b68e793d::t_46a78703ba449c 232,270,303,306
+frontend/src/pages/Trading.tsx
+  s_b0e228b68e793d::t_9976078467b440 23,45,51,63,109,111,161,186,191,199,206,224,227-228,263,265,271,278,292,298,301,320,323
+docs/06-Paper-Trading-Runbook.md
+  s_b0e228b68e793d::t_702a693e07987e 1,3-4,6,8,14,16-17,19,23,26-29,31,33-36,38,40-41,43-44,46,48-49,51,54,57,59,61-63,65,67,69-73,75,77-78,80,82-83,85,87,89-91
+frontend/src/locales/vi/common.ts
+  s_b0e228b68e793d::t_0dfc65f32d0bdc 1-7
+scripts/screen_classics.py
+  s_b0e228b68e793d::t_fecc0bed623eae 4-7,23,37,45,84
+  s_b0e228b68e793d::t_837467bc1a2c7c 75-76
+  s_b0e228b68e793d::t_74c85a9516aeb1 55
+  s_b0e228b68e793d::t_537c60148d0b8c 1,3
+tests/test_params.py
+  s_b0e228b68e793d::t_6c4b3642a6a526 62
+  s_b0e228b68e793d::t_92017ce0108d44 57
+tests/test_vol_breakout.py
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 1-3,167
+  s_b0e228b68e793d::t_57e89d78b3ace2 5,10
+  s_b0e228b68e793d::t_6c4b3642a6a526 23,41,47-48,50-51,65,67,76,86-88,99,106,111-112,121,123,130,169,171,173,178,189,203,208
+  s_b0e228b68e793d::t_d87ae0e03a69f7 137-138,151-152,161-162,182-183
+frontend/src/lib/ws.ts
+  s_b0e228b68e793d::t_952793bb92f5c6 1-2,70
+app/strategy/strategies/ict_po3_v4.py
+  s_b0e228b68e793d::t_7c4243d58d96df 20,28
+  s_b0e228b68e793d::t_59e4cc0a411c8b 135-140
+  s_b0e228b68e793d::t_8775f6a4bd7bfd 8-9,36-38,53,202,205-206
+  s_b0e228b68e793d::t_46a78703ba449c 191
+  s_b0e228b68e793d::t_d8df7e4a8291c4 1,3,5-7,10-14,16-17,39,43,50-52,54,126,133,143,157-158,164,171,208,223,233,241,277
+  s_b0e228b68e793d::t_2ed6e24ee8ffcf 265
+app/strategy/strategies/bollinger.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 1,3,15,32,34
+tests/test_more_strategies.py
+  s_b0e228b68e793d::t_6c4b3642a6a526 39,42,49,61,66,78
+frontend/src/lib/theme.ts
+  s_b0e228b68e793d::t_952793bb92f5c6 1
+tests/test_donchian_v2.py
+  s_b0e228b68e793d::t_57e89d78b3ace2 4,9
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 1-2
+  s_b0e228b68e793d::t_6c4b3642a6a526 22,44,50,58,66-67,73,82,95
+frontend/src/components/orders/PositionsTable.tsx
+  s_b0e228b68e793d::t_9976078467b440 8,14,70,93,125,132,198,201
+app/api/backtest.py
+  s_b0e228b68e793d::t_3b8799f6161dfb 99-100,157-158
+  s_b0e228b68e793d::t_84f8e8c5c22d28 186-187
+  s_b0e228b68e793d::t_835f49d4c7e1c5 185
+  s_b0e228b68e793d::t_ca00b3e3e9c44f 1,18,24,31,34-35,37,46,57,62-63,68,73-74,79-80,83,87,132,272,284
+tests/test_strategies.py
+  s_b0e228b68e793d::t_6c4b3642a6a526 11
+tests/test_account_risk.py
+  s_b0e228b68e793d::t_ac9dd5daa0edad 1,31,55-56,58,63,67,71,73,80,87-88
+tests/test_order_manager.py
+  s_b0e228b68e793d::t_57e89d78b3ace2 1,49,53
+scripts/diag_vol_breakout.py
+  s_b0e228b68e793d::t_5d0f74574e7131 74,82
+  s_b0e228b68e793d::t_13b054f0446ba5 5-6,45,67,76,84,92,97
+  s_b0e228b68e793d::t_537c60148d0b8c 1,3-4,49-52,77-81,87-90
+  s_b0e228b68e793d::t_74c85a9516aeb1 11,24
+  s_b0e228b68e793d::t_d7039ec8f17be1 68-73
+  s_b0e228b68e793d::t_837467bc1a2c7c 99-100
+scripts/sweep_ict_po3.py
+  s_b0e228b68e793d::t_fecc0bed623eae 1,3,5,16,23-24,30,56,81,95,110,123-124,130-131
+  s_b0e228b68e793d::t_537c60148d0b8c 6-7,125-126
+  s_b0e228b68e793d::t_26febda604cdbe 63
+  s_b0e228b68e793d::t_837467bc1a2c7c 28-29,98-99,113-116,133-136
+scripts/cb_select_vol_breakout.py
+  s_b0e228b68e793d::t_fecc0bed623eae 1,3-4,17-19,40,50
+  s_b0e228b68e793d::t_74c85a9516aeb1 8,41
+  s_b0e228b68e793d::t_837467bc1a2c7c 51-52
+frontend/src/pages/Account.tsx
+  s_b0e228b68e793d::t_304abebeec7e04 21,35-39,86,92,111,115-116,123,131-132,136-137,143,145,149-150,152,155,157,159,162-163,167,172-173,175,177,234,238-239,255,266,270-272,275,279,287,291-292,307-314,324,327,338,351,358,361,371-379,391,401,410,418,422-424,438,453,469,474-478,482-485,487,491-494,496,528,535,539,544,550,552,557,569,578,593,598-605
+app/backtest/engine.py
+  s_b0e228b68e793d::t_5eba6904e1b03b 1-2,4-5,7-8,18,26-27,70,72-74,81,88,102,109,123,139,166,176
+app/execution/base.py
+  s_b0e228b68e793d::t_0d2f61303ea79e 13,36
+  s_b0e228b68e793d::t_d45c4cc36d8cb4 1,3,12,17,22,27,32
+frontend/src/pages/Orders.tsx
+  s_b0e228b68e793d::t_9976078467b440 8,62,64,68,70,74,77,92,109,111-112,117,153,184
+tests/conftest.py
+  s_b0e228b68e793d::t_f7bb138aea6a3c 1
+frontend/src/locales/vi/tradingOrders.ts
+  s_b0e228b68e793d::t_0b6b9d0775071e 1-107
+tests/test_scanner.py
+  s_b0e228b68e793d::t_f7bb138aea6a3c 7,15,25
+tests/test_exchange_account_sync.py
+  s_b0e228b68e793d::t_7c4243d58d96df 1
+  s_b0e228b68e793d::t_ac9dd5daa0edad 41,70,72,85,89,99,114,116
+scripts/walkforward_365_ict_po3_v4.py
+  s_b0e228b68e793d::t_837467bc1a2c7c 1-2
+  s_b0e228b68e793d::t_fecc0bed623eae 4-5,14,40,48
+app/strategy/strategies/ict_po3.md
+  s_b0e228b68e793d::t_274b394159fad2 3,5,7,9,11-14,16-19,21,23,25-27,29,31,33-83,85-90,92,94,96-246,248
+README.md
+  s_b0e228b68e793d::t_7c7d8e373809fc 1-115,117-223,226-237
+  s_b0e228b68e793d::t_ac0ee6483a231f 116,224-225
+  s_b0e228b68e793d::t_39aa456e9bfaf4 238
+scripts/walkforward_ict_po3_v4.py
+  s_b0e228b68e793d::t_837467bc1a2c7c 53-54,68-69
+  s_b0e228b68e793d::t_74c85a9516aeb1 10,36
+  s_b0e228b68e793d::t_13b054f0446ba5 1,3,5-6,20-21,49,59,62,70-72
+frontend/src/components/watchlist/Watchlist.tsx
+  s_b0e228b68e793d::t_01dbc2698df490 6,34,45,51,57,61-62,76,78,81,87
+app/api/ws.py
+  s_b0e228b68e793d::t_ca00b3e3e9c44f 1,3-5,25,40-41
+frontend/src/lib/i18n.ts
+  s_b0e228b68e793d::t_0dfc65f32d0bdc 1-34
+frontend/src/lib/datafeed.ts
+  s_b0e228b68e793d::t_952793bb92f5c6 1-2,24,36
+frontend/src/components/account/SizingInput.tsx
+  s_b0e228b68e793d::t_cb851120db216a 2,4,6,8,15,17,19,21,28
+app/strategy/strategies/keltner.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 1,3,15,33,35
+app/strategy/strategies/stochastic.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 1,3,15,39
+frontend/src/lib/indicators.ts
+  s_b0e228b68e793d::t_952793bb92f5c6 1
+scripts/portfolio_vol_breakout.py
+  s_b0e228b68e793d::t_537c60148d0b8c 4-5
+  s_b0e228b68e793d::t_837467bc1a2c7c 1,84-85
+  s_b0e228b68e793d::t_13b054f0446ba5 3,49,87,89,91-92
+  s_b0e228b68e793d::t_9882948af21780 6-7,11,28,41,51,54-55,86,94
+app/strategy/strategies/donchian_v2.py
+  s_b0e228b68e793d::t_fccd4e32079cf3 21,29
+  s_b0e228b68e793d::t_ce8a5dc0458af3 1-5,8-9,12-16,37-38,42-43,46,48,66,83,88,115,141
+  s_b0e228b68e793d::t_c125dbd999d5c0 6-7,10-11,17-18
+tests/test_paper_executor.py
+  s_b0e228b68e793d::t_7c4243d58d96df 83
+  s_b0e228b68e793d::t_ac9dd5daa0edad 1,3-4,38,40,59,61,67,69,77
+scripts/sweep_donchian_v2.py
+  s_b0e228b68e793d::t_26febda604cdbe 49
+  s_b0e228b68e793d::t_fecc0bed623eae 1,3-4,43,75,78,89,97,99
+  s_b0e228b68e793d::t_837467bc1a2c7c 90-91
+frontend/index.html
+  s_b0e228b68e793d::t_01dbc2698df490 2
+alembic/versions/c5e1a2b3d4f6_account_ledger.py
+  s_b0e228b68e793d::t_2347c227c8b787 76,79
+  s_b0e228b68e793d::t_cb37820fc23f8e 1,3-4
+tests/test_atr_scanner.py
+  s_b0e228b68e793d::t_f7bb138aea6a3c 1,23,29,36,40
+frontend/src/components/orders/ManualOrderForm.tsx
+  s_b0e228b68e793d::t_9976078467b440 5,68
+tests/test_ichimoku_v2.py
+  s_b0e228b68e793d::t_e096e0f6c8d0f0 22-24
+  s_b0e228b68e793d::t_d87ae0e03a69f7 25-26
+  s_b0e228b68e793d::t_6c4b3642a6a526 1,30
+scripts/scan365_ict_po3_v4.py
+  s_b0e228b68e793d::t_13b054f0446ba5 1,3-4,45,50,57-58
+  s_b0e228b68e793d::t_537c60148d0b8c 5-6
+app/strategy/strategies/adx.md
+  s_b0e228b68e793d::t_d8df7e4a8291c4 1,3,5,7,9,12,19,21,23-24,26,28,30,32-34,36,38-39,41,43,45,47
+app/strategy/strategies/vol_breakout.py
+  s_b0e228b68e793d::t_ce8a5dc0458af3 3,5-11,13,35,38-39,42-44,49,81,84,87-88,101,119,129,135,182,210,229
+  s_b0e228b68e793d::t_c125dbd999d5c0 32,40,45,48,50,168-171,185
+  s_b0e228b68e793d::t_fccd4e32079cf3 16,24,33-34
+frontend/src/components/backtest/TradeDetail.tsx
+  s_b0e228b68e793d::t_cb851120db216a 20,31,47-50,53,74-75,79,108,119,132-133,139,148,156,171,205,239-240,250,258,278
+tests/test_version.py
+  s_b0e228b68e793d::t_f7bb138aea6a3c 1,23
+scripts/sweep_ichimoku.py
+  s_b0e228b68e793d::t_837467bc1a2c7c 76-77,82-85,92-93
+  s_b0e228b68e793d::t_fecc0bed623eae 1,3,5-6,43,73,91,96-97
+  s_b0e228b68e793d::t_26febda604cdbe 49
+app/strategy/strategies/bollinger.md
+  s_b0e228b68e793d::t_d8df7e4a8291c4 1,3,5,7,9,18,20,22-23,25,27,29-31,33,35-37,39,41,43,45
+scripts/walkforward_vol_breakout.py
+  s_b0e228b68e793d::t_537c60148d0b8c 1
+  s_b0e228b68e793d::t_13b054f0446ba5 3,5-6,18,48,57,67-69,73
+  s_b0e228b68e793d::t_837467bc1a2c7c 65-66,74-75
+  s_b0e228b68e793d::t_74c85a9516aeb1 10,35
+app/strategy/strategies/ichimoku_v2.py
+  s_b0e228b68e793d::t_ce8a5dc0458af3 3,7,25,41,50,64
+  s_b0e228b68e793d::t_c125dbd999d5c0 1,4-6,20-22
+frontend/src/components/Markdown.tsx
+  s_b0e228b68e793d::t_952793bb92f5c6 4
+docs/05-Strategy-Dev-Guide.md
+  s_b0e228b68e793d::t_74985427222083 1,3-4,8,10-12,16,20-22,28,30-31,33-41,43-45,47-49,51,55,57-63,65,77,85,87,90,92,97,103,105,107-109,113,115-118,120,126,128,130,135,137,139-142,146,148-149,153,155,158-159,162-166,170,172,174,179,182-187,191,193-197,199-203,207,209-214
+app/api/accounts.py
+  s_b0e228b68e793d::t_ca00b3e3e9c44f 111,130,132,137,144,158,176,224,230,239,276-277
+  s_b0e228b68e793d::t_835f49d4c7e1c5 1,60,110,116,141,159,290
+  s_b0e228b68e793d::t_112c3a164baeac 91,172,197,228,242
+frontend/src/components/scanner/QuickTradePanel.tsx
+  s_b0e228b68e793d::t_9976078467b440 6,8,54,81,85,88,94,99,108
+scripts/sweep_vol_breakout.py
+  s_b0e228b68e793d::t_26febda604cdbe 48
+  s_b0e228b68e793d::t_fecc0bed623eae 1,3-4,18,42,73,76,87,95,97
+  s_b0e228b68e793d::t_837467bc1a2c7c 88-89
+frontend/src/components/chart/CandleChart.tsx
+  s_b0e228b68e793d::t_952793bb92f5c6 25,40,77,93,128,149,157,173
+tests/test_backtest_sim.py
+  s_b0e228b68e793d::t_6c4b3642a6a526 1,16,35,45,57-58,65,75,84,88
+  s_b0e228b68e793d::t_8a9b1ec9721310 94
+frontend/src/index.css
+  s_b0e228b68e793d::t_5631b936b6dc87 4-5,8-9,27,36-37
+app/execution/paper_engine.py
+  s_b0e228b68e793d::t_74470493772b35 3-5,12-13,267
+  s_b0e228b68e793d::t_f42d7381433852 1-2,6-11,14-17,31,40,49,63-65,86,126,130,139,141,152,166,190,197,200,228,255
+scripts/walkforward_windows_vol_breakout.py
+  s_b0e228b68e793d::t_fecc0bed623eae 5-6,25,40,43,49,52,65
+  s_b0e228b68e793d::t_537c60148d0b8c 1,3
+  s_b0e228b68e793d::t_837467bc1a2c7c 67-68
+  s_b0e228b68e793d::t_6a1e772ad6f97c 4
+app/strategy/strategies/rsi_rev.py
+  s_b0e228b68e793d::t_b83799f1dcba4c 1,3,15,42
+frontend/src/locales/vi/misc.ts
+  s_b0e228b68e793d::t_daa958b4007672 1-24,26-62
+  s_b0e228b68e793d::t_57e89d78b3ace2 25
+tests/test_trades.py
+  s_b0e228b68e793d::t_57e89d78b3ace2 1,9,28-29,33,38,47
+tests/test_store.py
+  s_b0e228b68e793d::t_f7bb138aea6a3c 1,40,43,46,48,81,90,92
+frontend/src/pages/Library.tsx
+  s_b0e228b68e793d::t_01dbc2698df490 7,14,24,62,65,72,76,82,104,114
+app/execution/exchange.py
+  s_b0e228b68e793d::t_68ca7ab8474bef 288
+  s_b0e228b68e793d::t_caf1df662fc28e 1-3,5-7,10,12-17,63,66,94,96,112,125,142-143,154,159,190,194,208,224,229,245,251,292
+  s_b0e228b68e793d::t_b8c81f06c2f9a8 8,71-72,132-133,162-163,254-255
+Dockerfile
+  s_b0e228b68e793d::t_60523905a1fba2 11-12,36,40,45,50
+alembic/env.py
+  s_b0e228b68e793d::t_9b7b604c6028ea 1,3-4,17
+alembic/versions/0001_kline_hypertable.py
+  s_b0e228b68e793d::t_4cf77d10e983da 21-22,36
+alembic/versions/39fe80684728_scan_result.py
+  s_b0e228b68e793d::t_9e31b6220684a3 31
+alembic/versions/3d53f1accfea_backtest_market_leverage.py
+  s_b0e228b68e793d::t_f05e8488774667 24
+alembic/versions/962142f491da_scan_sltp_cols.py
+  s_b0e228b68e793d::t_0a4007c6163fa2 22
+alembic/versions/a7c1e2d4f901_position_review_cols.py
+  s_b0e228b68e793d::t_3d21e7fc874e31 1,22
+alembic/versions/b3d9f0a1c2e4_position_snapshot.py
+  s_b0e228b68e793d::t_8147ab921bfc77 1,3-5
+alembic/versions/cf84272c8ff9_audit_log.py
+  s_b0e228b68e793d::t_e9c3f84847853c 34
+alembic/versions/d7f2b4c6e8a0_backtest_account_engine.py
+  s_b0e228b68e793d::t_9b37e9708733f9 1
+alembic/versions/d9539815ac78_backtest_tables.py
+  s_b0e228b68e793d::t_1b9023d3a4d554 55
+alembic/versions/e9a3c5d7f1b2_exchange_accounts.py
+  s_b0e228b68e793d::t_ad0597522d481e 1-2
+alembic/versions/f4e62b2af69c_strategy_bot_order_position.py
+  s_b0e228b68e793d::t_9317427a28ade3 94
+app/config.py
+  s_b0e228b68e793d::t_1988de5df53b2b 1,3,25,29,35-36,39,42,49,53
+app/db.py
+  s_b0e228b68e793d::t_a42e6cff06664c 3-4,20
+app/market/bus.py
+  s_b0e228b68e793d::t_7793e92fadf24b 1,3-5,7-9,27,42
+app/market/watchlist.py
+  s_b0e228b68e793d::t_949564d4a7c229 1,17
+app/scanner/research.py
+  s_b0e228b68e793d::t_b29fc52c28502c 1,3-5,23,25,28,46,68,83-84,91,99
+app/strategy/strategies/adx.vi.md
+  s_b0e228b68e793d::t_5bff93780494ba 1-47
+app/strategy/strategies/bollinger.vi.md
+  s_b0e228b68e793d::t_04d4e8de65d26d 1-45
+app/strategy/strategies/donchian.vi.md
+  s_b0e228b68e793d::t_3aff098b88a966 1-81
+app/strategy/strategies/ema_cross.vi.md
+  s_b0e228b68e793d::t_702dae0d251543 1-61
+app/strategy/strategies/grid.vi.md
+  s_b0e228b68e793d::t_1a0c4e63b6ef43 1-50
+app/strategy/strategies/ichimoku.vi.md
+  s_b0e228b68e793d::t_86994f82c62fab 1-68
+app/strategy/strategies/ict_po3.vi.md
+  s_b0e228b68e793d::t_2c83fa1417d62f 1-248
+app/strategy/strategies/keltner.vi.md
+  s_b0e228b68e793d::t_386b939936b26d 1-46
+app/strategy/strategies/macd.vi.md
+  s_b0e228b68e793d::t_01009ca1f53084 1-45
+app/strategy/strategies/psar.md
+  s_b0e228b68e793d::t_d7273cb81b589a 3,5,7,9,13-15,18,20,22-23,25,27,29-31,33,35-37,39,41,43,45
+app/strategy/strategies/psar.vi.md
+  s_b0e228b68e793d::t_56a56195165f5f 1-45
+app/strategy/strategies/rsi_rev.md
+  s_b0e228b68e793d::t_a856e67479e625 1,3,5,7,9,12,16-17,19,21,23-24,26,28,30,32-35,37,39-42,44,46-47,49,51-53
+app/strategy/strategies/rsi_rev.vi.md
+  s_b0e228b68e793d::t_3276338ec8ef60 1-53
+app/strategy/strategies/stoch.md
+  s_b0e228b68e793d::t_e170b1bdccc586 1,3,5,7,9,14,16,18,20-21,23,25,27-30,32,34-35,37,39,41,43
+app/strategy/strategies/stoch.vi.md
+  s_b0e228b68e793d::t_f9fabebd65b536 1-43
+app/strategy/strategies/supertrend.md
+  s_b0e228b68e793d::t_2d23a401472b98 1,3,5,7,9,15-16,19,21,23-24,26,28,30,32-34,36,38-40,42,44,46,48-49
+app/strategy/strategies/supertrend.vi.md
+  s_b0e228b68e793d::t_5a54bce50e493e 1-49
+app/strategy/strategies/vol_breakout.vi.md
+  s_b0e228b68e793d::t_dce0118a6450ae 1-119
+app/strategy/strategies/vwap.md
+  s_b0e228b68e793d::t_8a41546b62f442 1,3,5,7,9,13,16,18,20,22-23,25,27,29-30,32,34-35,37,39,41,43-44
+app/strategy/strategies/vwap.vi.md
+  s_b0e228b68e793d::t_b4a71a9b6ef8ec 1-44
+app/version.py
+  s_b0e228b68e793d::t_769c8b96dda70d 1,3-4
+db/init/01-extensions.sql
+  s_b0e228b68e793d::t_837e7664a1ce43 1-2
+docker-compose.dev.yml
+  s_b0e228b68e793d::t_998f906015414d 1-2,32,49
+docker-compose.yml
+  s_b0e228b68e793d::t_6d3a5511d61526 2,19-21,30
+env.example
+  s_b0e228b68e793d::t_ec9c6b1a5b59e6 1,4,7,11,15
+frontend/src/lib/glossary.ts
+  s_b0e228b68e793d::t_da3cccb571259e 1-2,4-27
+LICENSE
+  s_b0e228b68e793d::t_8b8b21c97a823a 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5c5da27f6340e947a8dfb7265576d6d9cc61c1df",
+  "prompts": {},
+  "sessions": {
+    "s_b0e228b68e793d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5efec822-4231-4769-aeb3-598074ab911c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
