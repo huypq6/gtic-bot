@@ -6,6 +6,7 @@ import { useWsStore } from "../../lib/ws";
 import ModeBadge from "../ModeBadge";
 import InfoTip from "../InfoTip";
 import { t } from "../../lib/i18n";
+import { inLens, useModeLens } from "../../lib/modeLens";
 
 const fmt = (n: number, d = 2) =>
   n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -29,7 +30,8 @@ const keyOf = (botId: number | null, symbol: string) =>
 
 export default function PositionsTable() {
   const qc = useQueryClient();
-  const { data: initial } = useQuery({ queryKey: ["positions"], queryFn: fetchPositions });
+  const { data: initial } = useQuery({ queryKey: ["positions"], queryFn: () => fetchPositions() });
+  const lens = useModeLens((s) => s.lens);
   const live = useWsStore((s) => s.positions);
   const tickers = useWsStore((s) => s.tickers);
   const [editing, setEditing] = useState<number | null>(null);
@@ -63,11 +65,15 @@ export default function PositionsTable() {
       tp: p.tp,
     });
   }
-  const list = [...rows.values()];
+  const list = [...rows.values()].filter((p) => inLens(lens, p.mode));
   const refresh = () => qc.invalidateQueries({ queryKey: ["positions"] });
 
   if (list.length === 0)
-    return <p className="px-1 py-4 text-sm text-faint">{t("No open positions.")}</p>;
+    return (
+      <p className="px-1 py-4 text-sm text-faint">
+        {lens ? t("No open {mode} positions.", { mode: lens }) : t("No open positions.")}
+      </p>
+    );
 
   return (
     <div className="overflow-x-auto">

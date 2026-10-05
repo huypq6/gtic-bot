@@ -5,6 +5,7 @@ import { useWsStore } from "../lib/ws";
 import { useTheme } from "../lib/theme";
 import { lang, setLang, t } from "../lib/i18n";
 import FeedBanner from "./FeedBanner";
+import ModeLens, { LensStripe } from "./ModeLens";
 import VersionBadge from "./VersionBadge";
 
 export default function AppLayout() {
@@ -19,19 +20,24 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen flex-col bg-bg text-text">
-      <header className="flex items-center gap-2 border-b border-border bg-surface px-3 py-2">
+      <header className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-3 py-2">
         <img src="/logo.png" alt="GTIC" className="h-8 w-8 shrink-0 rounded-lg object-contain" />
         <span className="hidden shrink-0 font-semibold sm:inline">GTIC Trading Bot</span>
         <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap text-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <Tab to="/overview">{t("Overview")}</Tab>
           <Tab to="/">Chart</Tab>
           <Tab to="/library">Library</Tab>
           <Tab to="/trade">Trading</Tab>
           <Tab to="/orders">Orders</Tab>
+          <Tab to="/compare">{t("Compare")}</Tab>
           <Tab to="/account">{t("Account")}</Tab>
           <Tab to="/backtest">Backtest</Tab>
           <Tab to="/scanner">Scanner</Tab>
           <Tab to="/audit">Audit</Tab>
         </nav>
+        <div className="order-last w-full sm:order-none sm:w-auto">
+          <ModeLens />
+        </div>
         <div className="flex shrink-0 items-center gap-2 text-xs">
           <VersionBadge />
           <button
@@ -59,6 +65,7 @@ export default function AppLayout() {
         </div>
       </header>
 
+      <LensStripe />
       <FeedBanner />
       <Outlet />
     </div>

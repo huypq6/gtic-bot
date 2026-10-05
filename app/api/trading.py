@@ -178,9 +178,12 @@ async def _bot_dict(session: AsyncSession, bot: Bot) -> dict:
 
 @router.get("/bots")
 async def list_bots(
-    request: Request, session: AsyncSession = Depends(get_session)
+    request: Request, mode: str | None = None, session: AsyncSession = Depends(get_session)
 ) -> list[dict]:
-    bots = (await session.execute(select(Bot).order_by(Bot.id))).scalars().all()
+    q = select(Bot).order_by(Bot.id)
+    if mode:
+        q = q.where(Bot.mode == mode)
+    bots = (await session.execute(q)).scalars().all()
     mgr = getattr(request.app.state, "bot_manager", None)
     out = []
     for b in bots:
@@ -326,12 +329,13 @@ async def delete_bot(
 
 # ---------------- positions ----------------
 @router.get("/positions")
-async def list_positions(session: AsyncSession = Depends(get_session)) -> list[dict]:
-    rows = (
-        await session.execute(
-            select(PositionModel).where(PositionModel.status == "OPEN").order_by(PositionModel.id)
-        )
-    ).scalars().all()
+async def list_positions(
+    mode: str | None = None, session: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    q = select(PositionModel).where(PositionModel.status == "OPEN").order_by(PositionModel.id)
+    if mode:
+        q = q.where(PositionModel.mode == mode)
+    rows = (await session.execute(q)).scalars().all()
     return [
         {
             "id": p.id, "bot_id": p.bot_id, "mode": p.mode, "symbol": p.symbol,
@@ -612,8 +616,8 @@ async def cancel_order(
 
 
 @router.get("/audit")
-async def list_audit(request: Request, limit: int = 100) -> list[dict]:
-    return await request.app.state.order_manager.list_audit(limit)
+async def list_audit(request: Request, limit: int = 100, mode: str | None = None) -> list[dict]:
+    return await request.app.state.order_manager.list_audit(limit, mode)
 
 
 async def _db_close(

@@ -137,8 +137,9 @@ export interface VersionCompareRow {
 
 export const fetchCompare = (name: string) =>
   getJson<VersionCompareRow[]>(`/api/strategies/${name}/compare`);
-export const fetchBots = () => getJson<BotInfo[]>("/api/bots");
-export const fetchPositions = () => getJson<PositionRow[]>("/api/positions");
+export const fetchBots = (mode = "") => getJson<BotInfo[]>(`/api/bots${mode ? `?mode=${mode}` : ""}`);
+export const fetchPositions = (mode = "") =>
+  getJson<PositionRow[]>(`/api/positions${mode ? `?mode=${mode}` : ""}`);
 
 export const createBot = (body: {
   strategy_id: number;
@@ -198,7 +199,55 @@ export interface AuditRow {
   detail: Record<string, unknown> | null;
 }
 
-export const fetchAudit = () => getJson<AuditRow[]>("/api/audit");
+export const fetchAudit = (mode = "") =>
+  getJson<AuditRow[]>(`/api/audit${mode ? `?mode=${mode}` : ""}`);
+
+// ---- mode workspaces (docs/08) ----
+export interface ModeSummary {
+  mode: "PAPER" | "TESTNET" | "LIVE";
+  bots: Partial<Record<"RUNNING" | "PAUSED" | "STOPPED", number>>;
+  open_positions: number;
+  open_risk: number;
+  today: { trades: number; pnl: number };
+  week: { trades: number; wins: number; pnl: number; sum_r: number | null };
+}
+export const fetchModesSummary = () => getJson<ModeSummary[]>("/api/modes/summary");
+
+export interface ModeCompareRow {
+  mode: string;
+  version: string;
+  trades: number;
+  wins: number;
+  win_rate: number | null;
+  sum_r: number | null;
+  avg_r: number | null;
+  pnl: number;
+  fees: number;
+  bots: number[];
+}
+export interface ModeDivergence {
+  a: string;
+  b: string;
+  version: string;
+  paired: number;
+  only_a: number;
+  only_b: number;
+  entry_slip_bps: number | null;
+  exit_slip_bps: number | null;
+  r_diff: number | null;
+}
+export interface ModeCompareGroup {
+  strategy: string;
+  symbol: string;
+  tf: string;
+  trades: number;
+  rows: ModeCompareRow[];
+  divergence: ModeDivergence[];
+}
+export const fetchModeCompare = (days: number, symbol = "") =>
+  getJson<{ days: number; groups: ModeCompareGroup[] }>(
+    `/api/compare?days=${days}${symbol ? `&symbol=${symbol}` : ""}`,
+  );
 
 export interface OrderRow {
   id: number;

@@ -6,6 +6,7 @@ import ModeBadge from "../ModeBadge";
 import InfoTip from "../InfoTip";
 import TradeDetail, { fmtPrice } from "../backtest/TradeDetail";
 import { t } from "../../lib/i18n";
+import { useModeLens } from "../../lib/modeLens";
 
 const RESULT: Record<TradeRow["result"], { label: string; cls: string }> = {
   WIN: { label: t("WIN"), cls: "bg-up/15 text-up" },
@@ -69,7 +70,7 @@ function duration(from: number, to: number | null) {
 }
 
 export default function TradesTable() {
-  const [mode, setMode] = useState("");
+  const mode = useModeLens((s) => s.lens);
   const [risk, setRisk] = useState(loadRisk);
   const changeRisk = (v: number) => {
     setRisk(v);
@@ -131,19 +132,6 @@ export default function TradesTable() {
               onChange={(e) => changeRisk(Number(e.target.value))}
               className="w-20 rounded-md border border-border bg-surface-2 px-2 py-1.5"
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs text-faint">Mode</span>
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              className="rounded-md border border-border bg-surface-2 px-2 py-1.5"
-            >
-              <option value="">{t("All")}</option>
-              {["PAPER", "TESTNET", "LIVE"].map((o) => (
-                <option key={o}>{o}</option>
-              ))}
-            </select>
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs text-faint">Symbol</span>

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
-import { Pause, Play, Square, Trash2 } from "lucide-react";
+import { Copy, Pause, Play, Square, Trash2 } from "lucide-react";
 import {
   createBot,
   deleteBot,
@@ -15,25 +15,40 @@ import {
   type Sizing,
 } from "../lib/api";
 import ModeBadge from "../components/ModeBadge";
+import { LensNote } from "../components/ModeLens";
 import PositionsTable from "../components/orders/PositionsTable";
 import ManualOrderForm from "../components/orders/ManualOrderForm";
 import ParamsForm from "../components/strategy/ParamsForm";
 import EnableLiveModal from "../components/live/EnableLiveModal";
 import SizingInput, { sizingText } from "../components/account/SizingInput";
 import { t } from "../lib/i18n";
+import { inLens, useModeLens } from "../lib/modeLens";
 
 export default function Trading() {
   const qc = useQueryClient();
   const { data: strategies } = useQuery({ queryKey: ["strategies"], queryFn: fetchStrategies });
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: fetchConfig });
-  const { data: bots } = useQuery({ queryKey: ["bots"], queryFn: fetchBots, refetchInterval: 5000 });
+  const { data: allBots } = useQuery({
+    queryKey: ["bots"],
+    queryFn: () => fetchBots(),
+    refetchInterval: 5000,
+  });
+  const lens = useModeLens((s) => s.lens);
+  const bots = allBots?.filter((b) => inLens(lens, b.mode));
 
   const [searchParams] = useSearchParams();
   const urlSymbol = searchParams.get("symbol");
   const [stratId, setStratId] = useState<number | "">("");
   const [symbol, setSymbol] = useState("");
   const [tf, setTf] = useState("");
-  const [mode, setMode] = useState("PAPER");
+  const [mode, setMode] = useState<string>(lens || "PAPER");
+  // the create form follows the lens (All → keep the current choice)
+  useEffect(() => {
+    if (lens) setMode(lens);
+  }, [lens]);
+  const formRef = useRef<HTMLElement>(null);
+  const cloneParams = useRef<Record<string, unknown> | null>(null);
+  const [clonedFrom, setClonedFrom] = useState<number | null>(null);
   const [params, setParams] = useState<Record<string, unknown>>({});
   const [showLiveModal, setShowLiveModal] = useState(false);
   const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: fetchAccounts });
@@ -49,10 +64,10 @@ export default function Trading() {
 
   const selectedStrat = strategies?.find((s) => s.id === stratId);
   // symbol from the scanner (?symbol=) may be outside the watchlist → add it to the options.
-  const symbolOptions =
-    config && urlSymbol && !config.symbols.includes(urlSymbol)
-      ? [urlSymbol, ...config.symbols]
-      : (config?.symbols ?? []);
+  const extra = [urlSymbol, symbol].filter(
+    (x, i, a): x is string => !!x && !config?.symbols.includes(x) && a.indexOf(x) === i,
+  );
+  const symbolOptions = [...extra, ...(config?.symbols ?? [])];
 
   useEffect(() => {
     if (strategies?.length && stratId === "") setStratId(strategies[0].id);
@@ -60,10 +75,26 @@ export default function Trading() {
   useEffect(() => {
     if (urlSymbol) setSymbol(urlSymbol);
   }, [urlSymbol]);
-  // reset params to defaults when the strategy/version changes.
+  // reset params to defaults when the strategy/version changes (a clone keeps the bot's params).
   useEffect(() => {
-    if (selectedStrat) setParams({ ...selectedStrat.default_params });
+    if (!selectedStrat) return;
+    setParams(cloneParams.current ?? { ...selectedStrat.default_params });
+    cloneParams.current = null;
   }, [selectedStrat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clone (docs/08): pre-fill the create form from a bot + target mode; the user still presses
+  // Create, so every guard (LIVE modal, account/mode check) stays on the single create path.
+  const cloneTo = (b: BotInfo, target: string) => {
+    if (b.strategy_id === stratId) setParams({ ...b.params });
+    else cloneParams.current = { ...b.params };
+    setStratId(b.strategy_id);
+    setSymbol(b.symbol);
+    setTf(b.tf);
+    setMode(target);
+    if (b.sizing) setSizing(b.sizing);
+    setClonedFrom(b.id);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   useEffect(() => {
     if (config && !symbol) {
       setSymbol(config.symbols[0]);
@@ -89,6 +120,7 @@ export default function Trading() {
       }),
     onSuccess: () => {
       setShowLiveModal(false);
+      setClonedFrom(null);
       refresh();
     },
   });
@@ -106,9 +138,21 @@ export default function Trading() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+      <LensNote />
       {/* Create bot */}
-      <section className="rounded-xl border border-border bg-surface p-4">
+      <section ref={formRef} className="scroll-mt-4 rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">{t("Create bot")}</h2>
+        {clonedFrom != null && (
+          <p className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs">
+            {t("Cloned from bot #{id} → {mode}. Review the settings, then press Create.", {
+              id: clonedFrom,
+              mode,
+            })}
+            <button onClick={() => setClonedFrom(null)} className="text-muted underline">
+              {t("Dismiss")}
+            </button>
+          </p>
+        )}
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Strategy">
             <select
@@ -201,9 +245,16 @@ export default function Trading() {
 
       {/* Bots */}
       <section className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Bots</h2>
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+          Bots {lens && <ModeBadge mode={lens} />}
+          {lens && allBots && allBots.length > (bots?.length ?? 0) && (
+            <span className="text-xs font-normal text-faint">
+              {t("{n} more in other modes", { n: allBots.length - (bots?.length ?? 0) })}
+            </span>
+          )}
+        </h2>
         {!bots?.length ? (
-          <p className="text-sm text-faint">{t("No bots yet.")}</p>
+          <p className="text-sm text-faint">{lens ? t("No {mode} bots.", { mode: lens }) : t("No bots yet.")}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {bots.map((b) => (
@@ -242,6 +293,7 @@ export default function Trading() {
                   <IconBtn title="Stop" onClick={() => setStatus.mutate({ id: b.id, status: "STOPPED" })}>
                     <Square className="h-4 w-4" />
                   </IconBtn>
+                  <CloneMenu bot={b} onPick={(m) => cloneTo(b, m)} />
                   <IconBtn title="Delete" onClick={() => remove.mutate(b.id)}>
                     <Trash2 className="h-4 w-4 text-down" />
                   </IconBtn>
@@ -271,6 +323,44 @@ export default function Trading() {
         <h2 className="mb-3 text-sm font-semibold">{t("Open positions (realtime PnL)")}</h2>
         <PositionsTable />
       </section>
+    </div>
+  );
+}
+
+// "Clone to…" — pick the target mode; to the same mode = run a second copy (e.g. new params).
+function CloneMenu({ bot, onPick }: { bot: BotInfo; onPick: (mode: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const hint: Record<string, string> = {
+    PAPER: bot.mode === "LIVE" ? t("shadow") : "",
+    TESTNET: "",
+    LIVE: t("needs confirm"),
+  };
+  return (
+    <div className="relative">
+      <IconBtn title={t("Clone to…")} onClick={() => setOpen((o) => !o)}>
+        <Copy className="h-4 w-4" />
+      </IconBtn>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-border bg-surface p-1 text-sm shadow-lg">
+            <p className="px-2 py-1 text-[11px] text-faint">{t("Clone to…")}</p>
+            {["PAPER", "TESTNET", "LIVE"].map((m) => (
+              <button
+                key={m}
+                onClick={() => {
+                  setOpen(false);
+                  onPick(m);
+                }}
+                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 hover:bg-surface-2"
+              >
+                <ModeBadge mode={m} />
+                <span className="text-[11px] text-faint">{hint[m]}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

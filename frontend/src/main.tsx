@@ -11,6 +11,8 @@ import Backtest from "./pages/Backtest";
 import Scanner from "./pages/Scanner";
 import Audit from "./pages/Audit";
 import Account from "./pages/Account";
+import Overview from "./pages/Overview";
+import Compare from "./pages/Compare";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -22,6 +24,8 @@ createRoot(document.getElementById("root")!).render(
         <Routes>
           <Route element={<AppLayout />}>
             <Route index element={<Dashboard />} />
+            <Route path="overview" element={<Overview />} />
+            <Route path="compare" element={<Compare />} />
             <Route path="trade" element={<Trading />} />
             <Route path="library" element={<Library />} />
             <Route path="orders" element={<Orders />} />

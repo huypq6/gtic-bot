@@ -57,11 +57,12 @@ class OrderManager:
         )
         return await do()
 
-    async def list_audit(self, limit: int = 100) -> list[dict]:
+    async def list_audit(self, limit: int = 100, mode: str | None = None) -> list[dict]:
+        q = select(AuditLog).order_by(AuditLog.id.desc())
+        if mode:
+            q = q.where(AuditLog.mode == mode)
         async with self._sf() as s:
-            rows = (
-                await s.execute(select(AuditLog).order_by(AuditLog.id.desc()).limit(limit))
-            ).scalars().all()
+            rows = (await s.execute(q.limit(limit))).scalars().all()
         return [
             {
                 "id": r.id, "ts": r.ts.isoformat() if r.ts else None, "source": r.source,

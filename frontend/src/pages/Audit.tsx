@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchAudit } from "../lib/api";
 import { t } from "../lib/i18n";
+import { useModeLens } from "../lib/modeLens";
+import ModeBadge from "../components/ModeBadge";
 
 const SOURCE_CLS: Record<string, string> = {
   BOT: "text-muted",
@@ -9,11 +11,18 @@ const SOURCE_CLS: Record<string, string> = {
 };
 
 export default function Audit() {
-  const { data } = useQuery({ queryKey: ["audit"], queryFn: fetchAudit, refetchInterval: 4000 });
+  const lens = useModeLens((s) => s.lens);
+  const { data } = useQuery({
+    queryKey: ["audit", lens],
+    queryFn: () => fetchAudit(lens),
+    refetchInterval: 4000,
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
-      <h2 className="mb-3 text-sm font-semibold">Audit log</h2>
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+        Audit log {lens && <ModeBadge mode={lens} />}
+      </h2>
       <div className="overflow-x-auto rounded-xl border border-border bg-surface">
         <table className="w-full text-sm">
           <thead>

@@ -6,6 +6,8 @@ import ModeBadge from "../components/ModeBadge";
 import PositionsTable from "../components/orders/PositionsTable";
 import TradesTable from "../components/orders/TradesTable";
 import { t } from "../lib/i18n";
+import { useModeLens } from "../lib/modeLens";
+import { LensNote } from "../components/ModeLens";
 
 const STATUS_CLS: Record<string, string> = {
   FILLED: "text-up",
@@ -39,7 +41,7 @@ function toCsv(rows: OrderRow[]): string {
 }
 
 export default function Orders() {
-  const [mode, setMode] = useState("");
+  const mode = useModeLens((s) => s.lens);
   const [source, setSource] = useState("");
   const [status, setStatus] = useState("");
   const [symbol, setSymbol] = useState("");
@@ -49,7 +51,7 @@ export default function Orders() {
     queryFn: () => fetchOrders({ mode, source, status, symbol }),
     refetchInterval: 4000,
   });
-  const { data: bots } = useQuery({ queryKey: ["bots"], queryFn: fetchBots });
+  const { data: bots } = useQuery({ queryKey: ["bots"], queryFn: () => fetchBots() });
   const botName = (id: number | null) => {
     if (id == null) return "—";
     const b = bots?.find((x) => x.id === id);
@@ -68,6 +70,7 @@ export default function Orders() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+      <LensNote />
       {/* Monitor — open positions (the bot closes them at SL/TP) */}
       <section className="rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">{t("Monitoring (open positions · realtime)")}</h2>
@@ -90,7 +93,6 @@ export default function Orders() {
             </p>
           </div>
           <div className="flex flex-wrap items-end gap-2 text-sm">
-            <Sel label="Mode" value={mode} onChange={setMode} opts={["PAPER", "TESTNET", "LIVE"]} />
             <Sel label="Source" value={source} onChange={setSource} opts={["BOT", "MANUAL", "SYSTEM"]} />
             <Sel
               label="Status"

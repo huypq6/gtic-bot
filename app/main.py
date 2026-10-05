@@ -21,6 +21,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.account.service import AccountService, run_exchange_sync
 from app.api.accounts import router as accounts_router
 from app.api.backtest import router as backtest_router
+from app.api.modes import router as modes_router
 from app.api.routes import router as api_router
 from app.api.trading import router as trading_router
 from app.api.ws import WSGateway
@@ -145,6 +146,7 @@ app.include_router(api_router)
 app.include_router(trading_router)
 app.include_router(backtest_router)
 app.include_router(accounts_router)
+app.include_router(modes_router)
 
 
 @app.websocket("/ws")

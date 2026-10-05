@@ -18,6 +18,8 @@ import {
 import EquityCurve from "../components/backtest/EquityCurve";
 import InfoTip from "../components/InfoTip";
 import ModeBadge from "../components/ModeBadge";
+import { LensNote } from "../components/ModeLens";
+import { inLens, useModeLens } from "../lib/modeLens";
 import { t } from "../lib/i18n";
 
 const usd = (n: number | null | undefined, sign = false) =>
@@ -41,11 +43,13 @@ const TXN: Record<LedgerRow["type"], string> = {
 
 export default function Account() {
   const qc = useQueryClient();
-  const { data: accounts } = useQuery({
+  const { data: allAccounts } = useQuery({
     queryKey: ["accounts"],
     queryFn: fetchAccounts,
     refetchInterval: 5000,
   });
+  const lens = useModeLens((s) => s.lens);
+  const accounts = allAccounts?.filter((a) => inLens(lens, a.mode));
   const [selId, setSelId] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
   useEffect(() => {
@@ -61,6 +65,7 @@ export default function Account() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+      <LensNote />
       <div className="flex flex-wrap items-center gap-2">
         {accounts?.map((a) => (
           <button
@@ -89,7 +94,11 @@ export default function Account() {
 
       {creating && <CreateAccount onDone={() => { setCreating(false); refresh(); }} />}
       {!accounts?.length && !creating && (
-        <p className="text-sm text-faint">{t("No accounts yet. Create a paper account to get started.")}</p>
+        <p className="text-sm text-faint">
+          {lens
+            ? t("No {mode} account yet.", { mode: lens })
+            : t("No accounts yet. Create a paper account to get started.")}
+        </p>
       )}
       {acc && <AccountView key={acc.id} acc={acc} onChange={refresh} />}
     </div>
@@ -505,7 +514,8 @@ function Ledger({ id, currency }: { id: number; currency: string }) {
 
 function CreateAccount({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
-  const [mode, setMode] = useState("PAPER");
+  const lens = useModeLens((s) => s.lens);
+  const [mode, setMode] = useState<string>(lens || "PAPER");
   const [bal, setBal] = useState("1000");
   const [lev, setLev] = useState("1");
   const [confirm, setConfirm] = useState("");
