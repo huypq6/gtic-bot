@@ -324,15 +324,16 @@ class ExchangeExecutor(Executor):
                 source=self.source, bot_ref=self.bot_id, **self.trade_meta,
             )
             s.add(pos)
+            await s.flush()
             s.add(
                 OrderModel(
                     bot_id=self.bot_id, ext_id=ext, source=self.source, mode=self.mode,
                     symbol=self.symbol, side="BUY" if p.side == "LONG" else "SELL",
                     type="MARKET", qty=p.qty, price=p.entry_price, status="FILLED",
                     filled_qty=p.qty, avg_price=p.entry_price, sl=p.sl, tp=p.tp,
+                    position_id=pos.id, intent="OPEN",
                 )
             )
-            await s.flush()
             self._pos_db_id = pos.id
             await s.commit()
 
@@ -354,6 +355,7 @@ class ExchangeExecutor(Executor):
                     symbol=self.symbol, side="SELL" if closed.side == "LONG" else "BUY",
                     type="MARKET", qty=closed.qty, price=closed.exit_price, status="FILLED",
                     filled_qty=closed.qty, avg_price=closed.exit_price, fee=closed.exit_fee,
+                    position_id=self._pos_db_id, intent="CLOSE",
                 ))
             await s.commit()
         self._pos_db_id = None

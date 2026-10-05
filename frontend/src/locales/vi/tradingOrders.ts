@@ -24,6 +24,11 @@ const vi: Record<string, string> = {
   "Monitoring (open positions · realtime)": "Đang theo dõi (vị thế mở · realtime)",
   "Trade results (click a trade to review its chart)": "Kết quả giao dịch (bấm 1 lệnh để review biểu đồ)",
   "Fill history (per order)": "Lịch sử khớp lệnh (từng order)",
+  "1 trade = 2 fills: the entry order and the exit order (SL/TP/signal/manual).":
+    "1 giao dịch = 2 lần khớp: lệnh vào và lệnh thoát (SL/TP/tín hiệu/tay).",
+  Trade: "Giao dịch",
+  Open: "Mở",
+  Close: "Đóng",
   "e.g. BTCUSDT": "vd BTCUSDT",
   Time: "Thời gian",
   Source: "Nguồn",

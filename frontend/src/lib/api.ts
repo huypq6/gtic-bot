@@ -218,6 +218,11 @@ export interface OrderRow {
   fee: number | null;
   status: string;
   created_at: string | null;
+  // trade link: OPEN = entry fill, CLOSE = exit fill (null = not linked, e.g. pending/legacy)
+  position_id: number | null;
+  intent: "OPEN" | "CLOSE" | null;
+  pos_side: "LONG" | "SHORT" | null;
+  exit_reason: string | null;
 }
 
 export function fetchOrders(filters: Record<string, string> = {}) {

@@ -190,8 +190,9 @@ export default function TradesTable() {
               >
                 <td className="px-2 py-1.5 text-xs tabular-nums text-muted">
                   {new Date(tr.opened_at).toLocaleString()}
-                  <div className="mt-0.5">
+                  <div className="mt-0.5 flex items-center gap-1.5">
                     <ModeBadge mode={tr.mode} />
+                    <span className="text-faint">#{tr.id}</span>
                   </div>
                 </td>
                 <td className="px-2 py-1.5">

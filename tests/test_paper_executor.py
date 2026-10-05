@@ -78,6 +78,18 @@ async def test_buy_then_tp_persists_and_broadcasts(session_factory):
     assert rows[0].exit_reason == "TP"
     assert float(rows[0].init_sl) == 90.0
 
+    # 1 trade = 2 fills, both linked to the position: entry (OPEN) + exit (CLOSE)
+    async with session_factory() as s:
+        orders = (
+            await s.execute(
+                select(OrderModel).where(OrderModel.symbol == TEST_SYMBOL).order_by(OrderModel.id)
+            )
+        ).scalars().all()
+    assert [(o.side, o.intent, o.position_id) for o in orders] == [
+        ("BUY", "OPEN", rows[0].id),
+        ("SELL", "CLOSE", rows[0].id),
+    ]
+
 
 async def test_position_snapshot_survives_bot_meta(session_factory):
     """Strategy/tf/params snapshot written to the position at open (kept if the bot is deleted)."""

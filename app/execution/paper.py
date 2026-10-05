@@ -159,6 +159,8 @@ class PaperExecutor(Executor):
                 vals["filled_qty"] = (
                     await s.get(OrderModel, db_id)
                 ).qty
+                vals["position_id"] = self._pos_db_id  # the limit fill opened this position
+                vals["intent"] = "OPEN"
             await s.execute(update(OrderModel).where(OrderModel.id == db_id).values(**vals))
             await s.commit()
 
@@ -210,7 +212,7 @@ class PaperExecutor(Executor):
                     bot_id=self.bot_id, source=self.source, mode=self.mode, symbol=self.symbol,
                     side=close_side, type="MARKET", qty=closed.qty, price=closed.exit_price,
                     status="FILLED", filled_qty=closed.qty, avg_price=closed.exit_price,
-                    fee=closed.exit_fee,
+                    fee=closed.exit_fee, position_id=self._pos_db_id, intent="CLOSE",
                 )
             )
             await s.commit()
@@ -230,6 +232,8 @@ class PaperExecutor(Executor):
             side=fill.side, type=fill.type, qty=fill.qty, price=fill.price, status=status,
             filled_qty=fill.qty, avg_price=fill.price, fee=fill.fee,
             sl=p.sl if p else None, tp=p.tp if p else None,
+            # market fills only ever open a position (closes go through _persist_close)
+            position_id=self._pos_db_id if p else None, intent="OPEN" if p else None,
         )
 
     @property

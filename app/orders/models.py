@@ -150,6 +150,9 @@ class OrderModel(Base):
     filled_qty: Mapped[float] = mapped_column(Numeric, default=0)
     avg_price: Mapped[float | None] = mapped_column(Numeric)
     fee: Mapped[float] = mapped_column(Numeric, default=0)
+    # which trade this fill belongs to: OPEN = entry fill, CLOSE = exit fill (NULL = unknown/legacy)
+    position_id: Mapped[int | None] = mapped_column(Integer)
+    intent: Mapped[str | None] = mapped_column(String)  # OPEN|CLOSE
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

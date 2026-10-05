@@ -15,12 +15,21 @@ const STATUS_CLS: Record<string, string> = {
   PARTIAL: "text-warn",
 };
 
+// "#12 · Open LONG" / "#12 · Close LONG · TP" — ties each fill to its row in Trade results
+function tradeLabel(o: OrderRow): string {
+  if (o.position_id == null || !o.intent) return "—";
+  const act = o.intent === "OPEN" ? t("Open") : t("Close");
+  const reason = o.exit_reason ? ` · ${o.exit_reason}` : "";
+  return `#${o.position_id} · ${act} ${o.pos_side ?? ""}${reason}`;
+}
+
 const num = (n: number | null) => (n == null ? "—" : n.toLocaleString("en-US", { maximumFractionDigits: 6 }));
 
 function toCsv(rows: OrderRow[]): string {
   const cols: (keyof OrderRow)[] = [
     "id", "created_at", "mode", "source", "symbol", "side", "type", "qty", "price",
     "sl", "tp", "filled_qty", "avg_price", "fee", "status", "ext_id", "bot_id",
+    "position_id", "intent", "exit_reason",
   ];
   const head = cols.join(",");
   const body = rows
@@ -74,7 +83,12 @@ export default function Orders() {
       {/* Fill history (per order) */}
       <section className="rounded-xl border border-border bg-surface p-4">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-          <h2 className="text-sm font-semibold">{t("Fill history (per order)")}</h2>
+          <div>
+            <h2 className="text-sm font-semibold">{t("Fill history (per order)")}</h2>
+            <p className="mt-0.5 text-xs text-faint">
+              {t("1 trade = 2 fills: the entry order and the exit order (SL/TP/signal/manual).")}
+            </p>
+          </div>
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <Sel label="Mode" value={mode} onChange={setMode} opts={["PAPER", "TESTNET", "LIVE"]} />
             <Sel label="Source" value={source} onChange={setSource} opts={["BOT", "MANUAL", "SYSTEM"]} />
@@ -112,6 +126,7 @@ export default function Orders() {
                 <th className="px-2 py-1.5 font-medium">{t("Bot / strategy")}</th>
                 <th className="px-2 py-1.5 font-medium">Symbol</th>
                 <th className="px-2 py-1.5 font-medium">Side</th>
+                <th className="px-2 py-1.5 font-medium">{t("Trade")}</th>
                 <th className="px-2 py-1.5 font-medium">Type</th>
                 <th className="px-2 py-1.5 text-right font-medium">Qty</th>
                 <th className="px-2 py-1.5 text-right font-medium">{t("Price")}</th>
@@ -135,6 +150,7 @@ export default function Orders() {
                   <td className={`px-2 py-1.5 font-medium ${o.side === "BUY" ? "text-up" : "text-down"}`}>
                     {o.side}
                   </td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-xs text-muted">{tradeLabel(o)}</td>
                   <td className="px-2 py-1.5 text-muted">{o.type}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{num(o.qty)}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{num(o.price)}</td>
@@ -149,7 +165,7 @@ export default function Orders() {
               ))}
               {!orders?.length && (
                 <tr>
-                  <td colSpan={12} className="px-2 py-4 text-sm text-faint">
+                  <td colSpan={13} className="px-2 py-4 text-sm text-faint">
                     {t("No orders (matching filters).")}
                   </td>
                 </tr>

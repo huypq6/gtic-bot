@@ -352,7 +352,11 @@ async def list_orders(
     symbol: str | None = None,
     session: AsyncSession = Depends(get_session),
 ) -> list[dict]:
-    q = select(OrderModel).order_by(OrderModel.id.desc())
+    q = (
+        select(OrderModel, PositionModel)
+        .outerjoin(PositionModel, PositionModel.id == OrderModel.position_id)
+        .order_by(OrderModel.id.desc())
+    )
     if mode:
         q = q.where(OrderModel.mode == mode)
     if source:
@@ -361,13 +365,17 @@ async def list_orders(
         q = q.where(OrderModel.status == status)
     if symbol:
         q = q.where(OrderModel.symbol == symbol)
-    rows = (await session.execute(q.limit(limit))).scalars().all()
+    rows = (await session.execute(q.limit(limit))).all()
 
     def f(v):
         return float(v) if v is not None else None
 
     return [
         {
+            # trade link: OPEN = entry fill, CLOSE = exit fill of position `position_id`
+            "position_id": o.position_id, "intent": o.intent,
+            "pos_side": p.side if p else None,
+            "exit_reason": p.exit_reason if p and o.intent == "CLOSE" else None,
             "id": o.id, "bot_id": o.bot_id, "ext_id": o.ext_id, "source": o.source,
             "mode": o.mode, "symbol": o.symbol, "side": o.side, "type": o.type,
             "qty": f(o.qty), "price": f(o.price), "sl": f(o.sl), "tp": f(o.tp),
@@ -375,7 +383,7 @@ async def list_orders(
             "status": o.status,
             "created_at": o.created_at.isoformat() if o.created_at else None,
         }
-        for o in rows
+        for o, p in rows
     ]
 
 
