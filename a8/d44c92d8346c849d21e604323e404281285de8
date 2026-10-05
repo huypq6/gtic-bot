@@ -1,0 +1,62 @@
+app/config.py
+  s_59aed905705a04::t_70fff292818c1a 24-27
+frontend/src/components/account/ExchangeCheck.tsx
+  s_59aed905705a04::t_725a42f6304bfc 1-56
+frontend/src/locales/vi/modes.ts
+  s_59aed905705a04::t_e8b711141735f2 58-75
+app/execution/binance_futures.py
+  s_59aed905705a04::t_4834fc94a08049 1,85-89,92-95,98-134
+  s_59aed905705a04::t_839dfff02f0e69 135
+app/api/exchange.py
+  s_59aed905705a04::t_48c8ad384faad9 27-33
+  s_59aed905705a04::t_c3728bf44424bd 1-16,20-26,34-45
+  s_59aed905705a04::t_d230fc8cc9bdb5 17-19
+scripts/testnet_smoke.py
+  s_59aed905705a04::t_7f53d4ec4568eb 1-61,64-69,72-154
+  s_59aed905705a04::t_608b56bad0f0f4 62-63,70-71
+Dockerfile
+  s_59aed905705a04::t_6b4b9fb7016f87 34-35,45-46
+app/main.py
+  s_59aed905705a04::t_c3728bf44424bd 24,151
+tests/test_preflight.py
+  s_59aed905705a04::t_dc9fd575a446e2 1-90
+  s_59aed905705a04::t_9d67049b41189b 91-100
+frontend/src/pages/Account.tsx
+  s_59aed905705a04::t_e8b711141735f2 563
+  s_59aed905705a04::t_725a42f6304bfc 22,300,619-623
+app/execution/clients.py
+  s_59aed905705a04::t_70fff292818c1a 43-45,62-63
+  s_59aed905705a04::t_9d67049b41189b 48-49,53-61
+app/execution/preflight.py
+  s_59aed905705a04::t_e29bd89c76ef59 1-34,36-100,103-129
+  s_59aed905705a04::t_d230fc8cc9bdb5 35,101-102
+docs/09-Testnet-Setup.md
+  s_59aed905705a04::t_7176c10d8df888 52
+  s_59aed905705a04::t_41d034a7dc603e 1-51,53-91
+CLAUDE.md
+  s_59aed905705a04::t_7176c10d8df888 4
+env.example
+  s_59aed905705a04::t_70fff292818c1a 7-8,11-12
+frontend/src/lib/api.ts
+  s_59aed905705a04::t_725a42f6304bfc 205-221
+docs/07-Exchange-Smoke-Test.md
+  s_59aed905705a04::t_7176c10d8df888 7-9,12-13
+docs/IMPLEMENTATION-PLAN.md
+  s_59aed905705a04::t_260f5c502794a7 450
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a8d44c92d8346c849d21e604323e404281285de8",
+  "prompts": {},
+  "sessions": {
+    "s_59aed905705a04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8498151-ec0b-49f1-b59b-87bbd842990b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
