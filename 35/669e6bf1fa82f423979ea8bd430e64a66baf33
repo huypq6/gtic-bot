@@ -1,0 +1,37 @@
+app/execution/paper.py
+  s_59aed905705a04::t_05352f183dd774 162-163,215,235-236
+app/execution/exchange.py
+  s_59aed905705a04::t_05352f183dd774 327,334,358
+frontend/src/lib/api.ts
+  s_59aed905705a04::t_ae2af6b3a283e6 221-225
+frontend/src/pages/Orders.tsx
+  s_59aed905705a04::t_ae2af6b3a283e6 18-25,32,86-91,129,153,168
+frontend/src/locales/vi/tradingOrders.ts
+  s_59aed905705a04::t_ae2af6b3a283e6 27-31
+tests/test_paper_executor.py
+  s_59aed905705a04::t_fc88f52d406123 81-92
+frontend/src/components/orders/TradesTable.tsx
+  s_59aed905705a04::t_ae2af6b3a283e6 193,195
+app/api/trading.py
+  s_59aed905705a04::t_e41b35019ec510 355-359,368,375-378,386
+alembic/versions/a1b2c3d4e5f7_order_position_link.py
+  s_59aed905705a04::t_e41b35019ec510 1-54
+app/orders/models.py
+  s_59aed905705a04::t_05352f183dd774 153-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "35669e6bf1fa82f423979ea8bd430e64a66baf33",
+  "prompts": {},
+  "sessions": {
+    "s_59aed905705a04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8498151-ec0b-49f1-b59b-87bbd842990b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
