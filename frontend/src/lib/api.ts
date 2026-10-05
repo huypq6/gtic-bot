@@ -202,6 +202,23 @@ export interface AuditRow {
 export const fetchAudit = (mode = "") =>
   getJson<AuditRow[]>(`/api/audit${mode ? `?mode=${mode}` : ""}`);
 
+// ---- exchange connection check (docs/09) ----
+export interface ExchangeCheckItem {
+  key: string;
+  label: string;
+  status: "ok" | "warn" | "fail";
+  detail: string;
+  fix: string;
+}
+export interface ExchangeCheckResult {
+  mode: string;
+  endpoint: string;
+  status: "ok" | "warn" | "fail";
+  checks: ExchangeCheckItem[];
+}
+export const fetchExchangeCheck = (mode: string) =>
+  getJson<ExchangeCheckResult>(`/api/exchange/check?mode=${mode}`);
+
 // ---- mode workspaces (docs/08) ----
 export interface ModeSummary {
   mode: "PAPER" | "TESTNET" | "LIVE";

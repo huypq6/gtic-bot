@@ -1,4 +1,4 @@
-"""Adapter Binance USDⓈ-M Futures (P9b) — testnet (testnet.binancefuture.com) & live.
+"""Adapter Binance USDⓈ-M Futures (P9b) — testnet (Demo Trading, demo-fapi.binance.com) & live.
 
 Why Futures (not Spot): strategies go SHORT, and paper + backtest both simulate USDT-M
 Futures → real orders must be on the same market for results to be comparable.
@@ -82,11 +82,56 @@ class BinanceFuturesClient:
         self._leverage: dict[str, int] = {}
 
     @classmethod
-    async def create(cls, api_key: str, api_secret: str, testnet: bool) -> "BinanceFuturesClient":
+    async def create(
+        cls, api_key: str, api_secret: str, testnet: bool, endpoint: str = "demo"
+    ) -> "BinanceFuturesClient":
+        """`endpoint` (TESTNET only): "demo" = Demo Trading (demo-fapi.binance.com, where testnet
+        keys are created today) | "testnet" = legacy testnet.binancefuture.com."""
         from binance import AsyncClient
 
-        raw = await AsyncClient.create(api_key, api_secret, testnet=testnet)
+        demo = testnet and endpoint != "testnet"
+        raw = await AsyncClient.create(
+            api_key, api_secret, testnet=testnet and not demo, demo=demo
+        )
         return cls(raw, testnet)
+
+    @property
+    def base_url(self) -> str:
+        r = self._raw
+        if getattr(r, "demo", False):
+            return r.FUTURES_DEMO_URL
+        return r.FUTURES_TESTNET_URL if self.testnet else r.FUTURES_URL.format("com")
+
+    # ---------- account settings (connection check) ----------
+    async def server_time_offset_ms(self) -> int:
+        """Exchange clock − local clock (ms). Large drift → signed requests fail (-1021)."""
+        import time
+
+        st = await self._raw.futures_time()
+        return int(st["serverTime"]) - int(time.time() * 1000)
+
+    async def raw_account(self) -> dict:
+        return await self._raw.futures_account()
+
+    async def hedge_mode(self) -> bool:
+        r = await self._raw.futures_get_position_mode()
+        return bool(r.get("dualSidePosition"))
+
+    async def set_one_way(self) -> None:
+        await self._raw.futures_change_position_mode(dualSidePosition="false")
+
+    async def multi_assets_mode(self) -> bool:
+        r = await self._raw.futures_get_multi_assets_mode()
+        return bool(r.get("multiAssetsMargin"))
+
+    async def listed(self) -> set[str]:
+        if not self._rules:
+            self._rules.update(parse_rules(await self._raw.futures_exchange_info()))
+        return set(self._rules)
+
+    async def open_algo_orders(self, symbol: str) -> list[dict]:
+        r = await self._raw.futures_get_open_algo_orders(symbol=symbol)
+        return r if isinstance(r, list) else r.get("orders", [])
 
     async def close(self) -> None:
         await self._raw.close_connection()

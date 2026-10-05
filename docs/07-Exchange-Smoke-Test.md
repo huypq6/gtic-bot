@@ -4,11 +4,13 @@ P9b has been coded + tested with mocks (no exchange calls). This file is the che
 Do TESTNET first; LIVE only after TESTNET passes completely.
 
 ## 0. Prepare keys
-- TESTNET: log in at https://testnet.binancefuture.com → API Key → `.env`:
-  `BINANCE_TESTNET_KEY=... BINANCE_TESTNET_SECRET=...` (the testnet wallet comes with virtual USDT).
+- TESTNET: Binance moved it to **Demo Trading** — step-by-step in [09-Testnet-Setup.md](09-Testnet-Setup.md)
+  (demo.binance.com → API Management → `.env` `BINANCE_TESTNET_KEY/SECRET`, `BINANCE_TESTNET_ENDPOINT=demo`).
+  Then *Account → Check connection* must be all green, and `scripts/testnet_smoke.py` must pass.
 - LIVE (last): a Binance key with **only Futures + Reading enabled**, withdrawals DISABLED, VPS IP whitelisted →
   `BINANCE_KEY/SECRET` + `ENABLE_LIVE=1`.
-- Set the Futures account to **One-way mode** (not Hedge) — the app assumes 1 position per pair.
+- Set the Futures account to **One-way mode** (not Hedge) — the app assumes 1 position per pair
+  (TESTNET: *Check connection* switches it automatically; LIVE: you change it on Binance).
 - Restart the app (`docker compose up --build -d`) so it reads `.env`.
 
 ## 1. Account & sync

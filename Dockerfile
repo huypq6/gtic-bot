@@ -31,7 +31,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app
 
 # Install deps first (leverages layer cache); no dev/backtest extras for prod.
 COPY pyproject.toml uv.lock ./
@@ -41,6 +42,8 @@ RUN uv sync --frozen --no-dev --no-install-project --extra backtest
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
+# Exchange smoke test (docs/09): docker compose exec app python scripts/testnet_smoke.py
+COPY scripts/testnet_smoke.py ./scripts/testnet_smoke.py
 
 # Built frontend → FastAPI serves static files at "/"
 COPY --from=frontend-build /build/dist ./frontend/dist

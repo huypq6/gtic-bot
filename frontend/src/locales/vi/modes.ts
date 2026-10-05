@@ -55,4 +55,22 @@ export default {
   "Clone to…": "Nhân bản sang…",
   "No {mode} account yet.": "Chưa có tài khoản {mode}.",
   "No open {mode} positions.": "Không có vị thế {mode} đang mở.",
+  // exchange connection check (docs/09)
+  "Check connection": "Kiểm tra kết nối",
+  "Checking…": "Đang kiểm tra…",
+  "Ready — bots can trade on this account.": "Sẵn sàng — bot có thể giao dịch trên tài khoản này.",
+  "Usable, but check the warnings.": "Dùng được, nhưng hãy xem các cảnh báo.",
+  "Not ready — fix the failed items, restart the app if you edited .env, then check again.":
+    "Chưa sẵn sàng — sửa các mục lỗi, khởi động lại app nếu đã sửa .env, rồi kiểm tra lại.",
+  "Run this before creating the account.": "Chạy kiểm tra này trước khi tạo tài khoản.",
+  Endpoint: "Endpoint",
+  "Clock drift": "Lệch đồng hồ",
+  "API key": "API key",
+  "Trading permission": "Quyền giao dịch",
+  "USDT balance": "Số dư USDT",
+  "Position mode": "Chế độ vị thế",
+  "Multi-assets mode": "Chế độ đa tài sản",
+  Symbols: "Cặp giao dịch",
+  "Keys in .env": "Key trong .env",
+  "Connect to Binance": "Kết nối Binance",
 };

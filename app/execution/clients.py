@@ -40,10 +40,25 @@ async def exchange_client(mode: str, s: Settings = settings):
             from app.execution.binance_futures import BinanceFuturesClient
 
             k, sec = keys_for(mode, s)
-            _clients[mode] = await BinanceFuturesClient.create(k, sec, testnet=mode == "TESTNET")
+            _clients[mode] = await BinanceFuturesClient.create(
+                k, sec, testnet=mode == "TESTNET", endpoint=s.binance_testnet_endpoint
+            )
             if mode == "LIVE":
                 logger.warning("⚠️  BINANCE LIVE CLIENT CREATED (REAL MONEY)")
+            else:
+                await _testnet_one_way(_clients[mode])
         return _clients[mode]
+
+
+async def _testnet_one_way(client) -> None:
+    """Orders are sent without positionSide → Hedge mode would reject them (-4061). TESTNET only:
+    switch to One-way on first connect. LIVE account settings are never changed by the app."""
+    try:
+        if await client.hedge_mode():
+            await client.set_one_way()
+            logger.info("TESTNET position mode: Hedge → One-way")
+    except Exception as e:  # noqa: BLE001 — e.g. open positions; Check connection reports it
+        logger.warning("TESTNET position mode check failed: %s", e)
 
 
 def set_client(mode: str, client) -> None:

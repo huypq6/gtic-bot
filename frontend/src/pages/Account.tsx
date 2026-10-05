@@ -19,6 +19,7 @@ import EquityCurve from "../components/backtest/EquityCurve";
 import InfoTip from "../components/InfoTip";
 import ModeBadge from "../components/ModeBadge";
 import { LensNote } from "../components/ModeLens";
+import ExchangeCheck from "../components/account/ExchangeCheck";
 import { inLens, useModeLens } from "../lib/modeLens";
 import { t } from "../lib/i18n";
 
@@ -296,6 +297,7 @@ function ExchangePanel({ acc, onChange }: { acc: AccountInfo; onChange: () => vo
           <RefreshCw className={`h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} /> {t("Sync now")}
         </button>
         {sync.isError && <p className="text-xs text-down">{(sync.error as Error).message}</p>}
+        <ExchangeCheck mode={acc.mode} />
         <p className="text-xs text-faint">
           {t("Deposits/withdrawals: transfer USDT Spot ↔ USDⓈ-M Futures on Binance — the ledger records them automatically.")}
           {acc.mode === "LIVE" && ` ⚠️ ${t("REAL-MONEY account.")}`}
@@ -558,7 +560,7 @@ function CreateAccount({ onDone }: { onDone: () => void }) {
             className="rounded-md border border-border bg-surface-2 px-2 py-1.5"
           >
             <option value="PAPER">{t("PAPER (simulated)")}</option>
-            <option value="TESTNET">TESTNET (Binance Futures testnet)</option>
+            <option value="TESTNET">TESTNET (Binance Futures Demo Trading)</option>
             <option value="LIVE">{t("LIVE (real money)")}</option>
           </select>
         </label>
@@ -614,6 +616,11 @@ function CreateAccount({ onDone }: { onDone: () => void }) {
               },
             )}
       </p>
+      {!paper && (
+        <div className="mt-3 border-t border-border pt-3">
+          <ExchangeCheck key={mode} mode={mode} auto />
+        </div>
+      )}
       {create.isError && <p className="mt-2 text-xs text-down">{(create.error as Error).message}</p>}
     </section>
   );

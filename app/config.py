@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # --- Binance Testnet ---
     binance_testnet_key: str = ""
     binance_testnet_secret: str = ""
+    # Which sandbox the TESTNET keys belong to. Binance moved the futures testnet to Demo Trading
+    # (testnet.binancefuture.com → demo.binance.com): "demo" = demo-fapi.binance.com (default),
+    # "testnet" = legacy testnet.binancefuture.com. Both serve the same market today.
+    binance_testnet_endpoint: str = "demo"
 
     # --- Binance Live (only used when ENABLE_LIVE=1) ---
     binance_key: str = ""
