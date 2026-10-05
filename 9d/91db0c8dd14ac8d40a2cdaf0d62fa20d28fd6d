@@ -1,0 +1,75 @@
+app/api/modes.py
+  s_59aed905705a04::t_c5bbe376f57891 51-53
+  s_59aed905705a04::t_29f520ad00f6c9 1-50,54-96
+frontend/src/pages/Account.tsx
+  s_59aed905705a04::t_00cd8808ef05a2 21-22,46,51-52,68,97-101
+  s_59aed905705a04::t_7782b321a3928a 517-518
+tests/test_compare.py
+  s_59aed905705a04::t_8e284e539f9fca 1-72
+frontend/src/lib/modeLens.ts
+  s_59aed905705a04::t_8249562b15d683 1-36
+frontend/src/components/orders/PositionsTable.tsx
+  s_59aed905705a04::t_7e8370256d034f 9,33-34,68,72-76
+frontend/src/components/orders/TradesTable.tsx
+  s_59aed905705a04::t_7e8370256d034f 9,73
+frontend/src/main.tsx
+  s_59aed905705a04::t_db6a953596130b 14-15,27-28
+frontend/src/components/AppLayout.tsx
+  s_59aed905705a04::t_490eecfc47a833 8,23,27,32,38-40,68
+frontend/src/components/ModeLens.tsx
+  s_59aed905705a04::t_00cd8808ef05a2 78-92
+  s_59aed905705a04::t_490eecfc47a833 1-77
+frontend/src/pages/Overview.tsx
+  s_59aed905705a04::t_11df091df7424d 144
+  s_59aed905705a04::t_86ba0823ece623 1-143,145-150
+frontend/src/pages/Audit.tsx
+  s_59aed905705a04::t_7e8370256d034f 4-5,14-19,23-25
+frontend/src/pages/Trading.tsx
+  s_59aed905705a04::t_00cd8808ef05a2 18,141
+  s_59aed905705a04::t_db6a953596130b 1,4,25,31-37,44-51,67-70,78,80-82,84-97,123,143,145-155,248-255,257,296,330-363,365
+  s_59aed905705a04::t_5bb77f8a60e187 364,366-367
+frontend/src/locales/vi/index.ts
+  s_59aed905705a04::t_6b369a449ad2f2 5,10
+docs/IMPLEMENTATION-PLAN.md
+  s_59aed905705a04::t_eb975f822ed298 449
+app/orders/compare.py
+  s_59aed905705a04::t_c5bbe376f57891 84-85
+  s_59aed905705a04::t_50e97a4365cdb5 1-83,86-145
+frontend/src/pages/Orders.tsx
+  s_59aed905705a04::t_7e8370256d034f 9,44,54
+  s_59aed905705a04::t_00cd8808ef05a2 10,73
+frontend/src/pages/Compare.tsx
+  s_59aed905705a04::t_15c560b252fb0d 1-197
+docs/08-Mode-Workspaces.md
+  s_59aed905705a04::t_05e1a888bbfe3e 71,73-74,115-117
+  s_59aed905705a04::t_435287fe201844 1-70,72,75-114,118-186
+frontend/src/lib/api.ts
+  s_59aed905705a04::t_8249562b15d683 202-250
+  s_59aed905705a04::t_7e8370256d034f 140-142
+frontend/src/locales/vi/modes.ts
+  s_59aed905705a04::t_6b369a449ad2f2 1-58
+CLAUDE.md
+  s_59aed905705a04::t_72256346c32355 4
+app/api/trading.py
+  s_59aed905705a04::t_3fc79e15003b0b 181,183-186,332-338,619-620
+app/main.py
+  s_59aed905705a04::t_f4a643b9639808 24,149
+app/orders/manager.py
+  s_59aed905705a04::t_83d3127b72fea0 60-63,65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9d91db0c8dd14ac8d40a2cdaf0d62fa20d28fd6d",
+  "prompts": {},
+  "sessions": {
+    "s_59aed905705a04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8498151-ec0b-49f1-b59b-87bbd842990b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
