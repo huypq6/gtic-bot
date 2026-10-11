@@ -1,0 +1,23 @@
+docs/10-Live-Readiness.md
+  s_59aed905705a04::t_08a43a973b60d6 1-80
+CLAUDE.md
+  s_59aed905705a04::t_2e8af9a4abe4cb 4
+docs/IMPLEMENTATION-PLAN.md
+  s_59aed905705a04::t_c151d0b4c2da37 451
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5992440cc0ad6485c8d7cea025141156a03fb078",
+  "prompts": {},
+  "sessions": {
+    "s_59aed905705a04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8498151-ec0b-49f1-b59b-87bbd842990b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
