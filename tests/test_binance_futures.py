@@ -131,3 +131,23 @@ def test_check_mode_guards():
     with pytest.raises(ValueError, match="BINANCE_TESTNET_KEY"):
         check_mode("TESTNET", Settings(binance_testnet_key="", binance_testnet_secret=""))
     check_mode("TESTNET", Settings(binance_testnet_key="k", binance_testnet_secret="s"))
+
+
+async def test_market_order_reads_back_fill_when_avg_price_is_zero():
+    """Demo Trading returns avgPrice "0" for RESULT orders → the real fill is fetched."""
+
+    class DemoRaw(FakeRaw):
+        async def futures_create_order(self, **kw):
+            self.calls.append(("order", kw))
+            return {"orderId": 12, "avgPrice": "0.00", "price": "0", "executedQty": "0.012",
+                    "status": "FILLED"}
+
+        async def futures_get_order(self, **kw):
+            self.calls.append(("get", kw))
+            return {"orderId": 12, "avgPrice": "84010.2", "executedQty": "0.012",
+                    "status": "FILLED"}
+
+    raw = DemoRaw()
+    r = await BinanceFuturesClient(raw, testnet=True).market_order("BTCUSDT", "BUY", 0.012)
+    assert r["price"] == 84010.2 and r["qty"] == 0.012
+    assert raw.calls[-1] == ("get", {"symbol": "BTCUSDT", "orderId": "12"})

@@ -171,7 +171,24 @@ class BinanceFuturesClient:
                       newOrderRespType="RESULT")
         if reduce_only:
             params["reduceOnly"] = "true"
-        return self._norm(await self._raw.futures_create_order(**params))
+        out = self._norm(await self._raw.futures_create_order(**params))
+        if not out["price"]:
+            # Demo Trading answers newOrderRespType=RESULT with avgPrice "0" → read the real fill
+            # back, otherwise the app would record the feed price instead of the exchange's.
+            out = await self._filled(symbol, out)
+        return out
+
+    async def _filled(self, symbol: str, out: dict, tries: int = 5) -> dict:
+        import asyncio
+
+        for i in range(tries):
+            o = await self._raw.futures_get_order(symbol=symbol, orderId=out["orderId"])
+            n = self._norm(o)
+            if n["price"]:
+                return n
+            await asyncio.sleep(0.2 * (i + 1))
+        logger.warning("%s order %s: no average fill price", symbol, out["orderId"])
+        return out
 
     async def limit_order(self, symbol: str, side: str, qty: float, price: float) -> dict:
         r = await self.rules(symbol)
