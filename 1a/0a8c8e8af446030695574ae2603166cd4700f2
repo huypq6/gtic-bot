@@ -1,0 +1,36 @@
+app/api/trading.py
+  s_59aed905705a04::t_3b1e10f7d85838 221-230
+app/strategy/runner.py
+  s_59aed905705a04::t_d625487edba8c0 162-179,197-204,208-235
+  s_59aed905705a04::t_b13f47e5c8d086 236
+tests/test_exchange_executor.py
+  s_59aed905705a04::t_563264192921ab 116-126,130,139
+  s_59aed905705a04::t_199ee6eaa6a09f 248-288
+app/execution/exchange.py
+  s_59aed905705a04::t_6cb7fc9cb574b1 37-40,114-115,300-311
+  s_59aed905705a04::t_7f6d11541a9c12 71,116-119
+  s_59aed905705a04::t_88c7e245171ee6 103-110,195-196,214-226
+  s_59aed905705a04::t_5a00e416e0b024 227
+scripts/testnet_e2e.py
+  s_59aed905705a04::t_73689672f66556 1-14,16-30,32-52,55-208,210-211,213-226,228-260
+  s_59aed905705a04::t_c7ef8b9f85175a 15,31,209,212,227
+  s_59aed905705a04::t_99a6aa4b6484f3 53-54
+tests/test_runner.py
+  s_59aed905705a04::t_2c2538a690a5c7 81-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a0a8c8e8af446030695574ae2603166cd4700f2",
+  "prompts": {},
+  "sessions": {
+    "s_59aed905705a04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8498151-ec0b-49f1-b59b-87bbd842990b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
