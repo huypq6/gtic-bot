@@ -159,6 +159,24 @@ class StrategyRunner:
         else:
             await self.executor.submit(sig)
 
+    async def _order_error(self, sig: Signal, e: Exception) -> None:
+        """The order failed (exchange rejection, network…) → audit + UI alert; the bot keeps
+        running. Exchange positions stay protected by their SL/TP on the exchange."""
+        msg = getattr(e, "message", None) or str(e) or type(e).__name__
+        code = getattr(e, "code", None)
+        reason = f"{msg} (code {code})" if code is not None else msg
+        logger.warning("bot %s: %s %s failed — %s", self.bot_id, sig.action, self.symbol, reason)
+        if self._om:
+            await self._om.write_audit(
+                source="SYSTEM", action="ORDER_ERROR", mode=self.mode, bot_id=self.bot_id,
+                symbol=self.symbol,
+                detail={"signal": sig.action, "error": reason[:500], "type": type(e).__name__},
+            )
+        await self._bus.publish(
+            "risk", {"type": "risk", "bot_id": self.bot_id, "symbol": self.symbol,
+                     "signal": sig.action, "reason": f"order failed: {reason}"},
+        )
+
     async def _reject(self, sig: Signal, reason: str) -> None:
         logger.info("bot %s: blocked %s %s — %s", self.bot_id, sig.action, self.symbol, reason)
         if self._om:
@@ -176,32 +194,45 @@ class StrategyRunner:
         try:
             while not self._stop:
                 msg = await sub.get()
-                price = msg["close"]
-                await self.executor.on_price(price)
-                if msg.get("closed"):
-                    last = self._candles[-1]["ts"] if self._candles else None
-                    if last is not None and msg["ts"] <= last:
-                        if msg["ts"] < last:
-                            continue  # stale candle (reconnect) → skip
-                        self._candles[-1] = msg
-                    else:
-                        self._candles.append(msg)
-                    self.last_candle_ts = msg["ts"]
-                    if self.status == "RUNNING":
-                        ctx = Context(
-                            symbol=self.symbol,
-                            price=price,
-                            candles=list(self._candles),
-                            position=self.executor.current_position(),
-                        )
-                        for sig in self.strategy.on_candle(ctx):
-                            await self._dispatch(sig, price)
-        except asyncio.CancelledError:
-            raise
-        except Exception:  # noqa: BLE001 — never let one error kill the runner
-            logger.exception("runner bot %s error", self.bot_id)
+                try:
+                    await self._handle(msg)
+                except asyncio.CancelledError:
+                    raise
+                except Exception:  # noqa: BLE001 — one bad message must not stop the bot
+                    # (the old single try around the loop silently ended the runner: no more
+                    # signals or exchange reconciliation while the UI still said RUNNING)
+                    logger.exception("runner bot %s error", self.bot_id)
         finally:
             self._bus.unsubscribe(f"kline.{self.symbol}.{self.tf}", sub)
+
+    async def _handle(self, msg: dict) -> None:
+        price = msg["close"]
+        await self.executor.on_price(price)
+        if not msg.get("closed"):
+            return
+        last = self._candles[-1]["ts"] if self._candles else None
+        if last is not None and msg["ts"] <= last:
+            if msg["ts"] < last:
+                return  # stale candle (reconnect) → skip
+            self._candles[-1] = msg
+        else:
+            self._candles.append(msg)
+        self.last_candle_ts = msg["ts"]
+        if self.status != "RUNNING":
+            return
+        ctx = Context(
+            symbol=self.symbol,
+            price=price,
+            candles=list(self._candles),
+            position=self.executor.current_position(),
+        )
+        for sig in self.strategy.on_candle(ctx):
+            try:
+                await self._dispatch(sig, price)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:  # noqa: BLE001 — exchange rejected / network: record + alert
+                await self._order_error(sig, e)
 
 
 class BotManager:

@@ -218,6 +218,16 @@ async def create_bot(
     if account_id is None and body.mode != "PAPER":
         # without an account the strategy's default size is below the exchange minimum
         raise HTTPException(400, f"create a {body.mode} account first (Account page)")
+    if body.mode != "PAPER":
+        # Futures (one-way) nets a symbol into ONE position → two bots would close each other's
+        dup = (await session.execute(
+            select(Bot.id).where(Bot.mode == body.mode, Bot.symbol == body.symbol)
+        )).scalar_one_or_none()
+        if dup is not None:
+            raise HTTPException(
+                409, f"bot #{dup} already trades {body.symbol} on {body.mode} — "
+                     "one exchange bot per symbol"
+            )
     sizing = _check_sizing(body.sizing) or (
         {"method": "risk_pct", "value": 1.0} if account_id else None
     )

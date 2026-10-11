@@ -113,9 +113,21 @@ async def test_sltp_hit_sends_real_close():
     assert ex.engine.position is None
 
 
+async def test_limit_refused_by_default():
+    """LIMIT fills on the exchange aren't tracked → a fill would open an unprotected position."""
+    from app.execution.exchange import ExchangeOrderError
+
+    client = FakeClient()
+    ex, _, _ = make_exec(client)
+    with pytest.raises(ExchangeOrderError, match="LIMIT"):
+        await ex.submit(Signal("BUY", "BTCUSDT", size=1, order_type="LIMIT", price=95))
+    assert not any(c[0] == "limit" for c in client.calls)
+
+
 async def test_limit_order_placed_with_ext_id():
     client = FakeClient()
     ex, bus, _ = make_exec(client)
+    ex.allow_limit = True
     await ex.submit(Signal("BUY", "BTCUSDT", size=1, order_type="LIMIT", price=95))
     assert ("limit", "BTCUSDT", "BUY", 1, 95) in client.calls
     assert ex.engine.position is None  # limit resting on the exchange, no position opened yet
@@ -124,6 +136,7 @@ async def test_limit_order_placed_with_ext_id():
 async def test_limit_auto_cancel_after_timeout():
     client = FakeClient()
     ex, bus, _ = make_exec(client, timeout=0.05)
+    ex.allow_limit = True
     await ex.submit(Signal("BUY", "BTCUSDT", size=1, order_type="LIMIT", price=95))
     await asyncio.sleep(0.12)  # past the timeout
     assert any(c[0] == "cancel" for c in client.calls)
@@ -231,4 +244,45 @@ async def test_futures_protect_failure_falls_back_to_client_side():
     assert any(t == "risk" for t, _ in bus.msgs)  # user is warned
     await ex.on_price(94)  # no SL on the exchange → app closes it itself
     assert ("market", "BTCUSDT", "SELL", 1, True) in c.calls
+    assert ex.engine.position is None
+
+
+async def test_refuses_to_trade_into_untracked_exchange_position():
+    from app.execution.exchange import ExchangeOrderError
+
+    c, ex, _ = fx()
+    c.amt = 3.0  # e.g. opened by hand in the Binance app
+    with pytest.raises(ExchangeOrderError, match="doesn't track"):
+        await ex.submit(Signal("SELL", "BTCUSDT", size=1, sl=105))
+    assert not any(x[0] == "market" for x in c.calls)
+
+
+async def test_signal_close_keeps_protection_if_close_fails():
+    """Close first, cancel SL/TP after — a failed close must not leave the position naked."""
+    c, ex, _ = fx()
+    await ex.submit(Signal("BUY", "BTCUSDT", size=1, sl=95, tp=110))
+
+    async def boom(*a, **kw):
+        raise RuntimeError("network down")
+
+    c.market_order = boom
+    with pytest.raises(RuntimeError):
+        await ex.submit(Signal("CLOSE", "BTCUSDT"))
+    assert not any(x[0] == "unprotect" for x in c.calls)
+    assert ex._protect == {"sl": "a1", "tp": "a2"} and ex.engine.position is not None
+
+
+async def test_signal_close_when_exchange_already_closed_it():
+    """reduceOnly rejected because SL/TP already filled on the exchange → recorded, no error."""
+    c, ex, _ = fx()
+    await ex.submit(Signal("BUY", "BTCUSDT", size=1, sl=95, tp=110))
+    c.amt = 0.0
+    c.close_fill = {"orderId": "x9", "price": 110.0, "qty": 1, "fee": 0.05, "realized": 10.0,
+                    "ts": 1}
+
+    async def rejected(*a, **kw):
+        raise RuntimeError("ReduceOnly Order is rejected (code -2022)")
+
+    c.market_order = rejected
+    await ex.submit(Signal("CLOSE", "BTCUSDT"))
     assert ex.engine.position is None

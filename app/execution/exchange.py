@@ -34,6 +34,10 @@ from app.strategy.base import Position, Signal
 logger = logging.getLogger(__name__)
 
 
+class ExchangeOrderError(Exception):
+    """An order the executor refuses to send (user-facing reason)."""
+
+
 class ExchangeExecutor(Executor):
     def __init__(
         self,
@@ -64,6 +68,7 @@ class ExchangeExecutor(Executor):
         self._opened_ms: int | None = None
         self._last_reconcile = 0.0
         self.reconcile_every = 5.0  # seconds between exchange position polls
+        self.allow_limit = False  # see submit(): LIMIT fills are not tracked yet
         self.account_id: int | None = None
         self._accounts = None
 
@@ -95,9 +100,23 @@ class ExchangeExecutor(Executor):
         if pos and self._futures:
             await self._market_close("SIGNAL")  # one-way mode: fully close, then open the new side
         if self._futures:
+            # One-way mode nets everything on a symbol: never trade into a position the app
+            # doesn't own (opened by hand on Binance, another app, a crash before persisting).
+            ex = await self._client.position(self.symbol)
+            if abs(ex["amt"]) > 0:
+                raise ExchangeOrderError(
+                    f"{self.symbol} already has a position on the exchange ({ex['amt']:+g}) that "
+                    "this bot doesn't track — close it on Binance first"
+                )
             await self._client.ensure_leverage(self.symbol, self.engine.leverage)
 
         if signal.order_type == "LIMIT" and signal.price is not None:
+            # Fills of resting LIMIT orders are not tracked yet → a fill on the exchange would
+            # open a position the app doesn't know about, WITHOUT SL/TP. Refuse until supported.
+            if not self.allow_limit:
+                raise ExchangeOrderError(
+                    "LIMIT entries are not supported on the exchange yet — use MARKET"
+                )
             resp = await self._client.limit_order(self.symbol, a, signal.size, signal.price)
             ext = resp["orderId"]
             await self._persist_order(
@@ -173,6 +192,8 @@ class ExchangeExecutor(Executor):
         async with self._sf() as s:
             row = (await s.execute(q)).scalar_one_or_none()
         if row is None:
+            if self._futures:
+                await self._warn_untracked()
             return False
 
         def f(v):
@@ -189,6 +210,20 @@ class ExchangeExecutor(Executor):
         if self._futures:
             await self.reconcile()  # closed while the app was down?
         return self.engine.position is not None
+
+    async def _warn_untracked(self) -> None:
+        """Startup: a position on the exchange that no bot row owns → alert (never auto-manage)."""
+        try:
+            ex = await self._client.position(self.symbol)
+        except Exception:  # noqa: BLE001
+            logger.warning("startup position check %s failed", self.symbol, exc_info=True)
+            return
+        if abs(ex["amt"]) > 0:
+            reason = (f"untracked {self.symbol} position on the exchange ({ex['amt']:+g} @ "
+                      f"{ex['entry']}) — the bot won't trade this symbol until it is closed")
+            logger.warning("bot %s: %s", self.bot_id, reason)
+            await self._bus.publish("risk", {"type": "risk", "bot_id": self.bot_id,
+                                             "symbol": self.symbol, "reason": reason})
 
     async def cancel(self, order_id: str | None = None) -> None:
         # order_id = ext_id of the pending order.
@@ -262,9 +297,20 @@ class ExchangeExecutor(Executor):
             return
         side = "SELL" if pos.side == "LONG" else "BUY"
         if self._futures:
+            # Close FIRST, cancel SL/TP after: if the close fails, the position keeps its
+            # exchange-side protection (cancelling first would leave it naked).
+            try:
+                resp = await self._client.market_order(
+                    self.symbol, side, pos.qty, reduce_only=True
+                )
+            except Exception:
+                # e.g. reduceOnly rejected because SL/TP already closed it on the exchange
+                await self.reconcile()
+                if self.engine.position is None:
+                    return
+                raise
             await self._client.cancel_protection(self.symbol, self._protect)
             self._protect = {}
-            resp = await self._client.market_order(self.symbol, side, pos.qty, reduce_only=True)
         else:
             resp = await self._client.market_order(self.symbol, side, pos.qty)
         fill = resp["price"] or self._last_price

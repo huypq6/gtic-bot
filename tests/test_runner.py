@@ -78,3 +78,36 @@ async def test_bot_manager_registers_bot_stream_with_feed(monkeypatch):
     await mgr.start_bot(7, "count", "1", {}, "DOGEUSDT", "15m", "PAPER")
     assert "dogeusdt@kline_15m" in feed.stream_url()
     assert mgr.last_candle_ts(7) is None
+
+
+async def test_runner_survives_a_rejected_order():
+    """An exchange rejection must not end the runner (it used to stop silently while the UI
+    still said RUNNING): the error is alerted and the next candle is processed."""
+    from app.strategy.base import Signal
+
+    class _Buy(_Count):
+        def on_candle(self, ctx):
+            super().on_candle(ctx)
+            return [Signal("BUY", "BTCUSDT", size=1)]
+
+    class _Rejecting(_Exec):
+        def __init__(self):
+            self.tries = 0
+
+        async def submit(self, sig):
+            self.tries += 1
+            raise RuntimeError("order notional 0.01 < minimum 5 USDT")
+
+    bus = EventBus()
+    risk = bus.subscribe("risk")
+    strat, ex = _Buy(), _Rejecting()
+    r = StrategyRunner(1, strat, ex, bus, "BTCUSDT", "15m", session_factory=None)
+    task = asyncio.create_task(r.run())
+    await _drain(bus)
+    await bus.publish("kline.BTCUSDT.15m", _k(0))
+    await bus.publish("kline.BTCUSDT.15m", _k(900_000))
+    await _drain(bus)
+    task.cancel()
+    assert ex.tries == 2 and len(strat.seen) == 2  # still alive after the first failure
+    alert = risk.get_nowait()
+    assert "order failed" in alert["reason"] and "minimum" in alert["reason"]
