@@ -1,0 +1,22 @@
+tests/test_binance_futures.py
+  s_59aed905705a04::t_78c616cf3dea4b 134-153
+app/execution/binance_futures.py
+  s_59aed905705a04::t_e0d79e67eb0ace 174-189,191
+  s_59aed905705a04::t_5857a41c482936 190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3eecbe9e1a65e4de240348486dc1a6893a2eece5",
+  "prompts": {},
+  "sessions": {
+    "s_59aed905705a04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8498151-ec0b-49f1-b59b-87bbd842990b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
