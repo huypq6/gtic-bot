@@ -46,13 +46,19 @@ export default {
   "exit slip": "trượt ra",
   "R diff": "chênh R",
   trade: "lệnh",
-  "Cloned from bot #{id} → {mode}. Review the settings, then press Create.":
-    "Đã nhân bản từ bot #{id} → {mode}. Kiểm tra cấu hình rồi bấm Tạo.",
+  "Cloned from bot #{id} → {mode}. Nothing is created yet — review the settings, then press Create & run.":
+    "Đã nhân bản từ bot #{id} → {mode}. CHƯA tạo gì — kiểm tra cấu hình rồi bấm Create & run.",
+  "No {mode} account yet — create it first (it reads the balance from Binance and sizes the bot's orders).":
+    "Chưa có tài khoản {mode} — hãy tạo trước (tài khoản đọc số dư từ Binance và tính khối lượng lệnh cho bot).",
+  "Go to Account": "Đến trang Tài khoản",
   Dismiss: "Bỏ qua",
   "{n} more in other modes": "còn {n} ở chế độ khác",
   "No {mode} bots.": "Chưa có bot {mode}.",
   "needs confirm": "cần xác nhận",
   "Clone to…": "Nhân bản sang…",
+  Clone: "Nhân bản",
+  "Clone from another mode": "Nhân bản từ chế độ khác",
+  "Clone to {mode}": "Nhân bản sang {mode}",
   "No {mode} account yet.": "Chưa có tài khoản {mode}.",
   "No open {mode} positions.": "Không có vị thế {mode} đang mở.",
   // exchange connection check (docs/09)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Copy, Pause, Play, Square, Trash2 } from "lucide-react";
 import {
   createBot,
@@ -56,6 +56,9 @@ export default function Trading() {
   const [accountId, setAccountId] = useState<number | "">("");
   const [sizing, setSizing] = useState<Sizing>({ method: "risk_pct", value: 1 });
   const modeAccounts = (accounts ?? []).filter((a) => a.mode === mode);
+  // exchange modes size orders from the account; without one the strategy's tiny default size is
+  // below the exchange minimum and every order is rejected → require the account first.
+  const needsAccount = mode !== "PAPER" && accounts !== undefined && modeAccounts.length === 0;
   useEffect(() => {
     // on mode change → pick the first account of that mode (or leave empty if there is none)
     if (!modeAccounts.some((a) => a.id === accountId))
@@ -144,7 +147,7 @@ export default function Trading() {
         <h2 className="mb-3 text-sm font-semibold">{t("Create bot")}</h2>
         {clonedFrom != null && (
           <p className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs">
-            {t("Cloned from bot #{id} → {mode}. Review the settings, then press Create.", {
+            {t("Cloned from bot #{id} → {mode}. Nothing is created yet — review the settings, then press Create & run.", {
               id: clonedFrom,
               mode,
             })}
@@ -220,7 +223,7 @@ export default function Trading() {
           )}
           <button
             onClick={onCreate}
-            disabled={create.isPending || stratId === ""}
+            disabled={create.isPending || stratId === "" || needsAccount}
             className={`rounded-md px-3 py-1.5 text-sm font-semibold disabled:opacity-50 ${
               mode === "LIVE"
                 ? "bg-down text-white hover:bg-down/90"
@@ -230,6 +233,14 @@ export default function Trading() {
             {create.isPending ? t("Creating…") : mode === "LIVE" ? t("Create (LIVE)") : t("Create & run")}
           </button>
         </div>
+        {needsAccount && (
+          <p className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-xs">
+            {t("No {mode} account yet — create it first (it reads the balance from Binance and sizes the bot's orders).", { mode })}{" "}
+            <Link to="/account" className="font-medium underline">
+              {t("Go to Account")}
+            </Link>
+          </p>
+        )}
         {selectedStrat && Object.keys(selectedStrat.param_schema ?? {}).length > 0 && (
           <div className="mt-3 border-t border-border pt-3">
             <p className="mb-2 text-xs text-faint">{t("Params (tune without editing code)")}</p>
@@ -302,6 +313,39 @@ export default function Trading() {
             ))}
           </div>
         )}
+        {/* Lens on one mode → offer the other modes' bots as clone sources (shadow/candidate). */}
+        {lens && allBots && allBots.some((b) => b.mode !== lens) && (
+          <div className="mt-4 border-t border-border pt-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-faint">
+              {t("Clone from another mode")}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {allBots
+                .filter((b) => b.mode !== lens)
+                .map((b) => (
+                  <div
+                    key={b.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm"
+                  >
+                    <span className="flex flex-wrap items-center gap-x-2">
+                      <ModeBadge mode={b.mode} />
+                      <span className="font-medium">{b.strategy}</span>
+                      <span className="text-muted">
+                        {b.symbol} · {b.tf}
+                      </span>
+                      <span className="text-xs text-faint">#{b.id}</span>
+                    </span>
+                    <button
+                      onClick={() => cloneTo(b, lens)}
+                      className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-surface-2"
+                    >
+                      <Copy className="h-3.5 w-3.5" /> {t("Clone to {mode}", { mode: lens })}
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {showLiveModal && (
@@ -337,9 +381,13 @@ function CloneMenu({ bot, onPick }: { bot: BotInfo; onPick: (mode: string) => vo
   };
   return (
     <div className="relative">
-      <IconBtn title={t("Clone to…")} onClick={() => setOpen((o) => !o)}>
-        <Copy className="h-4 w-4" />
-      </IconBtn>
+      <button
+        title={t("Clone to…")}
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 rounded-md p-1.5 text-xs text-muted hover:bg-surface-2 hover:text-text"
+      >
+        <Copy className="h-4 w-4" /> {t("Clone")}
+      </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />

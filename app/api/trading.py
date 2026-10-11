@@ -215,6 +215,9 @@ async def create_bot(
     except ParamError as e:
         raise HTTPException(422, str(e)) from e
     account_id = await _check_account(session, body.account_id, body.mode)
+    if account_id is None and body.mode != "PAPER":
+        # without an account the strategy's default size is below the exchange minimum
+        raise HTTPException(400, f"create a {body.mode} account first (Account page)")
     sizing = _check_sizing(body.sizing) or (
         {"method": "risk_pct", "value": 1.0} if account_id else None
     )
