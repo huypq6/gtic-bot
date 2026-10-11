@@ -1,0 +1,43 @@
+tests/test_account_service.py
+  s_59aed905705a04::t_c216f46ecda0f8 141-148,151-156
+  s_59aed905705a04::t_a814850adf9f83 149-150
+frontend/src/components/orders/TradesTable.tsx
+  s_59aed905705a04::t_46195e69e23582 30-48,224-233,370-375
+  s_59aed905705a04::t_a1ea627586e104 332-350,352-356
+  s_59aed905705a04::t_50b0cb8b76aa2d 351
+app/api/trading.py
+  s_59aed905705a04::t_83d3754a4dd02c 463
+app/orders/models.py
+  s_59aed905705a04::t_83d3754a4dd02c 199-201
+frontend/src/lib/api.ts
+  s_59aed905705a04::t_46195e69e23582 318-326
+app/strategy/runner.py
+  s_59aed905705a04::t_83d3754a4dd02c 140-141,149-150
+  s_59aed905705a04::t_2d821da146011c 142-143
+app/execution/exchange.py
+  s_59aed905705a04::t_83d3754a4dd02c 325,339
+alembic/versions/b2c3d4e5f6a8_position_sizing.py
+  s_59aed905705a04::t_83d3754a4dd02c 1-48
+app/execution/base.py
+  s_59aed905705a04::t_83d3754a4dd02c 15-17
+frontend/src/locales/vi/tradingOrders.ts
+  s_59aed905705a04::t_a1ea627586e104 30-40
+app/execution/paper.py
+  s_59aed905705a04::t_83d3754a4dd02c 180,185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d265ca5f0b0f23c5df1e5993970fbea022c6f6e4",
+  "prompts": {},
+  "sessions": {
+    "s_59aed905705a04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8498151-ec0b-49f1-b59b-87bbd842990b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
