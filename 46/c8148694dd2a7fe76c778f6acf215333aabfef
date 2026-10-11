@@ -1,0 +1,67 @@
+frontend/src/locales/vi/settings.ts
+  s_59aed905705a04::t_cda7dd0abbf8f6 1-48
+app/orders/models.py
+  s_59aed905705a04::t_601a279f66e5d7 292-303
+app/execution/paper.py
+  s_59aed905705a04::t_786b3d58cd504a 77
+  s_59aed905705a04::t_525cffe1358dbc 188-190,232-237
+frontend/src/components/AppLayout.tsx
+  s_59aed905705a04::t_2fd51faf3cad58 37
+app/api/settings.py
+  s_59aed905705a04::t_f6bca70221b3be 1-91
+alembic/versions/c3d4e5f6a7b9_app_setting.py
+  s_59aed905705a04::t_601a279f66e5d7 1-30
+tests/test_paper_executor.py
+  s_59aed905705a04::t_7b3fe837ff43d9 68
+  s_59aed905705a04::t_1b930543fab503 69-72
+app/execution/exchange.py
+  s_59aed905705a04::t_786b3d58cd504a 226-227,290-291
+  s_59aed905705a04::t_756b0536c2d44b 208,390-392,416-421
+app/strategy/runner.py
+  s_59aed905705a04::t_5a0f22737d7a0d 176-177,189-190
+app/execution/base.py
+  s_59aed905705a04::t_525cffe1358dbc 38-54
+frontend/src/lib/api.ts
+  s_59aed905705a04::t_f07a10a86c27e6 241-242,244,246,249
+  s_59aed905705a04::t_49bacd76ce3577 222-240,243,245,247-248,250
+docs/10-Live-Readiness.md
+  s_59aed905705a04::t_7212e945b0e8e6 9,39-42
+frontend/src/main.tsx
+  s_59aed905705a04::t_2fd51faf3cad58 16,30
+docs/IMPLEMENTATION-PLAN.md
+  s_59aed905705a04::t_7212e945b0e8e6 452
+tests/test_notify.py
+  s_59aed905705a04::t_c07c73b3832531 1-73
+app/api/trading.py
+  s_59aed905705a04::t_786b3d58cd504a 242-246
+app/main.py
+  s_59aed905705a04::t_f6bca70221b3be 158
+  s_59aed905705a04::t_786b3d58cd504a 52-55,70,76
+  s_59aed905705a04::t_d9f8bd71de9a6d 27
+frontend/src/pages/Settings.tsx
+  s_59aed905705a04::t_27e88698fc845a 1-79,81-245
+  s_59aed905705a04::t_2fd51faf3cad58 80
+app/orders/manager.py
+  s_59aed905705a04::t_5e2364a043992c 20,22,42-46
+frontend/src/locales/vi/index.ts
+  s_59aed905705a04::t_cda7dd0abbf8f6 6,12
+app/notify/telegram.py
+  s_59aed905705a04::t_964ac05a37d03d 54-55,74-75
+  s_59aed905705a04::t_69b647440b3408 1-53,56-73,76-303
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "46c8148694dd2a7fe76c778f6acf215333aabfef",
+  "prompts": {},
+  "sessions": {
+    "s_59aed905705a04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8498151-ec0b-49f1-b59b-87bbd842990b",
+        "model": "unknown"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
