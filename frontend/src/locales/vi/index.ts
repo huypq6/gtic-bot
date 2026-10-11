@@ -3,11 +3,13 @@ import accountBacktest from "./accountBacktest";
 import common from "./common";
 import misc from "./misc";
 import modes from "./modes";
+import settings from "./settings";
 import tradingOrders from "./tradingOrders";
 
 export const VI: Record<string, string> = {
   ...misc,
   ...modes,
+  ...settings,
   ...tradingOrders,
   ...accountBacktest,
   ...common,

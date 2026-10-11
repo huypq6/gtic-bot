@@ -13,6 +13,7 @@ import Audit from "./pages/Audit";
 import Account from "./pages/Account";
 import Overview from "./pages/Overview";
 import Compare from "./pages/Compare";
+import Settings from "./pages/Settings";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
             <Route index element={<Dashboard />} />
             <Route path="overview" element={<Overview />} />
             <Route path="compare" element={<Compare />} />
+            <Route path="settings" element={<Settings />} />
             <Route path="trade" element={<Trading />} />
             <Route path="library" element={<Library />} />
             <Route path="orders" element={<Orders />} />

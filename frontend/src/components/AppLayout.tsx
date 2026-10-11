@@ -34,6 +34,7 @@ export default function AppLayout() {
           <Tab to="/backtest">Backtest</Tab>
           <Tab to="/scanner">Scanner</Tab>
           <Tab to="/audit">Audit</Tab>
+          <Tab to="/settings">{t("Settings")}</Tab>
         </nav>
         <div className="order-last w-full sm:order-none sm:w-auto">
           <ModeLens />

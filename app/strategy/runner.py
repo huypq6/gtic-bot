@@ -173,7 +173,8 @@ class StrategyRunner:
                 detail={"signal": sig.action, "error": reason[:500], "type": type(e).__name__},
             )
         await self._bus.publish(
-            "risk", {"type": "risk", "bot_id": self.bot_id, "symbol": self.symbol,
+            "risk", {"type": "risk", "mode": self.mode, "bot_id": self.bot_id,
+                     "symbol": self.symbol,
                      "signal": sig.action, "reason": f"order failed: {reason}"},
         )
 
@@ -185,7 +186,8 @@ class StrategyRunner:
                 symbol=self.symbol, detail={"signal": sig.action, "reason": reason},
             )
         await self._bus.publish(
-            "risk", {"type": "risk", "bot_id": self.bot_id, "symbol": self.symbol,
+            "risk", {"type": "risk", "mode": self.mode, "bot_id": self.bot_id,
+                     "symbol": self.symbol,
                      "signal": sig.action, "reason": reason},
         )
 

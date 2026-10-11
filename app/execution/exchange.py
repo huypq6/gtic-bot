@@ -205,6 +205,7 @@ class ExchangeExecutor(Executor):
             entry_fee=float(row.fee or 0),
         )
         self._pos_db_id = row.id
+        self._open_risk = f(row.risk_amount)
         self._protect = dict(row.ext_protect or {})
         self._opened_ms = int(row.opened_at.timestamp() * 1000) if row.opened_at else None
         if self._futures:
@@ -222,7 +223,8 @@ class ExchangeExecutor(Executor):
             reason = (f"untracked {self.symbol} position on the exchange ({ex['amt']:+g} @ "
                       f"{ex['entry']}) — the bot won't trade this symbol until it is closed")
             logger.warning("bot %s: %s", self.bot_id, reason)
-            await self._bus.publish("risk", {"type": "risk", "bot_id": self.bot_id,
+            await self._bus.publish("risk", {"type": "risk", "mode": self.mode,
+                                             "bot_id": self.bot_id,
                                              "symbol": self.symbol, "reason": reason})
 
     async def cancel(self, order_id: str | None = None) -> None:
@@ -285,7 +287,8 @@ class ExchangeExecutor(Executor):
         except Exception as e:  # noqa: BLE001
             logger.exception("placing SL/TP on the exchange failed for %s", self.symbol)
             await self._bus.publish(
-                "risk", {"type": "risk", "bot_id": self.bot_id, "symbol": self.symbol,
+                "risk", {"type": "risk", "mode": self.mode, "bot_id": self.bot_id,
+                         "symbol": self.symbol,
                          "reason": f"could not place SL/TP on the exchange ({e}) — "
                                    "the app will close it instead"},
             )
@@ -384,6 +387,9 @@ class ExchangeExecutor(Executor):
             self._pos_db_id = pos.id
             self.pending_sizing = None
             await s.commit()
+        self._open_risk = pos.risk_amount
+        await self.publish_trade("open", side=p.side, qty=p.qty, entry=p.entry_price, sl=p.sl,
+                                 tp=p.tp, risk=pos.risk_amount, ext_id=ext)
 
     async def _persist_close(self, closed, ext: str) -> None:
         async with self._sf() as s:
@@ -407,6 +413,12 @@ class ExchangeExecutor(Executor):
                 ))
             await s.commit()
         self._pos_db_id = None
+        risk = getattr(self, "_open_risk", None)
+        await self.publish_trade(
+            "close", side=closed.side, qty=closed.qty, entry=closed.entry_price,
+            exit=closed.exit_price, pnl=closed.pnl, reason=closed.reason,
+            r=closed.pnl / risk if risk else None, ext_id=ext,
+        )
         await self._bus.publish(
             "position",
             {"type": "position", "key": self._pos_key(), "bot_id": self.bot_id,

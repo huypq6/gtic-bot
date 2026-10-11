@@ -35,6 +35,23 @@ class Executor(ABC):
         """Modify SL/TP of the current position."""
         ...
 
+    async def publish_trade(self, event: str, **data) -> None:
+        """'open' / 'close' of a position → bus topic "trade" (Telegram notifier, …).
+        Never raises: a notification problem must not affect trading."""
+        bus = getattr(self, "_bus", None)
+        if bus is None:
+            return
+        try:
+            await bus.publish("trade", {
+                "event": event, "mode": getattr(self, "mode", None),
+                "bot_id": getattr(self, "bot_id", None), "symbol": getattr(self, "symbol", None),
+                "strategy": (self.trade_meta or {}).get("strategy"), **data,
+            })
+        except Exception:  # noqa: BLE001
+            import logging
+
+            logging.getLogger(__name__).exception("publish trade event failed")
+
     async def on_price(self, price: float) -> None:
         """Called on every price tick. Paper overrides it to check SL/TP/limit. Default: no-op."""
         return None

@@ -24,6 +24,7 @@ from app.api.backtest import router as backtest_router
 from app.api.exchange import router as exchange_router
 from app.api.modes import router as modes_router
 from app.api.routes import router as api_router
+from app.api.settings import router as settings_router
 from app.api.trading import router as trading_router
 from app.api.ws import WSGateway
 from app.config import settings
@@ -48,7 +49,10 @@ async def lifespan(app: FastAPI):
     gateway = WSGateway(bus)
     watch = await ensure_seeded(async_session, settings.default_symbols)
     feed = MarketFeed(bus, symbols=watch, tf=settings.default_tf)
-    order_manager = OrderManager(async_session)
+    order_manager = OrderManager(async_session, bus)
+    from app.notify.telegram import Notifier
+
+    notifier = Notifier(bus, async_session)
     accounts = AccountService(async_session, order_manager)
     bot_manager = BotManager(
         bus, async_session, order_manager, feed=feed, backfill=settings.feed_autostart,
@@ -63,11 +67,13 @@ async def lifespan(app: FastAPI):
     app.state.accounts = accounts
     app.state.bot_manager = bot_manager
     app.state.manual_trader = manual_trader
+    app.state.notifier = notifier
 
     tasks = [
         asyncio.create_task(gateway.track_feed_status(), name="feed-status-tracker"),
         # P9b: TESTNET/LIVE account balance/ledger from the exchange (no exchange account → no-op)
         asyncio.create_task(run_exchange_sync(accounts), name="exchange-account-sync"),
+        asyncio.create_task(notifier.run(), name="telegram-notifier"),
     ]
     if settings.feed_autostart:
         tasks.append(asyncio.create_task(feed.run(), name="market-feed"))
@@ -149,6 +155,7 @@ app.include_router(backtest_router)
 app.include_router(accounts_router)
 app.include_router(modes_router)
 app.include_router(exchange_router)
+app.include_router(settings_router)
 
 
 @app.websocket("/ws")

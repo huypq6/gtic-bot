@@ -17,8 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 class OrderManager:
-    def __init__(self, session_factory: async_sessionmaker) -> None:
+    def __init__(self, session_factory: async_sessionmaker, bus=None) -> None:
         self._sf = session_factory
+        self._bus = bus  # optional: every audit record is also published as "audit" (notifier)
 
     async def write_audit(
         self,
@@ -38,6 +39,11 @@ class OrderManager:
                 )
             )
             await s.commit()
+        if self._bus is not None:
+            await self._bus.publish("audit", {
+                "source": source, "action": action, "mode": mode, "bot_id": bot_id,
+                "symbol": symbol, "detail": detail,
+            })
 
     async def execute(
         self,

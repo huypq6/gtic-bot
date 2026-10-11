@@ -239,6 +239,11 @@ async def create_bot(
     session.add(bot)
     await session.commit()
     await session.refresh(bot)
+    await request.app.state.order_manager.write_audit(
+        source="MANUAL", action="CREATE_BOT", mode=bot.mode, bot_id=bot.id, symbol=bot.symbol,
+        detail={"strategy": f"{strat.name} v{strat.version}", "tf": bot.tf,
+                "account_id": bot.account_id, "sizing": bot.sizing},
+    )
 
     try:
         await request.app.state.bot_manager.start_bot(

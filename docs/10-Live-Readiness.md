@@ -6,7 +6,7 @@ Method: code review + unit tests (262) + a **real-exchange end-to-end run on Bin
 (`scripts/testnet_e2e.py`, 21/21 passed) + the 3 TESTNET bots running on d9020.
 
 **Verdict: the order path is ready for a small, supervised LIVE trial — but NOT before the
-3 blockers in §2 are closed.**
+open blockers in §2 (1 and 2) are closed.**
 
 ## 1. Verified on the real (demo) exchange
 
@@ -36,9 +36,10 @@ Method: code review + unit tests (262) + a **real-exchange end-to-end run on Bin
    ≈ break-even over 365 days (fees ≈ 0.25 R per trade because the SL is ~0.4% away).
    → Go live only with TESTNET evidence: **≥ 30 closed trades, average R > 0 after fees**, and
    TESTNET-vs-PAPER divergence on the Compare page small (entry slip a few bps, R diff ≈ 0).
-3. **No alerts outside the browser.** Order errors, unprotected positions, account halts,
-   feed-down auto-pause and untracked positions only show in the UI.
-   → Push them to Telegram (or similar) so a problem at 3 a.m. is noticed.
+3. ~~**No alerts outside the browser.**~~ ✅ Done (2026-10-11): Telegram notifications, set up in
+   **Settings** (token/chat/events/modes stored in the DB): trade open/close (PnL, R), order
+   errors, SL/TP protection problems + untracked positions, account halt/resume, feed down/back,
+   LIVE bot/account created. → Turn it on and send a test before going live.
 
 ## 3. Should fix (high)
 

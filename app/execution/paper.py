@@ -74,6 +74,7 @@ class PaperExecutor(Executor):
             entry_fee=float(p.fee or 0),
         )
         self._pos_db_id = p.id
+        self._open_risk = float(p.risk_amount) if p.risk_amount is not None else None
         return True
 
     def current_position(self):
@@ -184,6 +185,9 @@ class PaperExecutor(Executor):
             self._pos_db_id = pos.id
             self.pending_sizing = None
             await s.commit()
+        self._open_risk = pos.risk_amount
+        await self.publish_trade("open", side=p.side, qty=p.qty, entry=p.entry_price, sl=p.sl,
+                                 tp=p.tp, risk=pos.risk_amount)
         if self._accounts and self.account_id is not None:
             await self._accounts.record_fee(
                 self.account_id, self.engine.entry_fee, position_id=pos.id,
@@ -225,6 +229,12 @@ class PaperExecutor(Executor):
                 reason=closed.reason,
             )
         self._pos_db_id = None
+        risk = getattr(self, "_open_risk", None)
+        await self.publish_trade(
+            "close", side=closed.side, qty=closed.qty, entry=closed.entry_price,
+            exit=closed.exit_price, pnl=closed.pnl, reason=closed.reason,
+            r=closed.pnl / risk if risk else None,
+        )
         await self._broadcast_position_closed(closed)
 
     def _order_row(self, fill: Fill, status: str) -> OrderModel:

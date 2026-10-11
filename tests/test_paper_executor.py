@@ -65,6 +65,11 @@ async def test_buy_then_tp_persists_and_broadcasts(session_factory):
     closed = [m for _, m in bus.msgs if m.get("status") == "CLOSED"]
     assert closed and closed[0]["pnl"] == (110 - 100) * 2  # +20
     assert types  # not empty
+    # notifier feed: one "trade" open + one close with the realized R
+    trades = [m for t, m in bus.msgs if t == "trade"]
+    assert [m["event"] for m in trades] == ["open", "close"]
+    assert trades[0]["risk"] == 20.0 and trades[1]["reason"] == "TP"
+    assert trades[1]["r"] == 1.0  # pnl 20 / risk (100-90)*2 = 20
 
     # DB: position is CLOSED with the correct pnl
     async with session_factory() as s:

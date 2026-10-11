@@ -219,6 +219,35 @@ export interface ExchangeCheckResult {
 export const fetchExchangeCheck = (mode: string) =>
   getJson<ExchangeCheckResult>(`/api/exchange/check?mode=${mode}`);
 
+// ---- settings: Telegram notifications ----
+export type NotifyEvent =
+  | "trade_open" | "trade_close" | "order_error" | "risk_reject" | "protection"
+  | "account_halt" | "feed" | "live_change";
+export interface TelegramSettings {
+  enabled: boolean;
+  chat_id: string;
+  lang: "vi" | "en";
+  modes: Record<"PAPER" | "TESTNET" | "LIVE", boolean>;
+  events: Record<NotifyEvent, boolean>;
+  has_token: boolean;
+  token_hint: string;
+  status: { last_ok_at: number | null; last_error: string | null; sent: number; queued: number };
+}
+export type TelegramPatch = Partial<Omit<TelegramSettings, "has_token" | "token_hint" | "status">> & {
+  bot_token?: string;
+};
+export const fetchTelegram = () => getJson<TelegramSettings>("/api/settings/telegram");
+export const saveTelegram = (body: TelegramPatch) =>
+  sendJson<TelegramSettings>("PUT", "/api/settings/telegram", body);
+// sendJson (not postJson) so Telegram's own error text reaches the user
+export const testTelegram = (body: { bot_token?: string; chat_id?: string }) =>
+  sendJson<{ ok: boolean }>("POST", "/api/settings/telegram/test", body);
+export const findTelegramChats = (body: { bot_token?: string }) =>
+  sendJson<{
+    bot: { username: string; name: string };
+    chats: { id: string; type: string; name: string; username?: string }[];
+  }>("POST", "/api/settings/telegram/chats", body);
+
 // ---- mode workspaces (docs/08) ----
 export interface ModeSummary {
   mode: "PAPER" | "TESTNET" | "LIVE";
