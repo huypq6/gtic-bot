@@ -1,0 +1,25 @@
+frontend/src/locales/vi/modes.ts
+  s_59aed905705a04::t_798342136b2652 49-53
+  s_59aed905705a04::t_87af514a4c427e 59-61
+frontend/src/pages/Trading.tsx
+  s_59aed905705a04::t_798342136b2652 3,59-61,150,226,236-243
+  s_59aed905705a04::t_87af514a4c427e 316-348,384-390
+app/api/trading.py
+  s_59aed905705a04::t_58608e0bd63f98 218-220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b79c7d31fdc51f245f9b1292693292dc8ea94ecc",
+  "prompts": {},
+  "sessions": {
+    "s_59aed905705a04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8498151-ec0b-49f1-b59b-87bbd842990b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
