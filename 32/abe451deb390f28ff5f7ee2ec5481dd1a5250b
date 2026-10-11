@@ -1,0 +1,23 @@
+scripts/deploy.sh
+  s_59aed905705a04::t_9a71f1c7ece259 1-159
+.gitignore
+  s_59aed905705a04::t_dae1dbb895064c 229
+.dockerignore
+  s_59aed905705a04::t_f9acf97d002d40 11-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "32abe451deb390f28ff5f7ee2ec5481dd1a5250b",
+  "prompts": {},
+  "sessions": {
+    "s_59aed905705a04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8498151-ec0b-49f1-b59b-87bbd842990b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Huy Pham <huypq6@outlook.com.vn>"
+    }
+  }
+}
