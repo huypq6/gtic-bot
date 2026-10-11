@@ -57,6 +57,19 @@ export default {
   "needs confirm": "cần xác nhận",
   "Clone to…": "Nhân bản sang…",
   Clone: "Nhân bản",
+  "Start from": "Bắt đầu từ",
+  "New bot": "Bot mới",
+  "Copy a bot": "Sao chép bot",
+  "Choose the bot to copy…": "Chọn bot để sao chép…",
+  "Pick a strategy and market yourself.": "Tự chọn strategy và cặp giao dịch.",
+  "Copied strategy, symbol, TF, params and sizing from #{id} ({mode}). Choose where the copy runs in step 3 — e.g. a TESTNET twin of a PAPER bot.":
+    "Đã chép strategy, cặp, TF, params và cách tính khối lượng từ #{id} ({mode}). Chọn nơi chạy bản sao ở bước 3 — vd bản TESTNET của một bot PAPER.",
+  "Same strategy, params and sizing in another mode — e.g. run a PAPER bot on TESTNET to compare fills.":
+    "Cùng strategy, params và khối lượng ở chế độ khác — vd chạy bot PAPER trên TESTNET để so sánh khớp lệnh.",
+  "Strategy & market": "Strategy & cặp giao dịch",
+  "Where it runs": "Chạy ở đâu",
+  "Bot #{id} already trades {symbol} on {mode}. Binance Futures holds one position per symbol, so two bots would close each other's trades — pick another symbol.":
+    "Bot #{id} đang giao dịch {symbol} trên {mode}. Binance Futures chỉ giữ 1 vị thế mỗi cặp, 2 bot sẽ đóng lệnh của nhau — hãy chọn cặp khác.",
   "Clone from another mode": "Nhân bản từ chế độ khác",
   "Clone to {mode}": "Nhân bản sang {mode}",
   "No {mode} account yet.": "Chưa có tài khoản {mode}.",

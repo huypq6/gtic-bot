@@ -48,10 +48,17 @@ export default function Trading() {
   }, [lens]);
   const formRef = useRef<HTMLElement>(null);
   const cloneParams = useRef<Record<string, unknown> | null>(null);
-  const [clonedFrom, setClonedFrom] = useState<number | null>(null);
+  // step ① "Start from": a blank bot or a copy of an existing one (any mode)
+  const [source, setSource] = useState<"new" | "copy">("new");
+  const [sourceId, setSourceId] = useState<number | "">("");
+  const sourceBot = allBots?.find((b) => b.id === sourceId);
   const [params, setParams] = useState<Record<string, unknown>>({});
   const [showLiveModal, setShowLiveModal] = useState(false);
-  const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: fetchAccounts });
+  const { data: accounts } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: fetchAccounts,
+    refetchInterval: 15_000, // an account created in another tab shows up without a reload
+  });
   const { data: methods } = useQuery({ queryKey: ["sizing-methods"], queryFn: fetchSizingMethods });
   const [accountId, setAccountId] = useState<number | "">("");
   const [sizing, setSizing] = useState<Sizing>({ method: "risk_pct", value: 1 });
@@ -59,6 +66,10 @@ export default function Trading() {
   // exchange modes size orders from the account; without one the strategy's tiny default size is
   // below the exchange minimum and every order is rejected → require the account first.
   const needsAccount = mode !== "PAPER" && accounts !== undefined && modeAccounts.length === 0;
+  // Futures holds ONE position per symbol per account → two exchange bots on a symbol would
+  // close/flip each other's trades.
+  const dupExchange =
+    mode !== "PAPER" ? allBots?.find((b) => b.mode === mode && b.symbol === symbol) : undefined;
   useEffect(() => {
     // on mode change → pick the first account of that mode (or leave empty if there is none)
     if (!modeAccounts.some((a) => a.id === accountId))
@@ -85,17 +96,27 @@ export default function Trading() {
     cloneParams.current = null;
   }, [selectedStrat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clone (docs/08): pre-fill the create form from a bot + target mode; the user still presses
-  // Create, so every guard (LIVE modal, account/mode check) stays on the single create path.
-  const cloneTo = (b: BotInfo, target: string) => {
+  // Copy (docs/08): pre-fill the create form from a bot; the user still presses Create, so every
+  // guard (LIVE modal, account/mode check) stays on the single create path.
+  const copyFrom = (b: BotInfo) => {
     if (b.strategy_id === stratId) setParams({ ...b.params });
     else cloneParams.current = { ...b.params };
+    setSource("copy");
+    setSourceId(b.id);
     setStratId(b.strategy_id);
     setSymbol(b.symbol);
     setTf(b.tf);
-    setMode(target);
     if (b.sizing) setSizing(b.sizing);
-    setClonedFrom(b.id);
+  };
+  const startNew = () => {
+    setSource("new");
+    setSourceId("");
+    if (selectedStrat) setParams({ ...selectedStrat.default_params });
+  };
+  // row shortcut "Clone → mode": same flow, with the source + target mode pre-selected
+  const cloneTo = (b: BotInfo, target: string) => {
+    copyFrom(b);
+    setMode(target);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
   useEffect(() => {
@@ -123,7 +144,7 @@ export default function Trading() {
       }),
     onSuccess: () => {
       setShowLiveModal(false);
-      setClonedFrom(null);
+      startNew();
       refresh();
     },
   });
@@ -145,112 +166,167 @@ export default function Trading() {
       {/* Create bot */}
       <section ref={formRef} className="scroll-mt-4 rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">{t("Create bot")}</h2>
-        {clonedFrom != null && (
-          <p className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs">
-            {t("Cloned from bot #{id} → {mode}. Nothing is created yet — review the settings, then press Create & run.", {
-              id: clonedFrom,
-              mode,
-            })}
-            <button onClick={() => setClonedFrom(null)} className="text-muted underline">
-              {t("Dismiss")}
-            </button>
-          </p>
-        )}
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Strategy">
-            <select
-              value={stratId}
-              onChange={(e) => setStratId(Number(e.target.value))}
-              className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
-            >
-              {strategies?.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} v{s.version}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Symbol">
-            <select
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
-            >
-              {symbolOptions.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="TF">
-            <select
-              value={tf}
-              onChange={(e) => setTf(e.target.value)}
-              className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
-            >
-              {config?.timeframes.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Mode">
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
-            >
-              <option>PAPER</option>
-              <option>TESTNET</option>
-              <option>LIVE</option>
-            </select>
-          </Field>
-          {modeAccounts.length > 0 && (
-            <>
-              <Field label={t("Account")}>
+        <div className="flex flex-col gap-4">
+          <Step n={1} title={t("Start from")}>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex rounded-lg border border-border bg-surface-2 p-0.5 text-sm">
+                <button
+                  onClick={startNew}
+                  className={`rounded-md px-3 py-1 font-medium ${source === "new" ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"}`}
+                >
+                  {t("New bot")}
+                </button>
+                <button
+                  onClick={() => setSource("copy")}
+                  disabled={!allBots?.length}
+                  className={`flex items-center gap-1 rounded-md px-3 py-1 font-medium disabled:opacity-40 ${source === "copy" ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"}`}
+                >
+                  <Copy className="h-3.5 w-3.5" /> {t("Copy a bot")}
+                </button>
+              </div>
+              {source === "copy" && (
                 <select
-                  value={accountId}
-                  onChange={(e) => setAccountId(Number(e.target.value))}
+                  value={sourceId}
+                  onChange={(e) => {
+                    const b = allBots?.find((x) => x.id === Number(e.target.value));
+                    if (b) copyFrom(b);
+                  }}
+                  className="min-w-0 max-w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
+                >
+                  <option value="">{t("Choose the bot to copy…")}</option>
+                  {allBots?.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.mode} · {b.strategy} · {b.symbol} {b.tf} (#{b.id})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <p className="mt-1.5 text-xs text-faint">
+              {source === "new"
+                ? t("Pick a strategy and market yourself.")
+                : sourceBot
+                  ? t("Copied strategy, symbol, TF, params and sizing from #{id} ({mode}). Choose where the copy runs in step 3 — e.g. a TESTNET twin of a PAPER bot.", { id: sourceBot.id, mode: sourceBot.mode })
+                  : t("Same strategy, params and sizing in another mode — e.g. run a PAPER bot on TESTNET to compare fills.")}
+            </p>
+          </Step>
+
+          <Step n={2} title={t("Strategy & market")}>
+            <div className="flex flex-wrap items-end gap-3">
+              <Field label="Strategy">
+                <select
+                  value={stratId}
+                  onChange={(e) => setStratId(Number(e.target.value))}
                   className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
                 >
-                  {modeAccounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({Math.round(a.equity).toLocaleString("en-US")} {a.currency})
+                  {strategies?.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} v{s.version}
                     </option>
                   ))}
                 </select>
               </Field>
-              <SizingInput value={sizing} onChange={setSizing} methods={methods} />
-            </>
+              <Field label="Symbol">
+                <select
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value)}
+                  className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
+                >
+                  {symbolOptions.map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="TF">
+                <select
+                  value={tf}
+                  onChange={(e) => setTf(e.target.value)}
+                  className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
+                >
+                  {config?.timeframes.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          </Step>
+
+          <Step n={3} title={t("Where it runs")}>
+            <div className="flex flex-wrap items-end gap-3">
+              <Field label="Mode">
+                <select
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value)}
+                  className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
+                >
+                  <option>PAPER</option>
+                  <option>TESTNET</option>
+                  <option>LIVE</option>
+                </select>
+              </Field>
+              {modeAccounts.length > 0 && (
+                <>
+                  <Field label={t("Account")}>
+                    <select
+                      value={accountId}
+                      onChange={(e) => setAccountId(Number(e.target.value))}
+                      className="rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm"
+                    >
+                      {modeAccounts.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name} ({Math.round(a.equity).toLocaleString("en-US")} {a.currency})
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <SizingInput value={sizing} onChange={setSizing} methods={methods} />
+                </>
+              )}
+            </div>
+            {needsAccount && (
+              <p className="mt-2 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-xs">
+                {t("No {mode} account yet — create it first (it reads the balance from Binance and sizes the bot's orders).", { mode })}{" "}
+                <Link to="/account" className="font-medium underline">
+                  {t("Go to Account")}
+                </Link>
+              </p>
+            )}
+            {dupExchange && (
+              <p className="mt-2 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-xs">
+                {t("Bot #{id} already trades {symbol} on {mode}. Binance Futures holds one position per symbol, so two bots would close each other's trades — pick another symbol.", { id: dupExchange.id, symbol, mode })}
+              </p>
+            )}
+          </Step>
+
+          {selectedStrat && Object.keys(selectedStrat.param_schema ?? {}).length > 0 && (
+            <Step n={4} title={t("Params (tune without editing code)")}>
+              <ParamsForm
+                schema={selectedStrat.param_schema as Record<string, never>}
+                values={params}
+                onChange={setParams}
+              />
+            </Step>
           )}
-          <button
-            onClick={onCreate}
-            disabled={create.isPending || stratId === "" || needsAccount}
-            className={`rounded-md px-3 py-1.5 text-sm font-semibold disabled:opacity-50 ${
-              mode === "LIVE"
-                ? "bg-down text-white hover:bg-down/90"
-                : "bg-accent text-white hover:bg-accent-strong"
-            }`}
-          >
-            {create.isPending ? t("Creating…") : mode === "LIVE" ? t("Create (LIVE)") : t("Create & run")}
-          </button>
-        </div>
-        {needsAccount && (
-          <p className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-xs">
-            {t("No {mode} account yet — create it first (it reads the balance from Binance and sizes the bot's orders).", { mode })}{" "}
-            <Link to="/account" className="font-medium underline">
-              {t("Go to Account")}
-            </Link>
-          </p>
-        )}
-        {selectedStrat && Object.keys(selectedStrat.param_schema ?? {}).length > 0 && (
-          <div className="mt-3 border-t border-border pt-3">
-            <p className="mb-2 text-xs text-faint">{t("Params (tune without editing code)")}</p>
-            <ParamsForm
-              schema={selectedStrat.param_schema as Record<string, never>}
-              values={params}
-              onChange={setParams}
-            />
+
+          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-3">
+            <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+              {selectedStrat ? `${selectedStrat.name} v${selectedStrat.version}` : "—"} · {symbol} {tf} →
+              <ModeBadge mode={mode} />
+              {modeAccounts.find((a) => a.id === accountId)?.name}
+            </span>
+            <button
+              onClick={onCreate}
+              disabled={create.isPending || stratId === "" || needsAccount || !!dupExchange || (source === "copy" && !sourceBot)}
+              className={`rounded-md px-4 py-1.5 text-sm font-semibold disabled:opacity-50 ${
+                mode === "LIVE"
+                  ? "bg-down text-white hover:bg-down/90"
+                  : "bg-accent text-white hover:bg-accent-strong"
+              }`}
+            >
+              {create.isPending ? t("Creating…") : mode === "LIVE" ? t("Create (LIVE)") : t("Create & run")}
+            </button>
           </div>
-        )}
+        </div>
         {create.isError && <p className="mt-2 text-sm text-down">{t("Error: {msg}", { msg: (create.error as Error).message })}</p>}
       </section>
 
@@ -311,39 +387,6 @@ export default function Trading() {
                 </div>
               </div>
             ))}
-          </div>
-        )}
-        {/* Lens on one mode → offer the other modes' bots as clone sources (shadow/candidate). */}
-        {lens && allBots && allBots.some((b) => b.mode !== lens) && (
-          <div className="mt-4 border-t border-border pt-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-faint">
-              {t("Clone from another mode")}
-            </p>
-            <div className="flex flex-col gap-1.5">
-              {allBots
-                .filter((b) => b.mode !== lens)
-                .map((b) => (
-                  <div
-                    key={b.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm"
-                  >
-                    <span className="flex flex-wrap items-center gap-x-2">
-                      <ModeBadge mode={b.mode} />
-                      <span className="font-medium">{b.strategy}</span>
-                      <span className="text-muted">
-                        {b.symbol} · {b.tf}
-                      </span>
-                      <span className="text-xs text-faint">#{b.id}</span>
-                    </span>
-                    <button
-                      onClick={() => cloneTo(b, lens)}
-                      className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-surface-2"
-                    >
-                      <Copy className="h-3.5 w-3.5" /> {t("Clone to {mode}", { mode: lens })}
-                    </button>
-                  </div>
-                ))}
-            </div>
           </div>
         )}
       </section>
@@ -462,6 +505,20 @@ function BotSizing({
       </button>
       {err && <span className="w-full text-xs text-down">{err}</span>}
     </span>
+  );
+}
+
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[11px] font-semibold text-accent">
+        {n}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-faint">{title}</p>
+        {children}
+      </div>
+    </div>
   );
 }
 
