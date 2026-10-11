@@ -8,3 +8,5 @@ frontend/dist
 docs
 .env
 *.md
+backups
+outreach

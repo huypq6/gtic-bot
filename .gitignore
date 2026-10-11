@@ -226,3 +226,4 @@ frontend/dist/
 
 # sinh lúc docker build (app/version.py)
 VERSION.json
+backups/
