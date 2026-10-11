@@ -460,6 +460,7 @@ async def list_trades(
             "sl": f(p.sl), "tp": f(p.tp), "init_sl": f(p.init_sl), "status": p.status,
             "exit_reason": reason,
             "account_id": p.account_id, "fee": f(p.fee), "margin": f(p.margin),
+            "sizing": p.sizing,
             # snapshot at open (survives bot deletion); older positions without one → current bot.
             "strategy": p.strategy or (f"{strat.name} v{strat.version}" if strat else None),
             "tf": p.tf or (bot.tf if bot else None),

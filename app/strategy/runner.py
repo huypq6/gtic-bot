@@ -137,11 +137,17 @@ class StrategyRunner:
             "sizing": self.sizing, "equity": round(st.equity, 4), "risk_usdt": round(risk, 4),
             "notional": round(qty * entry, 4),
         }
+        method, value = self.sizing.get("method"), float(self.sizing.get("value") or 0)
+        if method in ("risk_pct", "risk_usdt"):  # what the user asked to risk, before any cap
+            target = st.equity * value / 100 if method == "risk_pct" else value
+            info["risk_target"] = round(target, 4)
         if notes:
             info["notes"] = notes
         return replace(sig, size=qty), info
 
     async def _submit(self, sig: Signal, info: dict) -> None:
+        if sig.action in ("BUY", "SELL"):
+            self.executor.pending_sizing = info or None
         # NFR: write the audit log BEFORE the executor acts.
         if self._om:
             await self._om.execute(

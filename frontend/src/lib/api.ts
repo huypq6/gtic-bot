@@ -315,6 +315,15 @@ export interface TradeRow {
   account_id: number | null;
   fee: number | null; // total entry + exit fees (USDT)
   margin: number | null;
+  // account sizing at entry; notes = why the size was cut (null = no account / older trade)
+  sizing: {
+    sizing?: { method: string; value: number };
+    equity?: number;
+    risk_target?: number;
+    risk_usdt?: number;
+    notional?: number;
+    notes?: string[];
+  } | null;
   strategy: string | null;
   tf: string | null;
   params: Record<string, unknown> | null; // snapshot at entry

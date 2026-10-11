@@ -322,6 +322,7 @@ class ExchangeExecutor(Executor):
                 bot_id=self.bot_id, mode=self.mode, symbol=self.symbol, side=p.side,
                 qty=p.qty, entry_price=p.entry_price, sl=p.sl, tp=p.tp, init_sl=p.sl, status="OPEN",
                 source=self.source, bot_ref=self.bot_id, **self.trade_meta,
+                sizing=self.pending_sizing,
             )
             s.add(pos)
             await s.flush()
@@ -335,6 +336,7 @@ class ExchangeExecutor(Executor):
                 )
             )
             self._pos_db_id = pos.id
+            self.pending_sizing = None
             await s.commit()
 
     async def _persist_close(self, closed, ext: str) -> None:

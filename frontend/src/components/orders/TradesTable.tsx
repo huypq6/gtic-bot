@@ -27,6 +27,25 @@ const signed = (n: number | null, d = 2, suffix = "") =>
   n == null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(d)}${suffix}`;
 
 // Money (USDT): small amounts (tiny paper sizes) still show significant digits.
+// Why the bot placed a smaller size than its sizing asked for (from the account guards).
+function reductionText(note: string): string {
+  if (note === "reduced to available balance")
+    return t("not enough available margin — raise the account leverage or lower the risk %");
+  let m = note.match(/^reduced to per-trade risk cap (.+)%$/);
+  if (m) return t("capped by the account's max risk per trade ({v}%)", { v: m[1] });
+  m = note.match(/^reduced to total open risk cap (.+)%$/);
+  if (m) return t("capped by the account's total open risk limit ({v}%)", { v: m[1] });
+  return note;
+}
+
+/** {notes, share} if the size was reduced; share = actual / requested risk (risk-based sizing). */
+function reduction(tr: TradeRow): { notes: string[]; share: number | null } | null {
+  const notes = tr.sizing?.notes ?? [];
+  if (!notes.length) return null;
+  const { risk_target: target, risk_usdt: got } = tr.sizing ?? {};
+  return { notes, share: target && got != null ? got / target : null };
+}
+
 const money = (n: number | null) =>
   n == null
     ? "—"
@@ -202,6 +221,16 @@ export default function TradesTable() {
                   <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${RESULT[tr.result].cls}`}>
                     {RESULT[tr.result].label}
                   </span>
+                  {reduction(tr) && (
+                    <div
+                      className="mt-1 w-fit rounded border border-warn/40 bg-warn/10 px-1 text-[10px] font-medium whitespace-nowrap text-warn"
+                      title={reduction(tr)!.notes.map(reductionText).join("\n")}
+                    >
+                      {reduction(tr)!.share != null
+                        ? t("size cut to {p}%", { p: Math.round(reduction(tr)!.share! * 100) })
+                        : t("size reduced")}
+                    </div>
+                  )}
                 </td>
                 <td className={`px-2 py-1.5 text-right tabular-nums ${tone(tr.r ?? tr.pnl)}`}>
                   <span className="font-medium">{usd(tr.r != null ? tr.r * risk : null)}</span>
@@ -300,6 +329,31 @@ function TradeReview({ t: tr, risk, onClose }: { t: TradeRow; risk: number; onCl
       }
       info={
         <div className="grid grid-cols-1 gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
+          {reduction(tr) && (
+            <div className="mb-2 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 sm:col-span-3">
+              <p className="font-semibold text-warn">
+                {reduction(tr)!.share != null
+                  ? t("Size reduced — risked {got} of the {want} USDT requested ({p}%)", {
+                      got: tr.sizing!.risk_usdt!.toFixed(2),
+                      want: tr.sizing!.risk_target!.toFixed(2),
+                      p: Math.round(reduction(tr)!.share! * 100),
+                    })
+                  : t("Size reduced by the account guards")}
+              </p>
+              <ul className="mt-0.5 list-disc pl-4 text-muted">
+                {reduction(tr)!.notes.map((n) => (
+                  <li key={n}>{reductionText(n)}</li>
+                ))}
+              </ul>
+              {reduction(tr)!.share != null && tr.r != null && (
+                <p className="mt-0.5 text-faint">
+                  {t("At full size this trade would have made ≈ {v} USDT.", {
+                    v: signed((tr.pnl ?? 0) / reduction(tr)!.share!, 2),
+                  })}
+                </p>
+              )}
+            </div>
+          )}
           <div className="space-y-1">
             <Item k={t("Strategy")} v={stratLabel(tr)} />
             <Item k={t("Bot / timeframe")} v={`${botLabel(tr)} · ${tr.tf ?? "—"}`} />
@@ -313,6 +367,12 @@ function TradeReview({ t: tr, risk, onClose }: { t: TradeRow; risk: number; onCl
             <Item k={t("Initial SL / TP")} v={`${fmtPrice(tr.init_sl ?? tr.sl)} / ${fmtPrice(tr.tp)}`} />
             <Item k={t("Size")} v={`${tr.qty} (${tr.notional.toLocaleString("en-US", { maximumSignificantDigits: 4 })} USDT)`} />
             <Item k={t("1R risk (real)")} v={tr.risk_amount != null ? `${money(tr.risk_amount).replace("+", "")} USDT` : "—"} />
+            {tr.sizing?.risk_target != null && (
+              <Item
+                k={t("Risk requested")}
+                v={`${tr.sizing.risk_target.toFixed(2)} USDT${tr.sizing.sizing?.method === "risk_pct" ? ` (${tr.sizing.sizing.value}% × ${tr.sizing.equity?.toFixed(2)})` : ""}`}
+              />
+            )}
           </div>
           <div className="space-y-1">
             <Item k={t("Normalized PnL (1R = ${risk})", { risk })} v={usd(tr.r != null ? tr.r * risk : null)} cls={tone(tr.r)} />

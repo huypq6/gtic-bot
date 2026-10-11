@@ -12,6 +12,9 @@ class Executor(ABC):
     # Bot snapshot at runtime (strategy/tf/params) — written to the position on open so
     # reviews stay correct after the bot's params are edited or it is deleted. Set by BotManager.
     trade_meta: dict = {}
+    # Account sizing of the order being submitted (set by the runner) — stored on the position it
+    # opens so Trade results can show requested vs actual risk and why the size was reduced.
+    pending_sizing: dict | None = None
 
     def current_position(self) -> Position | None:
         """Current position for the strategy to read via Context. Defaults to None."""

@@ -27,6 +27,17 @@ const vi: Record<string, string> = {
   "1 trade = 2 fills: the entry order and the exit order (SL/TP/signal/manual).":
     "1 giao dịch = 2 lần khớp: lệnh vào và lệnh thoát (SL/TP/tín hiệu/tay).",
   Trade: "Giao dịch",
+  "not enough available margin — raise the account leverage or lower the risk %":
+    "không đủ ký quỹ khả dụng — tăng đòn bẩy tài khoản hoặc giảm % rủi ro",
+  "capped by the account's max risk per trade ({v}%)": "bị giới hạn bởi rủi ro tối đa/lệnh của tài khoản ({v}%)",
+  "capped by the account's total open risk limit ({v}%)": "bị giới hạn bởi tổng rủi ro mở của tài khoản ({v}%)",
+  "size cut to {p}%": "khối lượng còn {p}%",
+  "size reduced": "đã giảm khối lượng",
+  "Risk requested": "Rủi ro yêu cầu",
+  "Size reduced — risked {got} of the {want} USDT requested ({p}%)":
+    "Đã giảm khối lượng — rủi ro thực {got} / {want} USDT yêu cầu ({p}%)",
+  "Size reduced by the account guards": "Khối lượng bị giảm bởi rào chắn tài khoản",
+  "At full size this trade would have made ≈ {v} USDT.": "Nếu đủ khối lượng, lệnh này lãi/lỗ ≈ {v} USDT.",
   Open: "Mở",
   Close: "Đóng",
   "e.g. BTCUSDT": "vd BTCUSDT",

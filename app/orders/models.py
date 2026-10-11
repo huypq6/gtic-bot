@@ -196,6 +196,9 @@ class PositionModel(Base):
     margin: Mapped[float | None] = mapped_column(Numeric)  # margin locked at open
     risk_amount: Mapped[float | None] = mapped_column(Numeric)  # USDT lost if the initial SL is hit
     ext_protect: Mapped[dict | None] = mapped_column(JSONB)  # {"sl": algoId, "tp": algoId}
+    # account sizing at entry: {sizing, equity, risk_target, risk_usdt, notional, notes[]} —
+    # notes say why the size was cut (e.g. "reduced to available balance"). NULL = no account.
+    sizing: Mapped[dict | None] = mapped_column(JSONB)
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

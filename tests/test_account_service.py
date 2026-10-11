@@ -138,3 +138,19 @@ async def test_restore_open_position_after_restart(env):
         acc = await s.get(Account, aid)
     assert pos.status == "CLOSED" and pos.exit_reason == "SL"
     assert await _ledger_sum(sf, aid) == pytest.approx(float(acc.balance))
+
+
+async def test_position_keeps_sizing_and_reduction_note(env):
+    sf, svc, aid, ex, runner, _ = env
+    await ex.on_price(100)
+    # SL 0.2 away → 1% risk (10 USDT) wants 50 units = 5000 USDT > 1000 balance at 1×
+    await runner._dispatch(Signal("BUY", SYM, sl=99.8), 100)
+    async with sf() as s:
+        q = select(PositionModel).where(PositionModel.symbol == SYM)
+        pos = (await s.execute(q)).scalar_one()
+    sz = pos.sizing
+    assert sz["sizing"] == {"method": "risk_pct", "value": 1}
+    assert sz["risk_target"] == pytest.approx(10)
+    assert sz["risk_usdt"] < sz["risk_target"] * 0.25  # cut to what the balance can hold
+    assert "reduced to available balance" in sz["notes"]
+    assert ex.pending_sizing is None  # consumed by this position, not reused by the next one
